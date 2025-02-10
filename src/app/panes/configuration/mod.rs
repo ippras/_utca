@@ -1,12 +1,9 @@
 use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
-use crate::{
-    app::{ContextExt, ResultExt},
-    localize,
-    utils::save,
-};
+use crate::{app::ContextExt, utils::save};
 use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
+use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, ERASER, FLOPPY_DISK, GEAR, LIST, NOTE_PENCIL,
     PENCIL, TAG, TRASH,
@@ -70,7 +67,7 @@ impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
         let mut response = ui
             .heading(Self::icon())
-            .on_hover_text(localize!("configuration"));
+            .on_hover_text(ui.localize("configuration"));
         response |= ui.heading(self.title());
         response = response
             .on_hover_text(format!("{:x}", self.hash()))
@@ -92,11 +89,16 @@ impl Pane {
             }
         })
         .response
-        .on_hover_text(localize!("list"));
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("list"));
+        });
         ui.separator();
         // Reset
         if ui
             .button(RichText::new(ARROWS_CLOCKWISE).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("reset_table"));
+            })
             .clicked()
         {
             self.state.reset_table_state = true;
@@ -106,17 +108,23 @@ impl Pane {
             &mut self.settings.resizable,
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
-        .on_hover_text(localize!("resize"));
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("resize_table"));
+        });
         // Edit
         ui.toggle_value(&mut self.settings.editable, RichText::new(PENCIL).heading())
-            .on_hover_text(localize!("edit"));
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("edit"));
+            });
         // Clear
         ui.add_enabled_ui(
             self.settings.editable && self.frames[self.settings.index].data.height() > 0,
             |ui| {
                 if ui
                     .button(RichText::new(ERASER).heading())
-                    .on_hover_text(localize!("clear"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("clear_table"));
+                    })
                     .clicked()
                 {
                     let data_frame = &mut self.frames[self.settings.index].data;
@@ -128,7 +136,9 @@ impl Pane {
         ui.add_enabled_ui(self.settings.editable && self.frames.len() > 1, |ui| {
             if ui
                 .button(RichText::new(TRASH).heading())
-                .on_hover_text(localize!("delete"))
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("delete_table"));
+                })
                 .clicked()
             {
                 self.frames.remove(self.settings.index);
@@ -141,12 +151,16 @@ impl Pane {
             &mut self.state.open_settings_window,
             RichText::new(GEAR).heading(),
         )
-        .on_hover_text(localize!("settings"));
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("settings"));
+        });
         ui.separator();
         // Save
         if ui
             .button(RichText::new(FLOPPY_DISK).heading())
-            .on_hover_text(localize!("save"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("save"));
+            })
             .on_hover_text(format!("{}.utca.ipc", self.title()))
             .clicked()
         {
@@ -158,7 +172,9 @@ impl Pane {
         // Calculation
         if ui
             .button(RichText::new(CALCULATOR).heading())
-            .on_hover_text(localize!("calculation"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("calculation"));
+            })
             .clicked()
         {
             ui.data_mut(|data| {
@@ -182,17 +198,9 @@ impl Pane {
     fn body_content_data(&mut self, ui: &mut Ui, index: usize) {
         let data_frame = &mut self.frames[index].data;
         TableView::new(data_frame, &self.settings, &mut self.state).show(ui);
-        if self.state.add_row {
-            self.add_row().context(ui.ctx());
-            self.state.add_row = false;
-        }
-        if let Some(index) = self.state.delete_row {
-            self.delete_row(index).context(ui.ctx());
-            self.state.delete_row = None;
-        }
     }
 
-    fn add_row(&mut self) -> PolarsResult<()> {
+    fn _add_row(&mut self) -> PolarsResult<()> {
         let data_frame = &mut self.frames[self.settings.index].data;
         *data_frame = concat(
             [
@@ -226,7 +234,7 @@ impl Pane {
         Ok(())
     }
 
-    fn delete_row(&mut self, row: usize) -> PolarsResult<()> {
+    fn _delete_row(&mut self, row: usize) -> PolarsResult<()> {
         let data_frame = &mut self.frames[self.settings.index].data;
         let mut lazy_frame = data_frame.clone().lazy();
         lazy_frame = lazy_frame

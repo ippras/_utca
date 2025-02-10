@@ -3,13 +3,7 @@ use crate::app::{
     presets::CHRISTIE,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
-use lipid::{
-    fatty_acid::{
-        Kind,
-        polars::expr::factor::{Selectivity as _, enrichment},
-    },
-    prelude::*,
-};
+use lipid::prelude::*;
 use metadata::MetaDataFrame;
 use polars::prelude::*;
 use polars_ext::{ExprExt as _, expr::ExprIfExt as _};
@@ -235,8 +229,7 @@ impl Experimental {
         let experimental = |mut expr: Expr| {
             // S / ∑(S * M)
             if let Fraction::Fraction = settings.fraction {
-                expr =
-                    expr.clone() / (expr * fatty_acid.clone().fatty_acid().mass(Kind::Rcooh)).sum()
+                expr = expr.clone() / (expr * fatty_acid.clone().fa().mass(None)).sum()
             };
             expr.normalize_if(settings.normalize.experimental)
         };
@@ -339,10 +332,10 @@ struct Factors(Expr);
 impl Factors {
     fn compute(self, fatty_acid: Expr) -> Expr {
         as_struct(vec![
-            enrichment(self.clone().mag2(), self.clone().tag()).alias("Enrichment"),
+            ef(self.clone().mag2(), self.clone().tag()).alias("Enrichment"),
             fatty_acid
-                .fatty_acid()
-                .selectivity(self.clone().mag2(), self.tag())
+                .fa()
+                .sf(self.clone().mag2(), self.tag())
                 .alias("Selectivity"),
         ])
         .alias("Factors")

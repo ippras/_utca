@@ -1,18 +1,17 @@
 use super::{ContextExt as _, ID_SOURCE, Settings, State};
 use crate::app::{
     panes::MARGIN,
-    widgets::{FattyAcidWidget, FloatWidget},
+    widgets::{FattyAcidWidget, FloatWidget, NamesWidget},
 };
 use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
-use egui_phosphor::regular::{MINUS, PLUS};
+use egui_l20n::UiExt;
+use egui_phosphor::regular::{HASH, MINUS, PLUS};
 use egui_table::{
     AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState,
 };
-use lipid::fatty_acid::{
-    FattyAcid,
-    polars::{DataFrameExt as _, SeriesExt as _},
-};
+use lipid::prelude::*;
 use polars::{chunked_array::builder::AnonymousOwnedListBuilder, prelude::*};
+use polars_ext::DataFrameExt as _;
 use std::ops::Range;
 
 const INDEX: Range<usize> = 0..1;
@@ -66,6 +65,14 @@ impl TableView<'_> {
             .headers([HeaderRow::new(height)])
             .auto_size_mode(AutoSizeMode::OnParentResize)
             .show(ui, self);
+        if self.state.add_table_row {
+            self.data_frame.add_row().unwrap();
+            self.state.add_table_row = false;
+        }
+        if let Some(index) = self.state.delete_table_row {
+            self.data_frame.delete_row(index).unwrap();
+            self.state.delete_table_row = None;
+        }
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
@@ -73,26 +80,42 @@ impl TableView<'_> {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {
-            // Top
             (0, INDEX) => {
-                ui.heading("Index");
+                ui.heading(HASH).on_hover_ui(|ui| {
+                    ui.label(ui.localize("index"));
+                });
             }
             (0, LABEL) => {
-                ui.heading("Label");
+                ui.heading(ui.localize("label"));
             }
             (0, FA) => {
-                ui.heading("FA");
+                ui.heading(ui.localize("fatty_acid.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("fatty_acid"));
+                    });
             }
             (0, TAG) => {
-                ui.heading("TAG");
+                ui.heading(ui.localize("triacylglycerol.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("triacylglycerol"));
+                    });
             }
             (0, DAG1223) => {
-                ui.heading("DAG1223");
+                ui.heading(format!(
+                    "{}1223",
+                    ui.localize("diacylglycerol.abbreviation"),
+                ))
+                .on_hover_ui(|ui| {
+                    ui.label(format!("sn-1,2/2,3 {}", ui.localize("diacylglycerol"),));
+                });
             }
             (0, MAG2) => {
-                ui.heading("MAG2");
+                ui.heading(format!("{}2", ui.localize("monoacylglycerol.abbreviation")))
+                    .on_hover_ui(|ui| {
+                        ui.label(format!("sn-2 {}", ui.localize("monoacylglycerol"),));
+                    });
             }
-            _ => {} // _ => unreachable!(),
+            _ => {}
         };
     }
 
@@ -120,16 +143,14 @@ impl TableView<'_> {
             (row, INDEX) => {
                 if self.settings.editable {
                     if ui.button(MINUS).clicked() {
-                        self.state.delete_row = Some(row);
+                        self.state.delete_table_row = Some(row);
                     }
                 }
-                let indices = self.data_frame[0].u32()?;
-                let index = indices.get(row).unwrap();
-                ui.label(index.to_string());
+                ui.label(row.to_string());
             }
             (row, LABEL) => {
                 let labels = self.data_frame["Label"].str()?;
-                let label = labels.get(row).unwrap();
+                let label = labels.get(row).unwrap_or_default();
                 if self.settings.editable {
                     let mut label = label.to_owned();
                     if ui.text_edit_singleline(&mut label).changed() {
@@ -141,14 +162,21 @@ impl TableView<'_> {
                 }
             }
             (row, FA) => {
-                let inner_response = FattyAcidWidget::new(|| self.data_frame.fatty_acid().get(row))
+                let mut fatty_acid = self.data_frame.fa().get(row)?;
+                let mut inner_response = FattyAcidWidget::new(fatty_acid.as_mut())
                     .editable(self.settings.editable)
                     .hover()
-                    .names(self.settings.names)
                     .show(ui);
-                if let Some(value) = inner_response.inner {
+                if self.settings.names {
+                    if let Some(fatty_acid) = &fatty_acid {
+                        inner_response.response = inner_response.response.on_hover_ui(|ui| {
+                            ui.add(NamesWidget::new(fatty_acid));
+                        });
+                    }
+                }
+                if inner_response.response.changed() {
                     self.data_frame
-                        .try_apply("FattyAcid", change_fatty_acid(row, &value))?;
+                        .try_apply("FattyAcid", update_fatty_acid(row, inner_response.inner))?;
                 }
             }
             (row, TAG) => {
@@ -170,7 +198,7 @@ impl TableView<'_> {
             INDEX => {
                 if self.settings.editable {
                     if ui.button(PLUS).clicked() {
-                        self.state.add_row = true;
+                        self.state.add_table_row = true;
                     }
                 }
             }
@@ -211,7 +239,7 @@ impl TableView<'_> {
             .show(ui);
         if let Some(value) = inner_response.inner {
             self.data_frame
-                .try_apply(column, change_experimental(row, value))?;
+                .try_apply(column, update_f64(row, Some(value)))?;
         }
         Ok(inner_response.response)
     }
@@ -248,6 +276,95 @@ impl TableDelegate for TableView<'_> {
     }
 }
 
+// TODO: change existing `ChunkedArrays` rather than creating new ones
+fn update_fatty_acid(
+    row: usize,
+    value: Option<FattyAcid>,
+) -> impl FnMut(&Series) -> PolarsResult<Series> + 'static {
+    move |series| {
+        let fatty_acid_series = series.fa();
+        let mut carbons = PrimitiveChunkedBuilder::<UInt8Type>::new(
+            fatty_acid_series.carbons.name().clone(),
+            fatty_acid_series.len(),
+        );
+        let mut unsaturated = AnonymousOwnedListBuilder::new(
+            fatty_acid_series.unsaturated.name().clone(),
+            fatty_acid_series.len(),
+            fatty_acid_series.unsaturated.dtype().inner_dtype().cloned(),
+        );
+        for index in 0..fatty_acid_series.len() {
+            let mut fatty_acid = fatty_acid_series.get(index)?;
+            if index == row {
+                fatty_acid = value.clone();
+            }
+            let fatty_acid = fatty_acid.as_ref();
+            // Carbons
+            carbons.append_option(fatty_acid.map(|fatty_acid| fatty_acid.carbons));
+            // Unsaturated
+            if let Some(fatty_acid) = fatty_acid {
+                let mut index = PrimitiveChunkedBuilder::<UInt8Type>::new(
+                    "Index".into(),
+                    fatty_acid.unsaturated.len(),
+                );
+                let mut isomerism = PrimitiveChunkedBuilder::<Int8Type>::new(
+                    "Isomerism".into(),
+                    fatty_acid.unsaturated.len(),
+                );
+                let mut unsaturation = PrimitiveChunkedBuilder::<UInt8Type>::new(
+                    "Unsaturation".into(),
+                    fatty_acid.unsaturated.len(),
+                );
+                for unsaturated in &fatty_acid.unsaturated {
+                    index.append_option(unsaturated.index);
+                    isomerism.append_option(unsaturated.isomerism.map(|isomerism| isomerism as _));
+                    unsaturation.append_option(
+                        unsaturated
+                            .unsaturation
+                            .map(|unsaturation| unsaturation as _),
+                    );
+                }
+                unsaturated.append_series(
+                    &StructChunked::from_series(
+                        PlSmallStr::EMPTY,
+                        fatty_acid.unsaturated.len(),
+                        [
+                            index.finish().into_series(),
+                            isomerism.finish().into_series(),
+                            unsaturation.finish().into_series(),
+                        ]
+                        .iter(),
+                    )?
+                    .into_series(),
+                )?;
+            } else {
+                unsaturated.append_opt_series(None)?;
+            }
+        }
+        Ok(StructChunked::from_series(
+            series.name().clone(),
+            fatty_acid_series.len(),
+            [
+                carbons.finish().into_series(),
+                unsaturated.finish().into_series(),
+            ]
+            .iter(),
+        )?
+        .into_series())
+    }
+}
+
+fn update_f64(row: usize, value: Option<f64>) -> impl FnMut(&Series) -> PolarsResult<Series> {
+    move |series| {
+        Ok(series
+            .f64()?
+            .iter()
+            .enumerate()
+            .map(|(index, current)| Ok(if index == row { value } else { current }))
+            .collect::<PolarsResult<Float64Chunked>>()?
+            .into_series())
+    }
+}
+
 fn change_label(row: usize, new: &str) -> impl FnMut(&Series) -> PolarsResult<Series> {
     move |series| {
         Ok(series
@@ -270,7 +387,7 @@ fn change_fatty_acid(
     new: &FattyAcid,
 ) -> impl FnMut(&Series) -> PolarsResult<Series> + '_ {
     move |series| {
-        let fatty_acid_series = series.fatty_acid();
+        let fatty_acid_series = series.fa();
         let mut carbons = PrimitiveChunkedBuilder::<UInt8Type>::new(
             fatty_acid_series.carbons.name().clone(),
             fatty_acid_series.len(),
@@ -356,19 +473,19 @@ fn change_fatty_acid(
     }
 }
 
-fn change_experimental(row: usize, new: f64) -> impl FnMut(&Series) -> PolarsResult<Series> {
-    move |series| {
-        Ok(series
-            .f64()?
-            .iter()
-            .enumerate()
-            .map(|(index, mut value)| {
-                if index == row {
-                    value = Some(new);
-                }
-                Ok(value)
-            })
-            .collect::<PolarsResult<Float64Chunked>>()?
-            .into_series())
-    }
-}
+// fn change_experimental(row: usize, new: f64) -> impl FnMut(&Series) -> PolarsResult<Series> {
+//     move |series| {
+//         Ok(series
+//             .f64()?
+//             .iter()
+//             .enumerate()
+//             .map(|(index, mut value)| {
+//                 if index == row {
+//                     value = Some(new);
+//                 }
+//                 Ok(value)
+//             })
+//             .collect::<PolarsResult<Float64Chunked>>()?
+//             .into_series())
+//     }
+// }

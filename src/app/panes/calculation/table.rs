@@ -2,19 +2,18 @@ use super::{
     ID_SOURCE, State,
     settings::{From, Settings},
 };
-use crate::{
-    app::{
-        ContextExt as _,
-        panes::MARGIN,
-        widgets::{FattyAcidWidget, FloatWidget},
-    },
-    localize,
+use crate::app::{
+    ContextExt as _,
+    panes::MARGIN,
+    widgets::{FattyAcidWidget, FloatWidget},
 };
 use egui::{Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
+use egui_l20n::UiExt as _;
+use egui_phosphor::regular::HASH;
 use egui_table::{
     AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState,
 };
-use lipid::fatty_acid::polars::DataFrameExt as _;
+use lipid::prelude::*;
 use polars::prelude::*;
 use std::ops::Range;
 
@@ -96,76 +95,122 @@ impl TableView<'_> {
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
-        if self.settings.truncate {
+        if self.settings.truncate_headers {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {
             // Top
             (0, ID) => {
-                ui.heading(localize!("ID"));
+                ui.heading(ui.localize("identifier.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("identifier"));
+                    });
             }
             (0, EXPERIMENTAL) => {
-                ui.heading(localize!("Experimental"));
+                ui.heading(ui.localize("experimental"));
             }
             (0, THEORETICAL) => {
-                ui.heading(localize!("Theoretical"));
+                ui.heading(ui.localize("theoretical"));
             }
             (0, FACTORS) if self.settings.factors => {
-                ui.heading(localize!("Factors"));
+                ui.heading(ui.localize("factors"));
             }
             // Middle
             (1, id::INDEX) => {
-                ui.heading(localize!("Index"));
+                ui.heading(HASH).on_hover_ui(|ui| {
+                    ui.label(ui.localize("index"));
+                });
             }
             (1, id::LABEL) => {
-                ui.heading(localize!("Label"));
+                ui.heading(ui.localize("label"));
             }
             (1, id::FA) => {
-                ui.heading(localize!("fatty_acid.abbreviation"))
-                    .on_hover_text(localize!("fatty_acid"));
+                ui.heading(ui.localize("fatty_acid.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("fatty_acid"));
+                    });
             }
             (1, experimental::TAG) => {
-                ui.heading("TAG")
-                    .on_hover_text(localize!("triacylglycerol"));
+                ui.heading(ui.localize("triacylglycerol.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("triacylglycerol"));
+                    });
             }
             (1, experimental::DAG1223) => {
-                ui.heading("DAG1223")
-                    .on_hover_text(format!("sn-1,2/2,3 {}", localize!("diacylglycerol")));
+                ui.heading(format!(
+                    "{}1223",
+                    ui.localize("diacylglycerol.abbreviation"),
+                ))
+                .on_hover_ui(|ui| {
+                    ui.label(format!("sn-1,2/2,3 {}", ui.localize("diacylglycerol"),));
+                });
             }
             (1, experimental::MAG2) => {
-                ui.heading("MAG2")
-                    .on_hover_text(format!("sn-2 {}", localize!("monoacylglycerol")));
+                ui.heading(format!("{}2", ui.localize("monoacylglycerol.abbreviation")))
+                    .on_hover_ui(|ui| {
+                        ui.label(format!("sn-2 {}", ui.localize("monoacylglycerol"),));
+                    });
             }
-            (1, theoretical::TAG) => {
-                ui.heading("TAG")
-                    .on_hover_text(localize!("triacylglycerol"));
+            (1, theoretical::TAG) if self.settings.theoretical => {
+                ui.heading(ui.localize("triacylglycerol.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("triacylglycerol"));
+                    });
             }
-            (1, theoretical::DAG1223) => {
-                ui.heading("DAG1223")
-                    .on_hover_text(format!("sn-1,2/2,3 {}", localize!("diacylglycerol")));
+            (1, theoretical::DAG1223) if self.settings.theoretical => {
+                ui.heading(format!(
+                    "{}1223",
+                    ui.localize("diacylglycerol.abbreviation"),
+                ))
+                .on_hover_ui(|ui| {
+                    ui.label(format!("sn-1,2/2,3 {}", ui.localize("diacylglycerol"),));
+                });
             }
-            (1, theoretical::MAG2) => {
-                ui.heading("MAG2")
-                    .on_hover_text(format!("sn-2 {}", localize!("monoacylglycerol")));
+            (1, theoretical::MAG2) if self.settings.theoretical => {
+                ui.heading(format!("{}2", ui.localize("monoacylglycerol.abbreviation")))
+                    .on_hover_ui(|ui| {
+                        ui.label(format!("sn-2 {}", ui.localize("monoacylglycerol"),));
+                    });
             }
             (1, theoretical::DAG13) => {
-                ui.heading("DAG13")
-                    .on_hover_text(format!("sn-13 {}", localize!("diacylglycerol")));
+                ui.heading(format!("{}13", ui.localize("diacylglycerol.abbreviation")))
+                    .on_hover_ui(|ui| {
+                        ui.label(format!("sn-13 {}", ui.localize("diacylglycerol"),));
+                    });
             }
             (1, factors::EF) if self.settings.factors => {
-                ui.heading("EF")
-                    .on_hover_text(localize!("enrichment_factor"));
+                ui.heading(ui.localize("enrichment_factor.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("enrichment_factor"));
+                    });
             }
             (1, factors::SF) if self.settings.factors => {
-                ui.heading("SF")
-                    .on_hover_text(localize!("selectivity_factor"));
+                ui.heading(ui.localize("selectivity_factor.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("selectivity_factor"));
+                    });
             }
             // Bottom
             (2, theoretical::dag13::DAG1223) => {
-                ui.heading("DAG1223");
+                ui.heading(format!(
+                    "{}1223",
+                    ui.localize("diacylglycerol.abbreviation"),
+                ))
+                .on_hover_ui(|ui| {
+                    ui.label(format!(
+                        "Calculated from sn-1,2/2,3 {}",
+                        ui.localize("diacylglycerol?genus=genitive"),
+                    ));
+                });
             }
             (2, theoretical::dag13::MAG2) => {
-                ui.heading("MAG2");
+                ui.heading(format!("{}2", ui.localize("monoacylglycerol.abbreviation")))
+                    .on_hover_ui(|ui| {
+                        ui.label(format!(
+                            "Calculated from sn-2 {}",
+                            ui.localize("monoacylglycerol?genus=genitive"),
+                        ));
+                    });
             }
             _ => {}
         };
@@ -203,9 +248,8 @@ impl TableView<'_> {
                 ui.label(label);
             }
             (row, id::FA) => {
-                FattyAcidWidget::new(|| self.data_frame.fatty_acid().get(row))
-                    .hover()
-                    .show(ui);
+                let mut fatty_acid = self.data_frame.fa().get(row)?;
+                FattyAcidWidget::new(fatty_acid.as_mut()).hover().show(ui);
             }
             (row, experimental::TAG) => {
                 self.value(
@@ -240,7 +284,7 @@ impl TableView<'_> {
                     self.settings.from != From::Mag2,
                 )?;
             }
-            (row, theoretical::TAG) => {
+            (row, theoretical::TAG) if self.settings.theoretical => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -251,7 +295,7 @@ impl TableView<'_> {
                     true,
                 )?;
             }
-            (row, theoretical::DAG1223) => {
+            (row, theoretical::DAG1223) if self.settings.theoretical => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -262,7 +306,7 @@ impl TableView<'_> {
                     true,
                 )?;
             }
-            (row, theoretical::MAG2) => {
+            (row, theoretical::MAG2) if self.settings.theoretical => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -364,7 +408,7 @@ impl TableView<'_> {
                 )?
                 .on_hover_text("∑ MAG2");
             }
-            theoretical::TAG => {
+            theoretical::TAG if self.settings.theoretical => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -376,7 +420,7 @@ impl TableView<'_> {
                 )?
                 .on_hover_text("∑ TAG");
             }
-            theoretical::DAG1223 => {
+            theoretical::DAG1223 if self.settings.theoretical => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -388,7 +432,7 @@ impl TableView<'_> {
                 )?
                 .on_hover_text("∑ DAG1223");
             }
-            theoretical::MAG2 => {
+            theoretical::MAG2 if self.settings.theoretical => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]

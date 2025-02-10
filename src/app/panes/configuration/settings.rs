@@ -1,5 +1,6 @@
-use crate::{app::MAX_PRECISION, localize};
+use crate::app::MAX_PRECISION;
 use egui::{Grid, Slider, Ui};
+use egui_l20n::UiExt as _;
 use serde::{Deserialize, Serialize};
 
 /// Configuration settings
@@ -32,10 +33,13 @@ impl Settings {
     }
 
     pub(crate) fn show(&mut self, ui: &mut Ui) {
-        Grid::new("configuration").show(ui, |ui| {
+        Grid::new("Configuration").show(ui, |ui| {
             // Precision
-            ui.label(localize!("precision"));
-            ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
+            let mut response = ui.label(ui.localize("settings-precision"));
+            response |= ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
+            response.on_hover_ui(|ui| {
+                ui.label(ui.localize("settings-precision.description"));
+            });
             ui.end_row();
 
             ui.separator();
@@ -43,15 +47,19 @@ impl Settings {
             ui.end_row();
 
             // Properties
-            ui.label(localize!("properties"));
-            ui.checkbox(&mut self.properties, "")
-                .on_hover_text(localize!("properties_description"));
+            let mut response = ui.label(ui.localize("settings-properties"));
+            response |= ui.checkbox(&mut self.properties, "");
+            response.on_hover_ui(|ui| {
+                ui.label(ui.localize("settings-properties.description"));
+            });
             ui.end_row();
 
             // Names
-            ui.label(localize!("names"));
-            ui.checkbox(&mut self.names, "")
-                .on_hover_text(localize!("names_description"));
+            let mut response = ui.label(ui.localize("settings-names"));
+            response |= ui.checkbox(&mut self.names, "");
+            response.on_hover_ui(|ui| {
+                ui.label(ui.localize("settings-names.description"));
+            });
         });
     }
 }

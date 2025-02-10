@@ -5,19 +5,21 @@ use self::{
     table::TableView,
 };
 use super::PaneDelegate;
-use crate::{
-    app::{
-        computers::{CompositionComputed, CompositionKey},
-        text::Text,
+use crate::app::{
+    computers::{
+        FattyAcidCompositionComputed, FattyAcidCompositionKey, TriacylglycerolCompositionComputed,
+        TriacylglycerolCompositionKey,
     },
-    localize,
+    text::Text,
 };
 use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
+use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CHECK, GEAR, INTERSECT_THREE, LIST,
 };
 use metadata::MetaDataFrame;
 use polars::prelude::*;
+use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 
 const ID_SOURCE: &str = "Composition";
@@ -48,14 +50,14 @@ impl Pane {
     pub(crate) fn title(&self) -> String {
         match self.settings.index {
             Some(index) => self.source[index].meta.title(),
-            None => localize!("composition"),
+            None => format_list_truncated!(self.source.iter().map(|frame| frame.meta.title()), 2),
         }
     }
 
     fn header_content(&mut self, ui: &mut Ui) -> Response {
         let mut response = ui
             .heading(Self::icon())
-            .on_hover_text(localize!("composition"));
+            .on_hover_text(ui.localize("composition"));
         response |= ui.heading(self.title());
         response = response
             .on_hover_text(format!("{:x}", self.hash()))
@@ -81,7 +83,7 @@ impl Pane {
             }
         })
         .response
-        .on_hover_text(localize!("list"));
+        .on_hover_text(ui.localize("list"));
         ui.separator();
         // Reset
         if ui
@@ -95,7 +97,7 @@ impl Pane {
             &mut self.settings.resizable,
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
-        .on_hover_text(localize!("resize"));
+        .on_hover_text(ui.localize("resize"));
         ui.separator();
         // Settings
         ui.toggle_value(
@@ -121,8 +123,8 @@ impl Pane {
         self.target = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CompositionComputed>()
-                .get(CompositionKey {
+                .cache::<TriacylglycerolCompositionComputed>()
+                .get(TriacylglycerolCompositionKey {
                     frames: &self.source,
                     settings: &self.settings,
                 })
@@ -139,6 +141,14 @@ impl Pane {
             .default_pos(ui.next_widget_position())
             .open(&mut self.state.open_settings_window)
             .show(ui.ctx(), |ui| {
+                // let data_frame = ui.memory_mut(|memory| {
+                //     memory.caches.cache::<FattyAcidCompositionComputed>().get(
+                //         FattyAcidCompositionKey {
+                //             frames: &self.source,
+                //             settings: &self.settings,
+                //         },
+                //     )
+                // });
                 self.settings.show(ui, &self.target);
                 let enabled = hash(&self.settings.confirmed) != hash(&self.settings.unconfirmed);
                 ui.add_enabled_ui(enabled, |ui| {

@@ -1,6 +1,10 @@
 pub(super) use self::{
     calculation::{Computed as CalculationComputed, Key as CalculationKey},
-    composition::{Computed as CompositionComputed, Key as CompositionKey},
+    composition::{
+        FattyAcidComputed as FattyAcidCompositionComputed, FattyAcidKey as FattyAcidCompositionKey,
+        TriacylglycerolComputed as TriacylglycerolCompositionComputed,
+        TriacylglycerolKey as TriacylglycerolCompositionKey,
+    },
 };
 
 pub(super) mod calculation;

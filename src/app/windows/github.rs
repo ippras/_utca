@@ -1,6 +1,5 @@
 use crate::{
     app::identifiers::{DATA, GITHUB_TOKEN as ID},
-    localize,
     utils::spawn,
 };
 use anyhow::{Error, Result};

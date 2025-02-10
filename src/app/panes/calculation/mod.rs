@@ -1,20 +1,19 @@
 use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
-use crate::{
-    app::{
-        computers::{CalculationComputed, CalculationKey},
-        presets::CHRISTIE,
-        widgets::{FattyAcidWidget, FloatWidget},
-    },
-    localize,
+use crate::app::{
+    computers::{CalculationComputed, CalculationKey},
+    presets::CHRISTIE,
+    widgets::{FattyAcidWidget, FloatWidget},
 };
 use egui::{CursorIcon, Grid, Id, Response, RichText, ScrollArea, Ui, Window, util::hash};
+use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS,
 };
 use lipid::prelude::DataFrameExt as _;
 use metadata::MetaDataFrame;
 use polars::prelude::*;
+use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 
 const ID_SOURCE: &str = "Calculation";
@@ -45,14 +44,14 @@ impl Pane {
     pub(crate) fn title(&self) -> String {
         match self.settings.index {
             Some(index) => self.source[index].meta.title(),
-            None => localize!("calculation"),
+            None => format_list_truncated!(self.source.iter().map(|frame| frame.meta.title()), 2),
         }
     }
 
     fn header_content(&mut self, ui: &mut Ui) -> Response {
-        let mut response = ui
-            .heading(Self::icon())
-            .on_hover_text(localize!("calculation"));
+        let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
+            ui.label(ui.localize("calculation"));
+        });
         response |= ui.heading(self.title());
         response = response
             .on_hover_text(format!("{:x}", self.hash()))
@@ -76,11 +75,16 @@ impl Pane {
             }
         })
         .response
-        .on_hover_text(localize!("list"));
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("list"));
+        });
         ui.separator();
         // Reset
         if ui
             .button(RichText::new(ARROWS_CLOCKWISE).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("reset_table"));
+            })
             .clicked()
         {
             self.state.reset_table_state = true;
@@ -90,18 +94,25 @@ impl Pane {
             &mut self.settings.resizable,
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
-        .on_hover_text(localize!("resize"));
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("resize_table"));
+        });
         ui.separator();
         // Settings
         ui.toggle_value(
             &mut self.state.open_settings_window,
             RichText::new(GEAR).heading(),
-        );
+        )
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("settings"));
+        });
         ui.separator();
         // Composition
         if ui
             .button(RichText::new(INTERSECT_THREE).heading())
-            .on_hover_text(localize!("composition"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("composition"));
+            })
             .clicked()
         {
             let mut target = Vec::with_capacity(self.source.len());
@@ -164,9 +175,8 @@ impl Pane {
                         ui.heading("Value");
                         ui.end_row();
                         for index in 0..CHRISTIE.data.height() {
-                            FattyAcidWidget::new(|| CHRISTIE.data.fatty_acid().get(index))
-                                .hover()
-                                .show(ui);
+                            let mut fatty_acid = CHRISTIE.data.fa().get(index).unwrap();
+                            FattyAcidWidget::new(fatty_acid.as_mut()).hover().show(ui);
                             FloatWidget::new(move || {
                                 Ok(CHRISTIE.data["Christie"].f64()?.get(index))
                             })

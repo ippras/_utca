@@ -11,6 +11,12 @@ pub(crate) struct Behavior {
     pub(crate) close: Option<TileId>,
 }
 
+impl Behavior {
+    pub(crate) fn new() -> Self {
+        Self { close: None }
+    }
+}
+
 impl egui_tiles::Behavior<Pane> for Behavior {
     fn tab_title_for_pane(&mut self, pane: &Pane) -> WidgetText {
         pane.title().into()

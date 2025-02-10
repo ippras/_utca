@@ -1,5 +1,4 @@
 use super::{ID_SOURCE, Settings, State};
-use crate::special::composition::{MC, NC, PMC, UC};
 use egui::{Align2, Color32, Id, Ui, Vec2b};
 use egui_plot::{AxisHints, Bar, BarChart, Line, Plot, PlotPoints};
 use polars::prelude::*;
@@ -46,8 +45,8 @@ impl PlotView<'_> {
             let indices = &self.data_frame["Index"];
             let keys = self.data_frame["Keys"].struct_()?;
             let values = self.data_frame["Values"].array()?;
-            let groups = &self.settings.confirmed.groups;
-            let index = groups.len() - 1;
+            let selections = &self.settings.confirmed.selections;
+            let index = selections.len() - 1;
             let fields = &keys.fields_as_series();
             let keys = &fields[index];
             let mut bars = Vec::new();
@@ -55,9 +54,9 @@ impl PlotView<'_> {
                 let values = values.unwrap();
                 let mut value = values.f64()?.get(index).unwrap();
                 let key = keys.str_value(row)?;
-                let x = match self.settings.confirmed.groups[index].composition {
+                let x = match self.settings.confirmed.selections[index].composition {
                     MC => keys.f64()?.get(row).unwrap(),
-                    NC => keys.i64()?.get(row).unwrap() as _,
+                    EC => keys.i64()?.get(row).unwrap() as _,
                     UC => keys.i64()?.get(row).unwrap() as _,
                     _ => indices.u32()?.get(row).unwrap() as _,
                 };

@@ -1,7 +1,7 @@
-use crate::localize;
 use egui::{Frame, Grid, Label, Response, RichText, Sides, Ui, Widget, menu::bar};
 use egui_dnd::dnd;
 use egui_extras::{Column, TableBuilder};
+use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{ARROWS_OUT_CARDINAL, CHECK, TRASH};
 use metadata::MetaDataFrame;
 use serde::{Deserialize, Serialize};
@@ -41,12 +41,12 @@ impl Data {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         // Header
         bar(ui, |ui| {
-            ui.heading(localize!("files"));
+            ui.heading(ui.localize("files"));
             ui.separator();
             // Check all
             if ui
                 .button(RichText::new(CHECK).heading())
-                .on_hover_text(localize!("check-all"))
+                .on_hover_text(ui.localize("check-all"))
                 .clicked()
             {
                 if let Some(&checked) = self.checked.get(0) {
@@ -57,7 +57,7 @@ impl Data {
             // Delete all
             if ui
                 .button(RichText::new(TRASH).heading())
-                .on_hover_text(localize!("delete-all"))
+                .on_hover_text(ui.localize("delete-all"))
                 .clicked()
             {
                 *self = Default::default();

@@ -1,5 +1,5 @@
 use crate::special::composition::{
-    Composition, Kind, MC, NC, PMC, PNC, PSC, PTC, PUC, SC, SMC, SNC, SSC, STC, SUC, TC, UC,
+    Composition, MNC, MSC, NNC, NSC, SNC, SPC, SSC, TNC, TPC, TSC, UNC, USC,
 };
 
 // Text
@@ -12,71 +12,35 @@ pub trait Text {
 impl Text for Composition {
     fn text(&self) -> &'static str {
         match *self {
-            NC => "NC",
-            PNC => "PNC",
-            SNC => "SNC",
-
-            MC => "MC",
-            PMC => "PMC",
-            SMC => "SMC",
-
-            UC => "UC",
-            PUC => "PUC",
-            SUC => "SUC",
-
-            TC => "TC",
-            PTC => "PTC",
-            STC => "STC",
-
-            SC => "SC",
-            PSC => "PSC",
-            SSC => "SSC",
+            MNC => "mass_nonstereospecific_composition.abbreviation",
+            MSC => "mass_stereospecific_composition.abbreviation",
+            NNC => "equivalent_carbon_number_nonstereospecific_composition.abbreviation",
+            NSC => "equivalent_carbon_number_stereospecific_composition.abbreviation",
+            SNC => "species_nonstereospecific_composition.abbreviation",
+            SPC => "species_positionalspecific_composition.abbreviation",
+            SSC => "species_stereospecific_composition.abbreviation",
+            TNC => "type_nonstereospecific_composition.abbreviation",
+            TPC => "type_positionalspecific_composition.abbreviation",
+            TSC => "type_stereospecific_composition.abbreviation",
+            UNC => "unsaturation_nonstereospecific_composition.abbreviation",
+            USC => "unsaturation_stereospecific_composition.abbreviation",
         }
     }
 
     fn hover_text(&self) -> &'static str {
         match *self {
-            NC => "Equivalent carbon number composition",
-            PNC => "Positional equivalent carbon number composition",
-            SNC => "Stereo equivalent carbon number composition",
-
-            MC => "Mass composition",
-            PMC => "Positional mass composition",
-            SMC => "Stereo mass composition",
-
-            UC => "Unsaturation composition",
-            PUC => "Positional unsaturation composition",
-            SUC => "Stereo unsaturation composition",
-
-            TC => "Type composition",
-            PTC => "Positional type composition",
-            STC => "Stereo type composition",
-
-            SC => "Species composition",
-            PSC => "Positional species composition",
-            SSC => "Stereo species composition",
-        }
-    }
-}
-
-impl Text for Kind {
-    fn text(&self) -> &'static str {
-        match self {
-            Self::Ecn => "Equivalent carbon number",
-            Self::Mass => "Mass",
-            Self::Species => "Species",
-            Self::Type => "Type",
-            Self::Unsaturation => "Unsaturation",
-        }
-    }
-
-    fn hover_text(&self) -> &'static str {
-        match self {
-            Self::Ecn => "ECN",
-            Self::Mass => "M",
-            Self::Species => "S",
-            Self::Type => "T",
-            Self::Unsaturation => "U",
+            MNC => "mass_nonstereospecific_composition",
+            MSC => "mass_stereospecific_composition",
+            NNC => "equivalent_carbon_number_nonstereospecific_composition",
+            NSC => "equivalent_carbon_number_stereospecific_composition",
+            SNC => "species_nonstereospecific_composition",
+            SPC => "species_positionalspecific_composition",
+            SSC => "species_stereospecific_composition",
+            TNC => "type_nonstereospecific_composition",
+            TPC => "type_positionalspecific_composition",
+            TSC => "type_stereospecific_composition",
+            UNC => "unsaturation_nonstereospecific_composition",
+            USC => "unsaturation_stereospecific_composition",
         }
     }
 }
