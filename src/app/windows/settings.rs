@@ -13,7 +13,7 @@ pub(crate) struct SettingsWindow {
 }
 
 impl SettingsWindow {
-    pub(crate) const fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { open: false }
     }
 

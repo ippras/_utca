@@ -9,7 +9,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub(crate) const fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             add_table_row: false,
             delete_table_row: None,

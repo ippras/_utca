@@ -42,13 +42,13 @@ pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 /// Configuration pane
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
-    pub(crate) frames: Vec<MetaDataFrame>,
-    pub(crate) settings: Settings,
+    frames: Vec<MetaDataFrame>,
+    settings: Settings,
     state: State,
 }
 
 impl Pane {
-    pub(crate) const fn new(frames: Vec<MetaDataFrame>) -> Self {
+    pub(crate) fn new(frames: Vec<MetaDataFrame>) -> Self {
         Self {
             frames,
             settings: Settings::new(),
@@ -191,7 +191,7 @@ impl Pane {
     fn body_content_meta(&mut self, ui: &mut Ui, index: usize) {
         ui.style_mut().visuals.collapsing_header_frame = true;
         ui.collapsing(RichText::new(format!("{TAG} Metadata")).heading(), |ui| {
-            self.frames[index].meta.show(ui);
+            self.frames[index].meta.show_writable(ui);
         });
     }
 

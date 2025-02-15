@@ -21,14 +21,14 @@ const ID_SOURCE: &str = "Calculation";
 /// Calculation pane
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Pane {
-    pub(crate) source: Vec<MetaDataFrame>,
-    pub(crate) target: DataFrame,
-    pub(crate) settings: Settings,
+    source: Vec<MetaDataFrame>,
+    target: DataFrame,
+    settings: Settings,
     state: State,
 }
 
 impl Pane {
-    pub(crate) const fn new(frames: Vec<MetaDataFrame>, index: usize) -> Self {
+    pub(crate) fn new(frames: Vec<MetaDataFrame>, index: usize) -> Self {
         Self {
             source: frames,
             target: DataFrame::empty(),

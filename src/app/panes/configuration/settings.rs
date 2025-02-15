@@ -19,7 +19,7 @@ pub(crate) struct Settings {
 }
 
 impl Settings {
-    pub(crate) const fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             index: 0,
             resizable: false,

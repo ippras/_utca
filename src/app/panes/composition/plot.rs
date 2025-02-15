@@ -1,8 +1,10 @@
 use super::{ID_SOURCE, Settings, State};
+use crate::special::composition::{
+    Composition, MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC,
+};
 use egui::{Align2, Color32, Id, Ui, Vec2b};
 use egui_plot::{AxisHints, Bar, BarChart, Line, Plot, PlotPoints};
 use polars::prelude::*;
-// use super::settings::MC;
 
 /// Composition plot
 #[derive(Debug)]
@@ -13,7 +15,7 @@ pub(crate) struct PlotView<'a> {
 }
 
 impl<'a> PlotView<'a> {
-    pub const fn new(
+    pub fn new(
         data_frame: &'a DataFrame,
         settings: &'a Settings,
         state: &'a mut State,
@@ -45,7 +47,7 @@ impl PlotView<'_> {
             let indices = &self.data_frame["Index"];
             let keys = self.data_frame["Keys"].struct_()?;
             let values = self.data_frame["Values"].array()?;
-            let selections = &self.settings.confirmed.selections;
+            let selections = &self.settings.confirmable.selections;
             let index = selections.len() - 1;
             let fields = &keys.fields_as_series();
             let keys = &fields[index];
@@ -54,10 +56,10 @@ impl PlotView<'_> {
                 let values = values.unwrap();
                 let mut value = values.f64()?.get(index).unwrap();
                 let key = keys.str_value(row)?;
-                let x = match self.settings.confirmed.selections[index].composition {
-                    MC => keys.f64()?.get(row).unwrap(),
-                    EC => keys.i64()?.get(row).unwrap() as _,
-                    UC => keys.i64()?.get(row).unwrap() as _,
+                let x = match self.settings.confirmable.selections[index].composition {
+                    MMC => keys.f64()?.get(row).unwrap(),
+                    NMC => keys.i64()?.get(row).unwrap() as _,
+                    UMC => keys.i64()?.get(row).unwrap() as _,
                     _ => indices.u32()?.get(row).unwrap() as _,
                 };
                 if self.settings.percent {

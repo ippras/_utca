@@ -14,7 +14,7 @@ use egui::{
     util::IdTypeMap, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
-use egui_l20n::UiExt as _;
+use egui_l20n::{ResponseExt, UiExt as _};
 use egui_notify::Toasts;
 use egui_phosphor::{
     Variant, add_to_fonts,
@@ -109,14 +109,6 @@ impl App {
         add_to_fonts(&mut fonts, Variant::Regular);
         cc.egui_ctx.set_fonts(fonts);
         cc.egui_ctx.set_localizations();
-        // cc.egui_ctx.set_localization(
-        //     langid!("ru"),
-        //     Localization::new(language_identifier).with_sources(RU),
-        // );
-        // cc.egui_ctx.set_localization(
-        //     langid!("ru"),
-        //     Localization::new(language_identifier).with_sources(RU),
-        // );
         custom_style(&cc.egui_ctx);
 
         // return Default::default();
@@ -347,13 +339,11 @@ impl App {
                     }
                     ui.separator();
                     // Configuration
-                    let frames = self.data.checked();
+                    let frames = self.data.selected();
                     ui.add_enabled_ui(!frames.is_empty(), |ui| {
                         if ui
                             .button(RichText::new(ConfigurationPane::icon()).size(ICON_SIZE))
-                            .on_hover_ui(|ui| {
-                                ui.label(ui.localize("configuration"));
-                            })
+                            .on_hover_localized("configuration")
                             .clicked()
                         {
                             let pane = Pane::Configuration(ConfigurationPane::new(frames));
@@ -363,9 +353,7 @@ impl App {
                     // Create
                     if ui
                         .button(RichText::new(PLUS).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("create"));
-                        })
+                        .on_hover_localized("create")
                         .clicked()
                     {
                         let data_frame = DataFrame::empty_with_schema(&SCHEMA);
@@ -396,9 +384,7 @@ impl App {
                         // About
                         if ui
                             .button(RichText::new(INFO).size(ICON_SIZE))
-                            .on_hover_ui(|ui| {
-                                ui.label(ui.localize("about"));
-                            })
+                            .on_hover_localized("about")
                             .clicked()
                         {
                             self.about.open ^= true;

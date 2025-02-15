@@ -5,12 +5,15 @@ use self::{
     table::TableView,
 };
 use super::PaneDelegate;
-use crate::app::{
-    computers::{
-        FattyAcidCompositionComputed, FattyAcidCompositionKey, TriacylglycerolCompositionComputed,
-        TriacylglycerolCompositionKey,
+use crate::{
+    app::{
+        computers::{
+            CompositionComputed, CompositionKey, FilteredCompositionComputed,
+            FilteredCompositionKey,
+        },
+        text::Text,
     },
-    text::Text,
+    utils::Hashed,
 };
 use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -27,17 +30,20 @@ const ID_SOURCE: &str = "Composition";
 /// Composition pane
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
-    pub(crate) source: Vec<MetaDataFrame>,
-    pub(crate) target: DataFrame,
-    pub(crate) settings: Settings,
+    source: Hashed<Vec<MetaDataFrame>>,
+    target: Hashed<DataFrame>,
+    settings: Settings,
     state: State,
 }
 
 impl Pane {
     pub(crate) fn new(frames: Vec<MetaDataFrame>, index: Option<usize>) -> Self {
         Self {
-            source: frames,
-            target: DataFrame::empty(),
+            source: Hashed::new(frames),
+            target: Hashed {
+                value: DataFrame::empty(),
+                hash: 0,
+            },
             settings: Settings::new(index),
             state: State::new(),
         }
@@ -50,7 +56,9 @@ impl Pane {
     pub(crate) fn title(&self) -> String {
         match self.settings.index {
             Some(index) => self.source[index].meta.title(),
-            None => format_list_truncated!(self.source.iter().map(|frame| frame.meta.title()), 2),
+            None => {
+                format_list_truncated!(self.source.iter().map(|frame| frame.meta.title()), 2)
+            }
         }
     }
 
@@ -60,7 +68,7 @@ impl Pane {
             .on_hover_text(ui.localize("composition"));
         response |= ui.heading(self.title());
         response = response
-            .on_hover_text(format!("{:x}", self.hash()))
+            .on_hover_text(format!("{:x}/{:x}", self.source.hash, self.target.hash))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         // List
@@ -121,17 +129,31 @@ impl Pane {
 
     fn body_content(&mut self, ui: &mut Ui) {
         self.target = ui.memory_mut(|memory| {
+            let key = CompositionKey {
+                frames: &self.source,
+                settings: &self.settings,
+            };
+            Hashed {
+                value: memory.caches.cache::<CompositionComputed>().get(key),
+                hash: hash(key),
+            }
+        });
+        let filtered_data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<TriacylglycerolCompositionComputed>()
-                .get(TriacylglycerolCompositionKey {
-                    frames: &self.source,
+                .cache::<FilteredCompositionComputed>()
+                .get(FilteredCompositionKey {
+                    data_frame: &self.target,
                     settings: &self.settings,
                 })
         });
         match self.state.view {
-            View::Plot => PlotView::new(&self.target, &self.settings, &mut self.state).show(ui),
-            View::Table => TableView::new(&self.target, &self.settings, &mut self.state).show(ui),
+            View::Plot => {
+                PlotView::new(&filtered_data_frame, &self.settings, &mut self.state).show(ui)
+            }
+            View::Table => {
+                TableView::new(&filtered_data_frame, &self.settings, &mut self.state).show(ui)
+            }
         }
     }
 
@@ -141,37 +163,8 @@ impl Pane {
             .default_pos(ui.next_widget_position())
             .open(&mut self.state.open_settings_window)
             .show(ui.ctx(), |ui| {
-                // let data_frame = ui.memory_mut(|memory| {
-                //     memory.caches.cache::<FattyAcidCompositionComputed>().get(
-                //         FattyAcidCompositionKey {
-                //             frames: &self.source,
-                //             settings: &self.settings,
-                //         },
-                //     )
-                // });
                 self.settings.show(ui, &self.target);
-                let enabled = hash(&self.settings.confirmed) != hash(&self.settings.unconfirmed);
-                ui.add_enabled_ui(enabled, |ui| {
-                    ui.horizontal(|ui| {
-                        if ui
-                            .button(RichText::new(format!("{ARROWS_CLOCKWISE} Reset")).heading())
-                            .clicked()
-                        {
-                            self.settings.unconfirmed = self.settings.confirmed.clone();
-                        }
-                        if ui
-                            .button(RichText::new(format!("{CHECK} Confirm")).heading())
-                            .clicked()
-                        {
-                            self.settings.confirmed = self.settings.unconfirmed.clone();
-                        }
-                    });
-                });
             });
-    }
-
-    fn hash(&self) -> u64 {
-        hash(&self.source)
     }
 }
 

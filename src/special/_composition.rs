@@ -100,7 +100,7 @@ pub struct Composition {
 }
 
 impl Composition {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             kind: Kind::Species,
             agregation: false,

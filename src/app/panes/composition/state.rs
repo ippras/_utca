@@ -17,7 +17,7 @@ pub(crate) struct State {
 }
 
 impl State {
-    pub(crate) const fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             open_settings_window: false,
             view: View::Table,

@@ -5,34 +5,34 @@ use self::{
 use serde::{Deserialize, Serialize};
 
 pub const COMPOSITIONS: [Composition; 12] =
-    [MNC, MSC, NNC, NSC, SNC, SPC, SSC, TNC, TPC, TSC, UNC, USC];
+    [MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC];
 
 // Mass composition, non-stereospecific, agregation
-pub const MNC: Composition = Mass(NonStereospecific(Agregation));
+pub const MMC: Composition = Mass(NonStereospecific(Agregation));
 // Mass composition, stereospecific
 pub const MSC: Composition = Mass(Stereospecific);
 
 // Equivalent carbon number composition, non-stereospecific, agregation
-pub const NNC: Composition = EquivalentCarbonNumber(NonStereospecific(Agregation));
+pub const NMC: Composition = EquivalentCarbonNumber(NonStereospecific(Agregation));
 // Equivalent carbon number composition, stereospecific
 pub const NSC: Composition = EquivalentCarbonNumber(Stereospecific);
 
 // Species composition, non-stereospecific, permutation
-pub const SNC: Composition = Species(NonStereospecific(Permutation { positional: false }));
+pub const SMC: Composition = Species(NonStereospecific(Permutation { positional: false }));
 // Species composition, non-stereospecific, permutation, positional
 pub const SPC: Composition = Species(NonStereospecific(Permutation { positional: true }));
 // Species composition, stereospecific
 pub const SSC: Composition = Species(Stereospecific);
 
 // Type composition, non-stereospecific, permutation
-pub const TNC: Composition = Type(NonStereospecific(Permutation { positional: false }));
+pub const TMC: Composition = Type(NonStereospecific(Permutation { positional: false }));
 // Type composition, non-stereospecific, permutation, positional
 pub const TPC: Composition = Type(NonStereospecific(Permutation { positional: true }));
 // Type composition, stereospecific
 pub const TSC: Composition = Type(Stereospecific);
 
 // Unsaturation composition, non-stereospecific, agregation
-pub const UNC: Composition = Unsaturation(NonStereospecific(Agregation));
+pub const UMC: Composition = Unsaturation(NonStereospecific(Agregation));
 // Unsaturation composition, stereospecific
 pub const USC: Composition = Unsaturation(Stereospecific);
 
@@ -49,6 +49,12 @@ pub enum Composition {
 impl Composition {
     pub fn new() -> Self {
         SSC
+    }
+}
+
+impl Default for Composition {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

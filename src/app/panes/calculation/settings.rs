@@ -29,7 +29,7 @@ pub(crate) struct Settings {
 }
 
 impl Settings {
-    pub(crate) const fn new(index: Option<usize>) -> Self {
+    pub(crate) fn new(index: Option<usize>) -> Self {
         Self {
             index,
             percent: true,
@@ -282,7 +282,7 @@ pub(crate) struct Normalize {
 }
 
 impl Normalize {
-    pub(crate) const fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             experimental: true,
             theoretical: true,

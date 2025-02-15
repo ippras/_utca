@@ -1,18 +1,12 @@
 pub(crate) use self::filter::{Filter, FilterWidget};
 
 use crate::{
-    app::{
-        MAX_PRECISION,
-        computers::{UniqueCompositionComputed, UniqueCompositionKey},
-        text::Text,
-    },
+    app::{MAX_PRECISION, text::Text},
     r#const::relative_atomic_mass::{H, LI, NA, NH4},
     special::composition::{COMPOSITIONS, Composition},
-    utils::Hashed,
 };
 use egui::{
-    ComboBox, DragValue, Grid, Id, Key, KeyboardShortcut, Modal, Modifiers, RichText, ScrollArea,
-    Sides, Slider, Ui, emath::Float, util::hash,
+    ComboBox, DragValue, Grid, Key, KeyboardShortcut, Modifiers, RichText, Slider, Ui, emath::Float,
 };
 use egui_ext::LabeledSeparator;
 use egui_l20n::UiExt;
@@ -27,29 +21,31 @@ use std::{
 /// Composition settings
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub(crate) struct Settings {
+    pub(crate) index: Option<usize>,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
     pub(crate) resizable: bool,
     pub(crate) sticky_columns: usize,
 
-    pub(crate) index: Option<usize>,
-    pub(crate) confirmable: Confirmable,
+    pub(crate) confirmed: Confirmable,
+    pub(super) unconfirmed: Confirmable,
 }
 
 impl Settings {
     pub(crate) fn new(index: Option<usize>) -> Self {
         Self {
+            index: index,
             percent: true,
             precision: 1,
             resizable: false,
             sticky_columns: 0,
 
-            index: index,
-            confirmable: Confirmable::new(),
+            confirmed: Confirmable::new(),
+            unconfirmed: Confirmable::new(),
         }
     }
 
-    pub(crate) fn show(&mut self, ui: &mut Ui, data_frame: &Hashed<DataFrame>) {
+    pub(crate) fn show(&mut self, ui: &mut Ui, data_frame: &DataFrame) {
         Grid::new("Composition").show(ui, |ui| {
             // Precision
             ui.label(ui.localize("settings-precision"));
@@ -65,7 +61,7 @@ impl Settings {
             ui.label(ui.localize("settings-sticky_columns"));
             ui.add(Slider::new(
                 &mut self.sticky_columns,
-                0..=self.confirmable.selections.len() * 2 + 1,
+                0..=self.unconfirmed.selections.len() * 2 + 1,
             ));
             ui.end_row();
 
@@ -75,39 +71,12 @@ impl Settings {
 
             // Compose
             ui.label(ui.localize("settings-compose"));
-            ui.menu_button(PLUS, |ui| {
-                let id_salt = "Composition";
-                let id = ui.auto_id_with(Id::new(id_salt));
-
-                let mut current_value =
-                    ui.data_mut(|data| data.get_temp::<Option<Composition>>(id).flatten());
-                let max_height = ui.spacing().combo_height;
-                ScrollArea::vertical()
-                    .max_height(max_height)
-                    .show(ui, |ui| {
-                        for selected_value in COMPOSITIONS {
-                            let response = ui
-                                .selectable_value(
-                                    &mut current_value,
-                                    Some(selected_value),
-                                    ui.localize(selected_value.text()),
-                                )
-                                .on_hover_text(ui.localize(selected_value.hover_text()));
-                            if response.clicked() {
-                                self.confirmable.selections.push_front(Selection {
-                                    composition: selected_value,
-                                    filter: Default::default(),
-                                });
-                                current_value = None;
-                                ui.close_menu();
-                            }
-                        }
-                    });
-                ui.data_mut(|data| data.insert_temp(id, current_value));
-            });
+            if ui.button(PLUS).clicked() {
+                self.unconfirmed.selections.push_front(Selection::new());
+            }
             ui.end_row();
             let mut index = 0;
-            self.confirmable.selections.retain_mut(|selection| {
+            self.unconfirmed.selections.retain_mut(|selection| {
                 let mut keep = true;
                 ui.label("");
                 ui.horizontal(|ui| {
@@ -133,105 +102,56 @@ impl Settings {
                         .response
                         .on_hover_text(ui.localize(selection.composition.hover_text()));
                     // Filter
-                    // let data_frame = ui.memory_mut(|memory| {
-                    //     memory
-                    //         .caches
-                    //         .cache::<UniqueCompositionComputed>()
-                    //         .get(UniqueCompositionKey {
-                    //             data_frame,
-                    //             selections: &self.confirmable.selections,
-                    //         })
-                    // });
-                    // if let Some(series) = ui.memory_mut(|memory| {
-                    //     memory
-                    //         .caches
-                    //         .cache::<UniqueCompositionComputed>()
-                    //         .get(UniqueCompositionKey { data_frame, index })
-                    // }) {
-                    //     // ui.add(FilterWidget::new(selection, &series).percent(self.percent));
-                    // }
-                    if let Some(series) = data_frame["Keys"]
-                        .struct_()
-                        .unwrap()
-                        .fields_as_series()
-                        .get(index)
-                    {
-                        let series = series.unique().unwrap().sort(Default::default()).unwrap();
-                        ui.add(FilterWidget::new(selection, &series).percent(self.percent));
-                    }
+                    let series = &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
+                    ui.add(FilterWidget::new(selection, series).percent(self.percent));
                 });
                 ui.end_row();
                 index += 1;
                 keep
             });
 
-            // // Filter
-            // ui.label(ui.localize("settings-filter?case=title"));
-            // for (index, selection) in &mut self.unconfirmed.selections.iter_mut().enumerate() {
-            //     let series = &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
-            //     ui.add(FilterWidget::new(selection, series).percent(self.percent));
-            // }
-            // ui.end_row();
-
-            // if enabled {
-            //     let series =
-            //         &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
-            //     ui.add_enabled(
-            //         enabled,
-            //         FilterWidget::new(selection, series).percent(self.percent),
-            //     );
-            // } else {
-            //     ui.add_enabled(
-            //         enabled,
-            //         FilterWidget::new(
-            //             selection,
-            //             &Series::new_empty(PlSmallStr::EMPTY, &DataType::Null),
-            //         ),
-            //     );
-            // }
-
             // Method
             ui.label(ui.localize("settings-method"));
             if ui.input_mut(|input| {
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::G))
             }) {
-                self.confirmable.method = Method::Gunstone;
+                self.unconfirmed.method = Method::Gunstone;
             }
             if ui.input_mut(|input| {
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::W))
             }) {
-                self.confirmable.method = Method::VanderWal;
+                self.unconfirmed.method = Method::VanderWal;
             }
             ComboBox::from_id_salt("method")
-                .selected_text(self.confirmable.method.text())
+                .selected_text(self.unconfirmed.method.text())
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
-                        &mut self.confirmable.method,
+                        &mut self.unconfirmed.method,
                         Method::Gunstone,
                         Method::Gunstone.text(),
                     )
                     .on_hover_text(Method::Gunstone.hover_text());
                     ui.selectable_value(
-                        &mut self.confirmable.method,
+                        &mut self.unconfirmed.method,
                         Method::VanderWal,
                         Method::VanderWal.text(),
                     )
                     .on_hover_text(Method::VanderWal.hover_text());
                 })
                 .response
-                .on_hover_text(self.confirmable.method.hover_text());
+                .on_hover_text(self.unconfirmed.method.hover_text());
             ui.end_row();
 
             // Adduct
             ui.label(ui.localize("settings-adduct"));
             ui.horizontal(|ui| {
-                let adduct = &mut self.confirmable.adduct;
+                let adduct = &mut self.unconfirmed.adduct;
                 ui.add(
                     DragValue::new(adduct)
                         .range(0.0..=f64::MAX)
-                        .speed(1.0 / 10f64.powi(self.confirmable.round_mass as _))
+                        .speed(1.0 / 10f64.powi(self.unconfirmed.round_mass as _))
                         .custom_formatter(|n, _| {
-                            format!("{n:.*}", self.confirmable.round_mass as _)
+                            format!("{n:.*}", self.unconfirmed.round_mass as _)
                         }),
                 )
                 .on_hover_text(format!("{adduct}"));
@@ -256,7 +176,7 @@ impl Settings {
             // Round mass
             ui.label(ui.localize("settings-round_mass"));
             ui.add(Slider::new(
-                &mut self.confirmable.round_mass,
+                &mut self.unconfirmed.round_mass,
                 0..=MAX_PRECISION as _,
             ));
             ui.end_row();
@@ -270,7 +190,7 @@ impl Settings {
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("settings-show_filtered.hover"));
                 });
-            ui.checkbox(&mut self.confirmable.show_filtered, "");
+            ui.checkbox(&mut self.unconfirmed.show_filtered, "");
             ui.end_row();
 
             // // Join
@@ -296,40 +216,40 @@ impl Settings {
             // Sort
             ui.label(ui.localize("settings-sort"));
             ComboBox::from_id_salt("sort")
-                .selected_text(self.confirmable.sort.text())
+                .selected_text(self.unconfirmed.sort.text())
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.confirmable.sort, Sort::Key, Sort::Key.text())
+                    ui.selectable_value(&mut self.unconfirmed.sort, Sort::Key, Sort::Key.text())
                         .on_hover_text(Sort::Key.hover_text());
                     ui.selectable_value(
-                        &mut self.confirmable.sort,
+                        &mut self.unconfirmed.sort,
                         Sort::Value,
                         Sort::Value.text(),
                     )
                     .on_hover_text(Sort::Value.hover_text());
                 })
                 .response
-                .on_hover_text(self.confirmable.sort.hover_text());
+                .on_hover_text(self.unconfirmed.sort.hover_text());
             ui.end_row();
             // Order
             ui.label(ui.localize("settings-order"));
             ComboBox::from_id_salt("order")
-                .selected_text(self.confirmable.order.text())
+                .selected_text(self.unconfirmed.order.text())
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
-                        &mut self.confirmable.order,
+                        &mut self.unconfirmed.order,
                         Order::Ascending,
                         Order::Ascending.text(),
                     )
                     .on_hover_text(Order::Ascending.hover_text());
                     ui.selectable_value(
-                        &mut self.confirmable.order,
+                        &mut self.unconfirmed.order,
                         Order::Descending,
                         Order::Descending.text(),
                     )
                     .on_hover_text(Order::Descending.hover_text());
                 })
                 .response
-                .on_hover_text(self.confirmable.order.hover_text());
+                .on_hover_text(self.unconfirmed.order.hover_text());
             ui.end_row();
 
             if self.index.is_none() {
@@ -340,7 +260,7 @@ impl Settings {
 
                 // https://numpy.org/devdocs/reference/generated/numpy.std.html
                 ui.label(ui.localize("settings-ddof"));
-                ui.add(Slider::new(&mut self.confirmable.ddof, 0..=2));
+                ui.add(Slider::new(&mut self.unconfirmed.ddof, 0..=2));
                 ui.end_row();
             }
 

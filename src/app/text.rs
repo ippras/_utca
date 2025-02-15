@@ -1,5 +1,5 @@
 use crate::special::composition::{
-    Composition, MNC, MSC, NNC, NSC, SNC, SPC, SSC, TNC, TPC, TSC, UNC, USC,
+    Composition, MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC,
 };
 
 // Text
@@ -12,35 +12,35 @@ pub trait Text {
 impl Text for Composition {
     fn text(&self) -> &'static str {
         match *self {
-            MNC => "mass_nonstereospecific_composition.abbreviation",
-            MSC => "mass_stereospecific_composition.abbreviation",
-            NNC => "equivalent_carbon_number_nonstereospecific_composition.abbreviation",
-            NSC => "equivalent_carbon_number_stereospecific_composition.abbreviation",
-            SNC => "species_nonstereospecific_composition.abbreviation",
-            SPC => "species_positionalspecific_composition.abbreviation",
-            SSC => "species_stereospecific_composition.abbreviation",
-            TNC => "type_nonstereospecific_composition.abbreviation",
-            TPC => "type_positionalspecific_composition.abbreviation",
-            TSC => "type_stereospecific_composition.abbreviation",
-            UNC => "unsaturation_nonstereospecific_composition.abbreviation",
-            USC => "unsaturation_stereospecific_composition.abbreviation",
+            MMC => "mass_nonstereospecific_composition",
+            MSC => "mass_stereospecific_composition",
+            NMC => "equivalent_carbon_number_nonstereospecific_composition",
+            NSC => "equivalent_carbon_number_stereospecific_composition",
+            SMC => "species_nonstereospecific_composition",
+            SPC => "species_positionalspecific_composition",
+            SSC => "species_stereospecific_composition",
+            TMC => "type_nonstereospecific_composition",
+            TPC => "type_positionalspecific_composition",
+            TSC => "type_stereospecific_composition",
+            UMC => "unsaturation_nonstereospecific_composition",
+            USC => "unsaturation_stereospecific_composition",
         }
     }
 
     fn hover_text(&self) -> &'static str {
         match *self {
-            MNC => "mass_nonstereospecific_composition",
-            MSC => "mass_stereospecific_composition",
-            NNC => "equivalent_carbon_number_nonstereospecific_composition",
-            NSC => "equivalent_carbon_number_stereospecific_composition",
-            SNC => "species_nonstereospecific_composition",
-            SPC => "species_positionalspecific_composition",
-            SSC => "species_stereospecific_composition",
-            TNC => "type_nonstereospecific_composition",
-            TPC => "type_positionalspecific_composition",
-            TSC => "type_stereospecific_composition",
-            UNC => "unsaturation_nonstereospecific_composition",
-            USC => "unsaturation_stereospecific_composition",
+            MMC => "mass_nonstereospecific_composition.hover",
+            MSC => "mass_stereospecific_composition.hover",
+            NMC => "equivalent_carbon_number_nonstereospecific_composition.hover",
+            NSC => "equivalent_carbon_number_stereospecific_composition.hover",
+            SMC => "species_nonstereospecific_composition.hover",
+            SPC => "species_positionalspecific_composition.hover",
+            SSC => "species_stereospecific_composition.hover",
+            TMC => "type_nonstereospecific_composition.hover",
+            TPC => "type_positionalspecific_composition.hover",
+            TSC => "type_stereospecific_composition.hover",
+            UMC => "unsaturation_nonstereospecific_composition.hover",
+            USC => "unsaturation_stereospecific_composition.hover",
         }
     }
 }
