@@ -71,6 +71,7 @@ impl Pane {
         response |= ui.heading(self.title());
         response = response
             .on_hover_text(format!("{:x}", self.hash()))
+            .on_hover_ui(|ui| MetadataWidget::new(&self.frames[self.settings.index].meta).show(ui))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         // List
