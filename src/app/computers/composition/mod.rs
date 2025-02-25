@@ -96,7 +96,7 @@ type Value = DataFrame;
 
 fn compute(lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
     match settings.confirmable.method {
-        Method::Gunstone => vander_wal(lazy_frame, settings),
+        Method::Gunstone => gunstone(lazy_frame, settings),
         Method::VanderWal => vander_wal(lazy_frame, settings),
     }
 }
@@ -124,7 +124,7 @@ fn compute(lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame
 fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
     println!("lazy_frame g0: {}", lazy_frame.clone().collect().unwrap());
     lazy_frame = lazy_frame.select([
-        col("Index"),
+        // col("Index"),
         col("Label"),
         col("FattyAcid"),
         col("Calculated")
@@ -133,6 +133,17 @@ fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<Lazy
     ]);
     println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
     let lazy_frame = lazy_frame.with_columns([
+        // col("Triacylglycerol").apply(
+        //     column(gunstone1),
+        //     GetOutput::from_type(DataType::Struct(vec![
+        //         Field::new("S".into(), DataType::Float64),
+        //         Field::new("U".into(), DataType::Float64),
+        //         Field::new("S3".into(), DataType::Float64),
+        //         Field::new("S2U".into(), DataType::Float64),
+        //         Field::new("SU2".into(), DataType::Float64),
+        //         Field::new("U3".into(), DataType::Float64),
+        //     ])),
+        // ),
         col("Triacylglycerol")
             .filter(col("FattyAcid").fa().is_saturated())
             .sum()
@@ -141,6 +152,25 @@ fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<Lazy
             .filter(col("FattyAcid").fa().is_unsaturated())
             .sum()
             .alias("U"),
+    ]);
+    const TWO_THIRDS: f64 = 2.0 / 3.0;
+    let lazy_frame = lazy_frame.with_columns([
+        when(col("S").lt_eq(lit(TWO_THIRDS)))
+            .then(lit(0))
+            .otherwise(lit(3) * col("S") - lit(2))
+            .alias("S3"),
+        when(col("S").lt_eq(lit(TWO_THIRDS)))
+            .then((lit(3) * col("S") / lit(2)).pow(2))
+            .otherwise(lit(3) * col("U"))
+            .alias("S2U"),
+        when(col("S").lt_eq(lit(TWO_THIRDS)))
+            .then(lit(3) * col("S") * (lit(3) * col("U") - lit(1)) / lit(2))
+            .otherwise(lit(0))
+            .alias("SU2"),
+        when(col("S").lt_eq(lit(TWO_THIRDS)))
+            .then(((lit(3) * col("U") - lit(1)) / lit(2)).pow(2))
+            .otherwise(lit(0))
+            .alias("U3"),
     ]);
     println!("lazy_frame g0: {}", lazy_frame.clone().collect().unwrap());
     let s = lazy_frame.clone().collect()?["_Sum"]
@@ -266,102 +296,6 @@ fn cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
     Ok(lazy_frame)
 }
 
-// fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
-//     // Composition
-//     for (index, selection) in settings.unconfirmed.selections.iter().enumerate() {
-//         lazy_frame = lazy_frame.with_column(
-//             match selection.composition {
-//                 MC => col("FattyAcid")
-//                     .tag()
-//                     .mass(Some(lit(settings.unconfirmed.adduct)))
-//                     .map(
-//                         column(round(settings.unconfirmed.round_mass)),
-//                         GetOutput::same_type(),
-//                     )
-//                     .alias("MC"),
-//                 PMC => col("FattyAcid")
-//                     .tag()
-//                     .positional(
-//                         |expr| expr.fa().mass(None).round(settings.unconfirmed.round_mass),
-//                         PermutationOptions::default().map(true),
-//                     )
-//                     .alias("PMC"),
-//                 SMC => col("FattyAcid")
-//                     .tag()
-//                     .map(|expr| expr.fa().mass(None).round(settings.unconfirmed.round_mass))
-//                     .alias("SMC"),
-//                 EC => col("FattyAcid").tag().ecn().alias("NC"),
-//                 PEC => col("FattyAcid")
-//                     .tag()
-//                     .positional(
-//                         |expr| expr.fa().ecn(),
-//                         PermutationOptions::default().map(true),
-//                     )
-//                     .alias("PNC"),
-//                 SEC => col("FattyAcid")
-//                     .tag()
-//                     .map(|expr| expr.fa().ecn())
-//                     .alias("SNC"),
-//                 SC => col("Label")
-//                     .tag()
-//                     .non_stereospecific(identity, PermutationOptions::default())?
-//                     .alias("SC"),
-//                 PSC => col("Label")
-//                     .tag()
-//                     .positional(identity, PermutationOptions::default())
-//                     .alias("PSC"),
-//                 SSC => col("Label").alias("SSC"),
-//                 TC => col("FattyAcid")
-//                     .tag()
-//                     .non_stereospecific(
-//                         |expr| expr.fa().is_saturated(),
-//                         PermutationOptions::default().map(true),
-//                     )?
-//                     .alias("TC"),
-//                 PTC => col("FattyAcid")
-//                     .tag()
-//                     .positional(
-//                         |expr| expr.fa().is_saturated(),
-//                         PermutationOptions::default().map(true),
-//                     )
-//                     .alias("PTC"),
-//                 STC => col("FattyAcid")
-//                     .tag()
-//                     .map(|expr| expr.fa().is_saturated())
-//                     .alias("STC"),
-//                 UC => col("FattyAcid").tag().unsaturation().alias("UC"),
-//                 PUC => col("FattyAcid")
-//                     .tag()
-//                     .positional(
-//                         |expr| expr.fa().unsaturated().sum(),
-//                         PermutationOptions::default().map(true),
-//                     )
-//                     .alias("PUC"),
-//                 SUC => col("FattyAcid")
-//                     .tag()
-//                     .map(|expr| expr.fa().unsaturated().sum())
-//                     .alias("SUC"),
-//             }
-//             .alias(format!("Key{index}")),
-//         );
-//         // Value
-//         lazy_frame = lazy_frame.with_column(
-//             sum("Value")
-//                 .over([as_struct(vec![col(format!("^Key[0-{index}]$"))])])
-//                 .alias(format!("Value{index}")),
-//         );
-//     }
-//     // Group
-//     lazy_frame = lazy_frame
-//         .group_by([col(r#"^Key\d$"#), col(r#"^Value\d$"#)])
-//         .agg([as_struct(vec![col("Label"), col("FattyAcid"), col("Value")]).alias("Species")]);
-//     lazy_frame = lazy_frame.select([
-//         as_struct(vec![col(r#"^Key\d$"#)]).alias("Keys"),
-//         concat_arr(vec![col(r#"^Value\d$"#)])?.alias("Values"),
-//         col("Species"),
-//     ]);
-//     Ok(lazy_frame)
-// }
 fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
     // Composition
     for (index, selection) in settings.confirmable.selections.iter().enumerate() {
@@ -466,84 +400,6 @@ fn meta(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFram
     Ok(lazy_frame)
 }
 
-fn filter(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
-    // println!(
-    //     "lazy_frame filter: {}",
-    //     lazy_frame.clone().collect().unwrap()
-    // );
-    // if !settings.confirmable.show_filtered {
-    //     let mut predicate = lit(true);
-    //     for (index, selection) in settings.confirmable.selections.iter().enumerate() {
-    //         // Key
-    //         // for (key, value) in &group.filter.key {
-    //         //     // match group.composition {
-    //         //     //     SC => {
-    //         //     //         let expr = col("Keys").struct_().field_by_index(index as _).tag();
-    //         //     //         if value[0] {
-    //         //     //             predicate = predicate
-    //         //     //                 .and(expr.clone().sn1().neq(lit(LiteralValue::from(key.clone()))));
-    //         //     //         }
-    //         //     //         if value[1] {
-    //         //     //             predicate = predicate
-    //         //     //                 .and(expr.clone().sn2().neq(lit(LiteralValue::from(key.clone()))));
-    //         //     //         }
-    //         //     //         if value[2] {
-    //         //     //             predicate = predicate
-    //         //     //                 .and(expr.clone().sn3().neq(lit(LiteralValue::from(key.clone()))));
-    //         //     //         }
-    //         //     //     }
-    //         //     //     PSC => {
-    //         //     //         let expr = col("Keys").struct_().field_by_index(index as _).tag();
-    //         //     //         predicate = predicate
-    //         //     //             .and(expr.clone().sn1().neq(lit(LiteralValue::from(key.clone()))))
-    //         //     //             .and(expr.clone().sn2().neq(lit(LiteralValue::from(key.clone()))));
-    //         //     //     }
-    //         //     //     // MC | ECNC | UC => {
-    //         //     //     //     let expr = col("Keys").struct_().field_by_index(index as _);
-    //         //     //     //     predicate = predicate.and(expr.neq(lit(LiteralValue::from(key.clone()))));
-    //         //     //     // }
-    //         //     //     _ => {
-    //         //     //         // let expr = col("Keys")
-    //         //     //         //     .struct_()
-    //         //     //         //     .field_by_index(index as _)
-    //         //     //         //     .triacylglycerol();
-    //         //     //         // predicate = predicate.and(expr.sn1().neq(lit(key.to_string())));
-    //         //     //     }
-    //         //     // }
-    //         //     let expr = col("Keys").struct_().field_by_index(index as _);
-    //         //     match group.composition {
-    //         //         MC => {
-    //         //             predicate = predicate.and(expr.neq(lit(LiteralValue::from(key.clone()))));
-    //         //         }
-    //         //         _ => {
-    //         //             let expr = expr.tag();
-    //         //             if value[0] {
-    //         //                 predicate = predicate
-    //         //                     .and(expr.clone().sn1().neq(lit(LiteralValue::from(key.clone()))));
-    //         //             }
-    //         //             if value[1] {
-    //         //                 predicate = predicate
-    //         //                     .and(expr.clone().sn2().neq(lit(LiteralValue::from(key.clone()))));
-    //         //             }
-    //         //             if value[2] {
-    //         //                 predicate = predicate
-    //         //                     .and(expr.clone().sn3().neq(lit(LiteralValue::from(key.clone()))));
-    //         //             }
-    //         //         }
-    //         //     }
-    //         // }
-    //         // Value
-    //         let mut expr = col("Values").arr().get(lit(index as u32), false);
-    //         if settings.index.is_none() {
-    //             expr = expr.struct_().field_by_name("Mean");
-    //         }
-    //         // predicate = predicate.and(expr.gt(lit(selection.filter.value)));
-    //     }
-    //     lazy_frame = lazy_frame.filter(predicate);
-    // }
-    lazy_frame
-}
-
 fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     let mut sort_options = SortMultipleOptions::default();
     if let Order::Descending = settings.confirmable.order {
@@ -576,154 +432,48 @@ fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     lazy_frame
 }
 
-// /// Extension methods for [`DataFrame`]
-// trait DataFrameExt {
-//     fn cartesian_product(&self) -> PolarsResult<Triacylglycerol>;
-// }
-
-// impl DataFrameExt for DataFrame {
-//     // TODO https://github.com/pola-rs/polars/issues/18587
-//     fn cartesian_product(&self) -> PolarsResult<Triacylglycerol> {
-//         let lazy_frame = self.clone().lazy().with_row_index("Index", None);
-//         // Fatty acid with stereospecific number value
-//         let fatty_acid = |name| {
-//             as_struct(vec![
-//                 col("Index"),
-//                 col("FA"),
-//                 col("Target")
-//                     .struct_()
-//                     .field_by_name("Calculated")
-//                     .struct_()
-//                     .field_by_name(name)
-//                     .alias("Value"),
-//             ])
-//         };
-//         Ok(Triacylglycerol(
-//             lazy_frame
-//                 .clone()
-//                 .select([fatty_acid("DAG13").alias("SN1")])
-//                 .cross_join(
-//                     lazy_frame.clone().select([fatty_acid("MAG2").alias("SN2")]),
-//                     None,
-//                 )
-//                 .cross_join(lazy_frame.select([fatty_acid("DAG13").alias("SN3")]), None)
-//                 .select([as_struct(vec![col("SN1"), col("SN2"), col("SN3")]).alias("TAG")]),
-//         ))
-//     }
-//     // fn cartesian_product(&self) -> PolarsResult<Tags> {
-//     //     let lazy_frame = self.0.clone().lazy().with_row_index("Index", None);
-//     //     Ok(Tags(
-//     //         lazy_frame
-//     //             .clone()
-//     //             .select([fatty_acid("DAG13.Calculated")?.alias("SN1")])
-//     //             .cross_join(
-//     //                 lazy_frame
-//     //                     .clone()
-//     //                     .select([fatty_acid("MAG2.Calculated")?.alias("SN2")]),
-//     //                 None,
-//     //             )
-//     //             .cross_join(
-//     //                 lazy_frame.select([fatty_acid("DAG13.Calculated")?.alias("SN3")]),
-//     //                 None,
-//     //             )
-//     //             .select([as_struct(vec![col("SN1"), col("SN2"), col("SN3")]).alias("TAG")]),
-//     //     ))
-//     // }
-// }
-
-// fn sort_by_ecn() -> Expr {
-//     col("").sort_by(
-//         [col("").struct_().field_by_name("FA").fa().ecn()],
-//         Default::default(),
-//     )
-// }
-
-// fn sort_by_mass() -> Expr {
-//     col("").sort_by(
-//         [col("").struct_().field_by_name("FA").fa().mass(None)],
-//         Default::default(),
-//     )
-// }
-
-// fn sort_by_type() -> Expr {
-//     col("").sort_by(
-//         [col("").struct_().field_by_name("FA").fa().saturated()],
-//         Default::default(),
-//     )
-// }
-
-// fn sort_by_species() -> Expr {
-//     col("").sort_by(
+// s3: 0.0,
+// s2u: (3.0 * s / 2.0).powi(2),
+// su2: 3.0 * s * (3.0 * u - 1.0) / 2.0,
+// u3: ((3.0 * u - 1.0) / 2.0).powi(2),
+// fn gunstone1(series: &Series) -> PolarsResult<Series> {
+//     let triacylglycerol = series.struct_()?.field_by_name("Triacylglycerol")?.f64()?;
+//     let fatty_acid = series.struct_()?.field_by_name("FattyAcid")?.fa();
+//     let Some(s) = triacylglycerol.filter(fatty_acid).sum() else {
+//         polars_bail!(NoData: "Triacylglycerol");
+//     };
+//     let u = 1.0 - s;
+//     let condition = s <= 2.0 / 3.0;
+//     let s3 = if condition { 0.0 } else { 3.0 * s - 2.0 };
+//     let s2u = if condition {
+//         (3.0 * s / 2.0).powi(2)
+//     } else {
+//         3.0 * u
+//     };
+//     let su2 = if condition {
+//         3.0 * s * (3.0 * u - 1.0) / 2.0
+//     } else {
+//         0.0
+//     };
+//     let u3 = if condition {
+//         ((3.0 * u - 1.0) / 2.0).powi(2)
+//     } else {
+//         0.0
+//     };
+//     Ok(StructChunked::from_series(
+//         PlSmallStr::EMPTY,
+//         series.len(),
 //         [
-//             col("")
-//                 .struct_()
-//                 .field_by_name("FA")
-//                 .struct_()
-//                 .field_by_name("Carbons"),
-//             col("")
-//                 .struct_()
-//                 .field_by_name("FA")
-//                 .struct_()
-//                 .field_by_name("Doubles")
-//                 .list()
-//                 .len(),
-//             col("")
-//                 .struct_()
-//                 .field_by_name("FA")
-//                 .struct_()
-//                 .field_by_name("Triples")
-//                 .list()
-//                 .len(),
-//             col("")
-//                 .struct_()
-//                 .field_by_name("FA")
-//                 .struct_()
-//                 .field_by_name("Label"),
-//             col("").struct_().field_by_name("Index"),
-//         ],
-//         Default::default(),
-//     )
-// }
-
-// fn sort_by_unsaturation() -> Expr {
-//     col("").sort_by(
-//         [col("").struct_().field_by_name("FA").fa().unsaturation()],
-//         Default::default(),
-//     )
-// }
-
-// // Triacylglycerol species
-// fn species() -> Expr {
-//     concat_str(
-//         [col("TAG")
-//             .struct_()
-//             // .field_by_name("FA")
-//             // .struct_()
-//             .field_by_names([r#"^SN[1-3]$"#])
-//             .fa()
-//             .species()],
-//         "",
-//         true,
-//     )
-// }
-
-// // Triacylglycerol value
-// fn value() -> Expr {
-//     col("TAG")
-//         .struct_()
-//         .field_by_name("SN1")
-//         .struct_()
-//         .field_by_name("Value")
-//         * col("TAG")
-//             .struct_()
-//             .field_by_name("SN2")
-//             .struct_()
-//             .field_by_name("Value")
-//         * col("TAG")
-//             .struct_()
-//             .field_by_name("SN3")
-//             .struct_()
-//             .field_by_name("Value")
+//             Scalar::new(DataType::Float64, s.into()).into_series("S".into()),
+//             Scalar::new(DataType::Float64, u.into()).into_series("U".into()),
+//             Scalar::new(DataType::Float64, s3.into()).into_series("S3".into()),
+//             Scalar::new(DataType::Float64, s2u.into()).into_series("S2U".into()),
+//             Scalar::new(DataType::Float64, su2.into()).into_series("SU2".into()),
+//             Scalar::new(DataType::Float64, u3.into()).into_series("U3".into()),
+//         ]
+//         .iter(),
+//     )?
+//     .into_series())
 // }
 
 // impl Composer {
@@ -763,7 +513,6 @@ fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
 //             .sum();
 //         Tree::from(ungrouped.group_by_key(key))
 //     }
-
 //     // 1,3-sn 2-sn 1,2,3-sn
 //     // [abc] = 2*[a13]*[b2]*[c13]
 //     // [aab] = 2*[a13]*[a2]*[b13]
