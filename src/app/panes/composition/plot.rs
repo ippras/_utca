@@ -15,11 +15,7 @@ pub(crate) struct PlotView<'a> {
 }
 
 impl<'a> PlotView<'a> {
-    pub fn new(
-        data_frame: &'a DataFrame,
-        settings: &'a Settings,
-        state: &'a mut State,
-    ) -> Self {
+    pub fn new(data_frame: &'a DataFrame, settings: &'a Settings, state: &'a mut State) -> Self {
         Self {
             data_frame,
             settings,
