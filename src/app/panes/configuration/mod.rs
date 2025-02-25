@@ -8,7 +8,7 @@ use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, ERASER, FLOPPY_DISK, GEAR, LIST, NOTE_PENCIL,
     PENCIL, TAG, TRASH,
 };
-use metadata::MetaDataFrame;
+use metadata::{MetaDataFrame, egui::MetadataWidget};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
@@ -191,7 +191,9 @@ impl Pane {
     fn body_content_meta(&mut self, ui: &mut Ui, index: usize) {
         ui.style_mut().visuals.collapsing_header_frame = true;
         ui.collapsing(RichText::new(format!("{TAG} Metadata")).heading(), |ui| {
-            self.frames[index].meta.show_writable(ui);
+            MetadataWidget::new(&mut self.frames[index].meta)
+                .writable(true)
+                .show(ui);
         });
     }
 

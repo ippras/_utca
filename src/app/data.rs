@@ -5,7 +5,7 @@ use egui::{
 use egui_extras::{Column, TableBuilder};
 use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::{ARROWS_OUT_CARDINAL, CHECK, TRASH};
-use metadata::MetaDataFrame;
+use metadata::{MetaDataFrame, egui::MetadataWidget};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, mem::MaybeUninit};
 
@@ -129,7 +129,7 @@ impl Data {
                                 let response = ui
                                     .add(Label::new(text).sense(Sense::click()).truncate())
                                     .on_hover_ui(|ui| {
-                                        frame.meta.show_readable(ui);
+                                        MetadataWidget::new(&frame.meta).show(ui);
                                     })
                                     .on_hover_ui(|ui| {
                                         Grid::new(ui.next_auto_id()).show(ui, |ui| {
