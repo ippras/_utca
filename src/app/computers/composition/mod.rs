@@ -13,7 +13,6 @@ use std::{
     hash::{Hash, Hasher},
     process::exit,
 };
-use tracing::warn;
 
 /// Composition computed
 pub(crate) type Computed = FrameCache<Value, Computer>;

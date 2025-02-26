@@ -1,13 +1,10 @@
-use egui::{
-    Color32, Frame, Grid, Label, RichText, Sense, Sides, Stroke, TextStyle, TextWrapMode, Ui,
-    Widget, menu::bar, util::hash,
-};
+use egui::{Color32, Frame, Grid, Label, RichText, Sense, Stroke, Ui, menu::bar};
 use egui_extras::{Column, TableBuilder};
 use egui_l20n::{ResponseExt, UiExt as _};
-use egui_phosphor::regular::{ARROWS_OUT_CARDINAL, CHECK, TRASH};
+use egui_phosphor::regular::{CHECK, TRASH};
 use metadata::{MetaDataFrame, egui::MetadataWidget};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, mem::MaybeUninit};
+use std::collections::HashSet;
 
 /// Data
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -22,11 +19,6 @@ impl Data {
             .iter()
             .filter_map(|frame| self.selected.contains(frame).then_some(frame.clone()))
             .collect()
-    }
-
-    pub(crate) fn is_empty(&self) -> bool {
-        assert_eq!(self.frames.len(), self.selected.len());
-        self.frames.is_empty()
     }
 
     pub(crate) fn add(&mut self, frame: MetaDataFrame) {
@@ -274,10 +266,4 @@ impl Data {
         //     });
         // });
     }
-}
-
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-pub(crate) struct State {
-    pub(crate) delete_row: Option<usize>,
-    pub(crate) swap: Option<(usize, usize)>,
 }

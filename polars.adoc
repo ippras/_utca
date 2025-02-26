@@ -42,7 +42,9 @@ pub(crate) fn delete_row(&mut self, row: usize) -> PolarsResult<()> {
 * <https://stackoverflow.com/questions/71486019/how-to-drop-row-in-polars-python>
 * <https://stackoverflow.com/a/71495211/1522758>
 
-== Index list
+== Index list (enumerate)
+
+<https://github.com/pola-rs/polars/pull/13478>
 
 [source, rust]
 expr.list()
