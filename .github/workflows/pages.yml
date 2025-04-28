@@ -1,13 +1,6 @@
 name: Github Pages
 
-on:
-  # workflow_run:
-  #   branches: [main]
-  #   workflows: [Rust]
-  #   types: [completed]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+on: [workflow_dispatch]
 
 jobs:
   build:
@@ -26,16 +19,10 @@ jobs:
     - name: Build
       run: ./trunk build --release --filehash=false --public-url=$public_url
       env:
-        public_url: "https://${{ github.repository_owner }}.github.io/utca"
+        public_url: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        CONFIGS_READ: ${{ secrets.CONFIGS_READ }}
-      # run: trunk build --release --public-url=/${{ github.event.repository.name }}
     - name: Deploy
       uses: JamesIves/github-pages-deploy-action@v4
       with:
         folder: dist
-        repository-name: ${{ github.repository_owner }}/utca
         single-commit: true
-        # ⚠️ Repository permissions:
-        # Contents: Read and write
-        token: ${{ secrets.DEPLOY }}
