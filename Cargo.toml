@@ -79,7 +79,7 @@ polars-utils = { git = "https://github.com/pola-rs/polars", rev = "65848bc2ff4bd
 ] }
 polars_ext = { git = "https://github.com/kgv/polars_ext" }
 radix_trie = "0.2.1"
-re_ui = "0.22.0"
+re_ui = "0.23.1"
 semver = { version = "1.0.25", features = ["serde"] }
 serde = { version = "1.0.217", features = ["derive", "std"] }
 thiserror = "2.0.11"
