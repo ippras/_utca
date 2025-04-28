@@ -15,7 +15,6 @@ use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{FUNNEL, FUNNEL_X, HASH, MINUS, PLUS};
 use itertools::Itertools;
 use polars::prelude::*;
-use re_ui::UiExt as _;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -334,7 +333,7 @@ impl<'a> Widget for ColumnWidget<'a> {
             .inner
         {
             error!(%error);
-            ui.error_with_details_on_hover(error.to_string());
+            // ui.error_with_details_on_hover(error.to_string());
         }
         ui.allocate_response(Default::default(), Sense::hover())
     }

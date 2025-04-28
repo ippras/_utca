@@ -7,7 +7,10 @@ use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use metadata::MetaDataFrame;
 use polars::prelude::*;
-use polars_ext::{ExprExt as _, column, functions::round};
+use polars_ext::{
+    prelude::ExprExt as _,
+    series::{column, round},
+};
 use std::{
     convert::identity,
     hash::{Hash, Hasher},

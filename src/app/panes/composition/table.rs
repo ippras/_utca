@@ -11,7 +11,7 @@ use egui_table::{
     AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState,
 };
 use polars::prelude::*;
-use polars_ext::functions::round;
+use polars_ext::series::round;
 use std::ops::{Add, Range};
 
 const INDEX: Range<usize> = 0..1;

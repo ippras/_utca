@@ -1,6 +1,6 @@
 [package]
 name = "utca"
-version = "0.44.0"
+version = "0.45.0"
 edition = "2024"
 
 [dependencies]
@@ -34,7 +34,9 @@ fluent_content = "0.0.5"
 indexmap = { version = "2.7.1", features = ["serde"] }
 intl-memoizer = "0.5.2"
 itertools = "0.14.0"
-lipid = { git = "https://github.com/ippras/lipid", features = ["polars"] }
+lipid = { git = "https://github.com/ippras/lipid", branch = "fix", features = [
+    "polars",
+] }
 log = "0.4.25"
 maplit = "1.0.2"
 metadata = { git = "https://github.com/ippras/metadata" }
@@ -77,9 +79,11 @@ polars = { version = "0.46.0", default-features = false, features = [
 polars-utils = { git = "https://github.com/pola-rs/polars", rev = "65848bc2ff4bda33809ed8be2517594df5b53d26", features = [
     "nightly",
 ] }
-polars_ext = { git = "https://github.com/kgv/polars_ext" }
+polars_ext = { git = "https://github.com/kgv/polars_ext", features = [
+    "temporal_conversions",
+] }
 radix_trie = "0.2.1"
-re_ui = "0.22.0"
+rust_xlsxwriter = { version = "0.86.1", features = ["chrono", "wasm"] }
 semver = { version = "1.0.25", features = ["serde"] }
 serde = { version = "1.0.217", features = ["derive", "std"] }
 thiserror = "2.0.11"
@@ -87,6 +91,7 @@ tracing = "0.1.41"
 unic-langid = { version = "0.9.5", features = ["macros"] }
 uom = "0.36.0"
 url = { version = "2.5.4", features = ["serde"] }
+# re_ui = "0.22.0"
 
 # native
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

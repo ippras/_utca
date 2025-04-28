@@ -6,7 +6,7 @@ use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use metadata::MetaDataFrame;
 use polars::prelude::*;
-use polars_ext::{ExprExt as _, expr::ExprIfExt as _};
+use polars_ext::{expr::ExprIfExt as _, prelude::ExprExt as _};
 use std::hash::{Hash, Hasher};
 
 /// Calculation computed

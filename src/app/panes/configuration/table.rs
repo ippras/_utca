@@ -11,7 +11,7 @@ use egui_table::{
 };
 use lipid::prelude::*;
 use polars::{chunked_array::builder::AnonymousOwnedListBuilder, prelude::*};
-use polars_ext::DataFrameExt as _;
+use polars_ext::prelude::DataFrameExt as _;
 use std::ops::Range;
 
 const INDEX: Range<usize> = 0..1;

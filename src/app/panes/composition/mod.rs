@@ -13,12 +13,13 @@ use crate::{
         },
         text::Text,
     },
+    export::xlsx,
     utils::Hashed,
 };
 use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
-    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CHECK, GEAR, INTERSECT_THREE, LIST,
+    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CHECK, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST,
 };
 use metadata::MetaDataFrame;
 use polars::prelude::*;
@@ -112,6 +113,32 @@ impl Pane {
             &mut self.state.open_settings_window,
             RichText::new(GEAR).heading(),
         );
+        ui.separator();
+        // Save
+        let file = format!("{}.utca.xlsx", self.title());
+        if ui
+            .button(RichText::new(FLOPPY_DISK).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("save"));
+            })
+            .on_hover_text(&file)
+            .clicked()
+        {
+            let mut data_frame = ui.memory_mut(|memory| {
+                memory
+                    .caches
+                    .cache::<FilteredCompositionComputed>()
+                    .get(FilteredCompositionKey {
+                        data_frame: &self.target,
+                        settings: &self.settings,
+                    })
+            });
+            data_frame = data_frame.unnest(["Keys"]).unwrap();
+            let _ = xlsx::save(&data_frame, &file);
+            // if let Err(error) = self.save() {
+            //     ui.ctx().error(error);
+            // }
+        }
         ui.separator();
         // View
         ui.menu_button(RichText::new(self.state.view.icon()).heading(), |ui| {
