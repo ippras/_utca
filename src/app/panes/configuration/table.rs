@@ -63,7 +63,6 @@ impl TableView<'_> {
             ])
             .num_sticky_cols(self.settings.sticky)
             .headers([HeaderRow::new(height)])
-            .auto_size_mode(AutoSizeMode::OnParentResize)
             .show(ui, self);
         if self.state.add_table_row {
             self.data_frame.add_row().unwrap();

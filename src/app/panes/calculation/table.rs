@@ -90,7 +90,6 @@ impl TableView<'_> {
                 },
                 HeaderRow::new(height),
             ])
-            .auto_size_mode(AutoSizeMode::OnParentResize)
             .show(ui, self);
     }
 
