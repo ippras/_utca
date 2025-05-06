@@ -1,4 +1,5 @@
-use egui::{Color32, Frame, Grid, Label, RichText, Sense, Stroke, Ui, menu::bar};
+use crate::app::panes::configuration::Pane as ConfigurationPane;
+use egui::{Color32, Frame, Grid, Id, Label, RichText, Sense, Stroke, Ui, menu::bar};
 use egui_extras::{Column, TableBuilder};
 use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::{CHECK, TRASH};
@@ -55,6 +56,18 @@ impl Data {
             {
                 *self = Default::default();
             }
+            ui.separator();
+            // Configuration
+            let frames = self.selected();
+            ui.add_enabled_ui(!frames.is_empty(), |ui| {
+                if ui
+                    .button(RichText::new(ConfigurationPane::icon()).heading())
+                    .on_hover_localized("configuration")
+                    .clicked()
+                {
+                    ui.data_mut(|data| data.insert_temp(Id::new("Configure"), frames));
+                }
+            });
             ui.separator();
         });
         // Body

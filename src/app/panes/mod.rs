@@ -13,6 +13,10 @@ pub(crate) enum Pane {
 }
 
 impl Pane {
+    pub(crate) fn configuration(frames: Vec<MetaDataFrame>) -> Self {
+        Self::Configuration(configuration::Pane::new(frames))
+    }
+
     pub(crate) fn calculation(frames: Vec<MetaDataFrame>, index: usize) -> Self {
         Self::Calculation(calculation::Pane::new(frames, index))
     }
