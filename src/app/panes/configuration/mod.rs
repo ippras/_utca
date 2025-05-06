@@ -1,6 +1,6 @@
 use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
-use crate::{app::ContextExt, utils::save};
+use crate::{app::ContextExt, export::ipc::save};
 use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
