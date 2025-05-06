@@ -174,7 +174,7 @@ fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<Lazy
             .otherwise(lit(0))
             .alias("U3"),
     ]);
-    println!("lazy_frame g0: {}", lazy_frame.clone().collect().unwrap());
+    println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
     let s = lazy_frame.clone().collect()?["_Sum"]
         .f64()?
         .first()

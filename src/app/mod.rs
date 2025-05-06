@@ -1,7 +1,7 @@
 use self::{
     data::Data,
     identifiers::{DATA, ERROR, GITHUB_TOKEN},
-    panes::{Pane, behavior::Behavior, configuration::Pane as ConfigurationPane},
+    panes::{Pane, behavior::Behavior},
     windows::{About, GithubWindow},
 };
 use crate::localization::ContextExt as _;
@@ -338,18 +338,18 @@ impl App {
                         self.settings.open = !self.settings.open;
                     }
                     ui.separator();
-                    // Configuration
-                    let frames = self.data.selected();
-                    ui.add_enabled_ui(!frames.is_empty(), |ui| {
-                        if ui
-                            .button(RichText::new(ConfigurationPane::icon()).size(ICON_SIZE))
-                            .on_hover_localized("configuration")
-                            .clicked()
-                        {
-                            let pane = Pane::Configuration(ConfigurationPane::new(frames));
-                            self.tree.insert_pane::<VERTICAL>(pane);
-                        }
-                    });
+                    // // Configuration
+                    // let frames = self.data.selected();
+                    // ui.add_enabled_ui(!frames.is_empty(), |ui| {
+                    //     if ui
+                    //         .button(RichText::new(ConfigurationPane::icon()).size(ICON_SIZE))
+                    //         .on_hover_localized("configuration")
+                    //         .clicked()
+                    //     {
+                    //         let pane = Pane::Configuration(ConfigurationPane::new(frames));
+                    //         self.tree.insert_pane::<VERTICAL>(pane);
+                    //     }
+                    // });
                     // Create
                     if ui
                         .button(RichText::new(PLUS).size(ICON_SIZE))
@@ -420,6 +420,15 @@ impl App {
 
 // Copy/Paste, Drag&Drop
 impl App {
+    fn configure(&mut self, ctx: &Context) {
+        if let Some(frames) =
+            ctx.data_mut(|data| data.remove_temp::<Vec<MetaDataFrame>>(Id::new("Configure")))
+        {
+            self.tree
+                .insert_pane::<VERTICAL>(Pane::configuration(frames));
+        }
+    }
+
     fn calculate(&mut self, ctx: &Context) {
         if let Some((frames, index)) = ctx
             .data_mut(|data| data.remove_temp::<(Vec<MetaDataFrame>, usize)>(Id::new("Calculate")))
@@ -598,6 +607,7 @@ impl eframe::App for App {
     /// Called each time the UI needs repainting, which may be many times per
     /// second.
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+        self.configure(ctx);
         self.calculate(ctx);
         self.compose(ctx);
         // Pre update
