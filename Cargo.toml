@@ -70,7 +70,9 @@ url = { version = "2.5.4", features = ["serde"] }
 # re_ui = "0.22.0"
 # semver = { version = "1.0.26", features = ["serde"] }
 
-egui_ext = { git = "https://github.com/kgv/egui_ext" }
+egui_ext = { git = "https://github.com/kgv/egui_ext", rev = "2c56702380d81e199a1d1996a87933925111e642", features = [
+    "tracing",
+] }
 egui_l20n = { git = "https://github.com/kgv/egui_l20n", features = ["macros"] }
 egui_tiles_ext = { git = "https://github.com/kgv/egui_tiles_ext" }
 lipid = { git = "https://github.com/ippras/lipid", rev = "95eb839cd461819184aa110e544adab4949f1888", features = [
@@ -95,6 +97,9 @@ poll-promise = { version = "0.3.0", features = ["web"] }
 tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.50"
 web-sys = "0.3.77"
+
+# js-sys = "0.3.77"
+# wasm-bindgen = "0.2.100"
 
 [profile.release]
 opt-level = 2 # fast and small wasm

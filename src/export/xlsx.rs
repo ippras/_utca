@@ -27,13 +27,14 @@ mod native {
 mod web {
     use super::*;
     use anyhow::bail;
+    use egui_ext::download::{XLSX, download};
 
     #[instrument(err)]
     pub fn save(data_frame: &DataFrame, name: &str) -> Result<()> {
         let mut workbook = Workbook::new();
         write(data_frame, workbook.add_worksheet())?;
         let buffer = workbook.save_to_buffer()?;
-        if let Err(error) = super::super::save(&buffer, name) {
+        if let Err(error) = download(&buffer, XLSX, name) {
             bail!("save: {error:?}");
         }
         Ok(())
