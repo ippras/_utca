@@ -377,10 +377,11 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
 fn meta(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
     // TODO [array_get?](https://docs.rs/polars/latest/polars/prelude/array/trait.ArrayNameSpace.html)
     let values = |index| {
+        // TODO: .arr().to_list().list() for compute mean std with None
         concat_list([all()
             .exclude(["Keys", r#"^Value\d$"#])
             .arr()
-            .get(lit(index as u32), false)])
+            .get(lit(index as u32), true)])
     };
     for index in 0..settings.confirmable.selections.len() {
         lazy_frame = lazy_frame.with_column(

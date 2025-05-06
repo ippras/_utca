@@ -31,29 +31,27 @@ log = "0.4.27"
 polars = { version = "0.46.0", default-features = false, features = [
     "concat_str",
     "cross_join",
+    "cum_agg",
     "dtype-array",
     "dtype-i8",
     "dtype-struct",
     "dtype-u8",
+    "fmt_no_tty",
+    "ipc",
     "lazy",
     "list_any_all",
     "list_eval",
     "regex",
     "round_series",
     "serde-lazy",
+    "sign",
     "strings",
     #
-    "cum_agg",
-    "fmt_no_tty",
-    "ipc",
-    "sign",
     # "diagonal_concat",
+    "list_drop_nulls",
     # "semi_anti_join",
 ] }
 polars-utils = { version = "0.47.1", features = ["nightly"] }
-# polars-utils = { git = "https://github.com/pola-rs/polars", rev = "65848bc2ff4bda33809ed8be2517594df5b53d26", features = [
-#     "nightly",
-# ] }
 radix_trie = "0.2.1"
 rust_xlsxwriter = { version = "0.86.1", features = ["chrono", "wasm"] }
 serde = { version = "1.0.219", features = ["derive", "std"] }

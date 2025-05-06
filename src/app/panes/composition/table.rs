@@ -13,6 +13,7 @@ use egui_table::{
 use polars::prelude::*;
 use polars_ext::series::round;
 use std::ops::{Add, Range};
+use tracing::instrument;
 
 const INDEX: Range<usize> = 0..1;
 
@@ -76,7 +77,6 @@ impl TableView<'_> {
                 },
                 HeaderRow::new(height),
             ])
-            .auto_size_mode(AutoSizeMode::OnParentResize)
             .show(ui, self);
     }
 
@@ -111,6 +111,7 @@ impl TableView<'_> {
         }
     }
 
+    #[instrument(skip(self, ui), err)]
     fn cell_content_ui(
         &mut self,
         ui: &mut Ui,
