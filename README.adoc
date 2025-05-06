@@ -13,6 +13,11 @@ Ultimate Triacylglycerol Calculation Application
 |link:doc/en-US.adoc[English 🇺🇸] | link:doc/ru-RU.adoc[Русский 🇷🇺]
 |===
 
+== Version
+
+* link:https://ippras.github.io/utca[title=Latest Release, window=_blank]
+* link:https://ippras.github.io/utca/{version}[title=Release Version, window=_blank]
+
 == Run
 
 === Native
