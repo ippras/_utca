@@ -261,7 +261,7 @@ impl Pane {
 
     fn save(&mut self) -> Result<()> {
         let name = format!("{}.utca.ipc", self.title());
-        save(&name, &mut self.frames[self.settings.index])?;
+        save(&mut self.frames[self.settings.index], &name)?;
         Ok(())
     }
 }
