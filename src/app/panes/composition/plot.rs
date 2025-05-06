@@ -63,7 +63,7 @@ impl PlotView<'_> {
                 }
                 bars.push(Bar::new(x, value).name(key));
             }
-            plot_ui.bar_chart(BarChart::new(bars).name(index));
+            plot_ui.bar_chart(BarChart::new("Bars", bars).name(index));
             Ok(())
         });
         Ok(())

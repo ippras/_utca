@@ -23,7 +23,7 @@ impl egui_tiles::Behavior<Pane> for Behavior {
     }
 
     fn pane_ui(&mut self, ui: &mut Ui, tile_id: TileId, pane: &mut Pane) -> UiResponse {
-        let response = TopBottomPanel::top(ui.auto_id_with("TopPanel"))
+        let response = TopBottomPanel::top(ui.auto_id_with("Pane"))
             .show_inside(ui, |ui| {
                 bar(ui, |ui| {
                     ScrollArea::horizontal()

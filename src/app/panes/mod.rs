@@ -37,15 +37,6 @@ impl Pane {
         }
     }
 
-    // pub(crate) fn hash(&self) -> u64 {
-    //     match self {
-    //         Self::Configuration(pane) => pane.hash(),
-    //         Self::Calculation(pane) => pane.hash(),
-    //         Self::Composition(pane) => pane.hash(),
-    //         Self::Visualization(pane) => pane.hash(),
-    //     }
-    // }
-
     fn header(&mut self, ui: &mut Ui) -> Response {
         match self {
             Self::Configuration(pane) => pane.header(ui),
