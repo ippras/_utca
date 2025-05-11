@@ -5,7 +5,7 @@ use self::{
 use serde::{Deserialize, Serialize};
 
 pub const COMPOSITIONS: [Composition; 12] =
-    [MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC];
+    [SMC, SPC, SSC, TMC, TPC, TSC, MMC, MSC, NMC, NSC, UMC, USC];
 
 // Mass composition, non-stereospecific, agregation
 pub const MMC: Composition = Mass(NonStereospecific(Agregation));

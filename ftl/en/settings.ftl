@@ -77,3 +77,6 @@ settings-filter = { $case ->
     *[title] Filter
     [lower] filter
 }
+
+discriminants = Discriminants
+    .hover = Discriminants for Gunstone's theory

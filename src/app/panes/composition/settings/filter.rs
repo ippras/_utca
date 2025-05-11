@@ -118,7 +118,7 @@ impl Widget for FilterWidget<'_> {
                 // Key
                 ui.labeled_separator("Key");
                 match self.selection.composition {
-                    MMC | NMC | UMC => {
+                    MMC | NMC | TMC | UMC => {
                         let series = self.series.unique()?.sort(Default::default())?;
                         ui.add(ColumnWidget {
                             indices: vec![0, 1, 2],
@@ -126,7 +126,7 @@ impl Widget for FilterWidget<'_> {
                             series,
                         });
                     }
-                    SMC | TMC => {
+                    SMC => {
                         let fields = self.series.struct_()?.fields_as_series();
                         let series = fields[0].unique()?.sort(Default::default())?;
                         ui.add(ColumnWidget {

@@ -45,12 +45,12 @@ type Value = DataFrame;
 fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     // println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
     let mut predicate = lit(true);
-    for (index, selection) in settings.confirmable.selections.iter().enumerate() {
+    for (index, selection) in settings.special.selections.iter().enumerate() {
         // Key
         for (key, value) in &selection.filter.key {
             let expr = col("Keys").struct_().field_by_index(index as _);
             match selection.composition {
-                MMC | NMC | UMC if value[0] => {
+                MMC | NMC | TMC | UMC if value[0] => {
                     predicate = predicate.and(expr.neq(lit(LiteralValue::from(key.clone()))));
                 }
                 _ => {
