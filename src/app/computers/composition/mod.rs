@@ -16,6 +16,7 @@ use std::{
     hash::{Hash, Hasher},
     process::exit,
 };
+use tracing::instrument;
 
 /// Composition computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -25,11 +26,12 @@ pub(crate) type Computed = FrameCache<Value, Computer>;
 pub(crate) struct Computer;
 
 impl Computer {
+    #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         // warn!("index: {:?}", key.settings.index);
         let mut settings = key.settings.clone();
-        if settings.confirmable.selections.is_empty() {
-            settings.confirmable.selections.push_back(Selection {
+        if settings.special.selections.is_empty() {
+            settings.special.selections.push_back(Selection {
                 composition: SSC,
                 filter: Filter::new(),
             });
@@ -89,7 +91,7 @@ impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.frames.hash(state);
         self.settings.index.hash(state);
-        self.settings.confirmable.hash(state);
+        self.settings.special.hash(state);
     }
 }
 
@@ -97,12 +99,13 @@ impl Hash for Key<'_> {
 type Value = DataFrame;
 
 fn compute(lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
-    match settings.confirmable.method {
+    match &settings.special.method {
         Method::Gunstone => gunstone(lazy_frame, settings),
         Method::VanderWal => vander_wal(lazy_frame, settings),
     }
 }
 
+// 0.0 + 0.048672 + 0.000623 + 0.950705 = 1.0
 // let u = 1.0 - s;
 // if s <= 2.0 / 3.0 {
 //     Self {
@@ -123,6 +126,14 @@ fn compute(lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame
 //         u3: 0.0,
 //     }
 // }
+// fn factor(&self, r#type: Tag<Saturation>) -> f64 {
+//     match r#type.into() {
+//         S3 => self.s3 / self.s.powi(3),                    // [SSS]
+//         S2U => self.s2u / (self.s.powi(2) * self.u) / 3.0, // [SSU], [USS], [SUS]
+//         SU2 => self.su2 / (self.s * self.u.powi(2)) / 3.0, // [SUU], [USU], [UUS]
+//         U3 => self.u3 / self.u.powi(3),                    // [UUU]
+//     }
+// }
 fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
     println!("lazy_frame g0: {}", lazy_frame.clone().collect().unwrap());
     lazy_frame = lazy_frame.select([
@@ -131,76 +142,181 @@ fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<Lazy
         col("FattyAcid"),
         col("Calculated")
             .struct_()
-            .field_by_names(["Triacylglycerol"]),
+            .field_by_names(["Triacylglycerol"])
+            .alias("Value"),
     ]);
     println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
-    let lazy_frame = lazy_frame.with_columns([
-        // col("Triacylglycerol").apply(
-        //     column(gunstone1),
-        //     GetOutput::from_type(DataType::Struct(vec![
-        //         Field::new("S".into(), DataType::Float64),
-        //         Field::new("U".into(), DataType::Float64),
-        //         Field::new("S3".into(), DataType::Float64),
-        //         Field::new("S2U".into(), DataType::Float64),
-        //         Field::new("SU2".into(), DataType::Float64),
-        //         Field::new("U3".into(), DataType::Float64),
-        //     ])),
-        // ),
-        col("Triacylglycerol")
-            .filter(col("FattyAcid").fa().is_saturated())
-            .sum()
-            .alias("S"),
-        col("Triacylglycerol")
-            .filter(col("FattyAcid").fa().is_unsaturated())
-            .sum()
-            .alias("U"),
-    ]);
-    const TWO_THIRDS: f64 = 2.0 / 3.0;
-    let lazy_frame = lazy_frame.with_columns([
-        when(col("S").lt_eq(lit(TWO_THIRDS)))
-            .then(lit(0))
-            .otherwise(lit(3) * col("S") - lit(2))
-            .alias("S3"),
-        when(col("S").lt_eq(lit(TWO_THIRDS)))
-            .then((lit(3) * col("S") / lit(2)).pow(2))
-            .otherwise(lit(3) * col("U"))
-            .alias("S2U"),
-        when(col("S").lt_eq(lit(TWO_THIRDS)))
-            .then(lit(3) * col("S") * (lit(3) * col("U") - lit(1)) / lit(2))
-            .otherwise(lit(0))
-            .alias("SU2"),
-        when(col("S").lt_eq(lit(TWO_THIRDS)))
-            .then(((lit(3) * col("U") - lit(1)) / lit(2)).pow(2))
-            .otherwise(lit(0))
-            .alias("U3"),
-    ]);
+
+    let factor = gunstone_factor(lazy_frame.clone())?;
+    println!("factor: {factor}");
+    //
     println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
-    let s = lazy_frame.clone().collect()?["_Sum"]
-        .f64()?
-        .first()
-        .unwrap();
-    println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
+    let discriminants = &settings.special.discriminants.0;
+    let discriminants = df! {
+        "Label" => Series::from_iter(discriminants.keys().cloned()),
+        "Factor1" => Series::from_iter(discriminants.values().map(|values| values[0])),
+        "Factor2" => Series::from_iter(discriminants.values().map(|values| values[1])),
+        "Factor3" => Series::from_iter(discriminants.values().map(|values| values[2])),
+    }?;
+    println!("Discriminants: {discriminants}");
+    lazy_frame = lazy_frame
+        .join(
+            discriminants.lazy(),
+            [col("Label")],
+            [col("Label")],
+            JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+        )
+        .select([
+            col("Label"),
+            col("FattyAcid"),
+            (col("Value") * col("Factor1")).alias("Value1"),
+            (col("Value") * col("Factor2")).alias("Value2"),
+            (col("Value") * col("Factor3")).alias("Value3"),
+            // col("Value") * col("Factor"),
+            // col("Value") * col("Factor").arr().get(lit(0), false),
+            // col("Value") * col("Factor").arr().get(lit(1), false),
+            // col("Value") * col("Factor").arr().get(lit(2), false),
+        ]);
+    println!("lazy_frame g25: {}", lazy_frame.clone().collect().unwrap());
 
-    exit(0);
-    // // Cartesian product (TAG from FA)
-    // let mut tags = fatty_acids.cartesian_product()?;
-    // // Filter
-    // tags = tags.filter(settings);
+    lazy_frame = gunstone_cartesian_product(lazy_frame)?;
+    println!("lazy_frame g3: {}", lazy_frame.clone().collect().unwrap());
+    lazy_frame = lazy_frame
+        .with_column(
+            col("FattyAcid")
+                .tag()
+                .map(|expr| expr.fa().is_unsaturated())
+                .tag()
+                .sum()
+                .alias("TMC"),
+        )
+        .join(
+            factor.lazy(),
+            [col("TMC")],
+            [col("TMC")],
+            JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+        )
+        .select([col("Label"), col("FattyAcid"), col("Value") * col("Factor")]);
+    println!("lazy_frame g4: {}", lazy_frame.clone().collect().unwrap());
 
-    // // let gunstone = Gunstone::new(s);
-    // let lazy_frame = key.fatty_acids.0.clone().lazy();
-    // // lazy_frame = lazy_frame.select([
-    // //     col("Label"),
-    // //     col("Formula"),
-    // //     col("TAG.Experimental"),
-    // //     col("DAG1223.Experimental"),
-    // //     col("MAG2.Experimental"),
-    // //     col("DAG13.DAG1223.Calculated"),
-    // //     col("DAG13.MAG2.Calculated"),
-    // // ]);
-    // // lazy_frame = lazy_frame.with_columns([s().alias("S"), u().alias("U")]);
-    // println!("key.data_frame: {}", lazy_frame.clone().collect().unwrap());
-    // lazy_frame.collect().unwrap()
+    // Compose
+    lazy_frame = compose(lazy_frame, settings)?;
+    Ok(lazy_frame)
+}
+
+fn gunstone_factor(lazy_frame: LazyFrame) -> PolarsResult<DataFrame> {
+    let data_frame = lazy_frame
+        .clone()
+        .select([
+            col("Value")
+                .nullify(col("FattyAcid").fa().is_saturated())
+                .alias("S"),
+            col("Value")
+                .nullify(col("FattyAcid").fa().is_unsaturated())
+                .alias("U"),
+        ])
+        .sum()
+        .collect()?;
+    let s = data_frame["S"].f64()?.first().unwrap();
+    let u = data_frame["U"].f64()?.first().unwrap();
+    // assert!(1.0 - u - s <= f64::EPSILON, "s + u != 1.0");
+    // [SSS]
+    let s3 = if s <= 2.0 / 3.0 { 0.0 } else { 3.0 * s - 2.0 } / s.powi(3);
+    // [SSU], [USS], [SUS]
+    let s2u = if s <= 2.0 / 3.0 {
+        (3.0 * s / 2.0).powi(2)
+    } else {
+        3.0 * u
+    } / (3.0 * s.powi(2) * u);
+    // [SUU], [USU], [UUS]
+    let su2 = if s <= 2.0 / 3.0 {
+        3.0 * s * (3.0 * u - 1.0) / 2.0
+    } else {
+        0.0
+    } / (3.0 * s * u.powi(2));
+    // [UUU]
+    let u3 = if s <= 2.0 / 3.0 {
+        ((3.0 * u - 1.0) / 2.0).powi(2)
+    } else {
+        0.0
+    } / u.powi(3);
+    let factor = df! {
+        "TMC" => Series::from_iter([0, 1, 2, 3]),
+        "Factor" => Series::from_iter([s3, s2u, su2, u3]),
+    }?;
+    Ok(factor)
+}
+
+fn gunstone_cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
+    lazy_frame = lazy_frame
+        .clone()
+        .select([as_struct(vec![
+            col("Label"),
+            col("FattyAcid"),
+            col("Value1").alias("Value"),
+        ])
+        .alias("StereospecificNumber1")])
+        .cross_join(
+            lazy_frame.clone().select([as_struct(vec![
+                col("Label"),
+                col("FattyAcid"),
+                col("Value2").alias("Value"),
+            ])
+            .alias("StereospecificNumber2")]),
+            None,
+        )
+        .cross_join(
+            lazy_frame.clone().select([as_struct(vec![
+                col("Label"),
+                col("FattyAcid"),
+                col("Value3").alias("Value"),
+            ])
+            .alias("StereospecificNumber3")]),
+            None,
+        );
+    // Restruct
+    lazy_frame = lazy_frame.select([
+        as_struct(vec![
+            col("StereospecificNumber1")
+                .struct_()
+                .field_by_name("Label")
+                .alias("StereospecificNumber1"),
+            col("StereospecificNumber2")
+                .struct_()
+                .field_by_name("Label")
+                .alias("StereospecificNumber2"),
+            col("StereospecificNumber3")
+                .struct_()
+                .field_by_name("Label")
+                .alias("StereospecificNumber3"),
+        ])
+        .alias("Label"),
+        as_struct(vec![
+            col("StereospecificNumber1")
+                .struct_()
+                .field_by_name("FattyAcid")
+                .alias("StereospecificNumber1"),
+            col("StereospecificNumber2")
+                .struct_()
+                .field_by_name("FattyAcid")
+                .alias("StereospecificNumber2"),
+            col("StereospecificNumber3")
+                .struct_()
+                .field_by_name("FattyAcid")
+                .alias("StereospecificNumber3"),
+        ])
+        .alias("FattyAcid"),
+        col("StereospecificNumber1")
+            .struct_()
+            .field_by_name("Value")
+            * col("StereospecificNumber2")
+                .struct_()
+                .field_by_name("Value")
+            * col("StereospecificNumber3")
+                .struct_()
+                .field_by_name("Value"),
+    ]);
+    Ok(lazy_frame)
 }
 
 // 1,3-sn 2-sn 1,2,3-sn
@@ -300,22 +416,22 @@ fn cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
 
 fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
     // Composition
-    for (index, selection) in settings.confirmable.selections.iter().enumerate() {
+    for (index, selection) in settings.special.selections.iter().enumerate() {
         lazy_frame = lazy_frame.with_column(
             match selection.composition {
                 MMC => col("FattyAcid")
                     .tag()
-                    .mass(Some(lit(settings.confirmable.adduct)))
+                    .mass(Some(lit(settings.special.adduct)))
                     .map(
-                        column(round(settings.confirmable.round_mass)),
+                        column(round(settings.special.round_mass)),
                         GetOutput::same_type(),
                     )
-                    .alias("MNC"),
+                    .alias("MMC"),
                 MSC => col("FattyAcid")
                     .tag()
-                    .map(|expr| expr.fa().mass(None).round(settings.confirmable.round_mass))
+                    .map(|expr| expr.fa().mass(None).round(settings.special.round_mass))
                     .alias("MSC"),
-                NMC => col("FattyAcid").tag().ecn().alias("NNC"),
+                NMC => col("FattyAcid").tag().ecn().alias("NMC"),
                 NSC => col("FattyAcid")
                     .tag()
                     .map(|expr| expr.fa().ecn())
@@ -323,7 +439,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                 SMC => col("Label")
                     .tag()
                     .non_stereospecific(identity, PermutationOptions::default())?
-                    .alias("SNC"),
+                    .alias("SMC"),
                 SPC => col("Label")
                     .tag()
                     .positional(identity, PermutationOptions::default())
@@ -331,11 +447,14 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                 SSC => col("Label").alias("SSC"),
                 TMC => col("FattyAcid")
                     .tag()
-                    .non_stereospecific(
-                        |expr| expr.fa().is_saturated(),
-                        PermutationOptions::default().map(true),
-                    )?
-                    .alias("TNC"),
+                    .map(|expr| expr.fa().is_unsaturated())
+                    .tag()
+                    .sum()
+                    // .non_stereospecific(
+                    //     |expr| expr.fa().is_saturated(),
+                    //     PermutationOptions::default().map(true),
+                    // )?
+                    .alias("TMC"),
                 TPC => col("FattyAcid")
                     .tag()
                     .positional(
@@ -347,7 +466,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                     .tag()
                     .map(|expr| expr.fa().is_saturated())
                     .alias("TSC"),
-                UMC => col("FattyAcid").tag().unsaturation().alias("UNC"),
+                UMC => col("FattyAcid").tag().unsaturation().alias("UMC"),
                 USC => col("FattyAcid")
                     .tag()
                     .map(|expr| expr.fa().unsaturated().sum())
@@ -383,13 +502,13 @@ fn meta(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFram
             .arr()
             .get(lit(index as u32), true)])
     };
-    for index in 0..settings.confirmable.selections.len() {
+    for index in 0..settings.special.selections.len() {
         lazy_frame = lazy_frame.with_column(
             as_struct(vec![
                 values(index)?.list().mean().alias("Mean"),
                 values(index)?
                     .list()
-                    .std(settings.confirmable.ddof)
+                    .std(settings.special.ddof)
                     .alias("StandardDeviation"),
             ])
             .alias(format!("Value{index}")),
@@ -405,12 +524,12 @@ fn meta(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFram
 
 fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     let mut sort_options = SortMultipleOptions::default();
-    if let Order::Descending = settings.confirmable.order {
+    if let Order::Descending = settings.special.order {
         sort_options = sort_options
             .with_order_descending(true)
             .with_nulls_last(true);
     }
-    lazy_frame = match settings.confirmable.sort {
+    lazy_frame = match settings.special.sort {
         Sort::Key => lazy_frame.sort_by_exprs([col("Keys")], sort_options),
         Sort::Value => {
             let mut expr = col("Values");
@@ -613,9 +732,9 @@ impl Gunstone {
 //         .map(move |(index, &value)| {
 //             let discrimination = &context.settings.composition.discrimination;
 //             match sn {
-//                 Sn::.sn1.One => discrimination.get(&index),
-//                 Sn::.sn2.Two => discrimination.get(&index),
-//                 Sn::.sn3.Three => discrimination.get(&index),
+//                 Sn::One => discrimination.get(&index),
+//                 Sn::Two => discrimination.get(&index),
+//                 Sn::Three => discrimination.get(&index),
 //             }
 //             .map_or(value, |&f| f * value)
 //         })

@@ -43,7 +43,7 @@ impl PlotView<'_> {
             let indices = &self.data_frame["Index"];
             let keys = self.data_frame["Keys"].struct_()?;
             let values = self.data_frame["Values"].array()?;
-            let selections = &self.settings.confirmable.selections;
+            let selections = &self.settings.special.selections;
             let index = selections.len() - 1;
             let fields = &keys.fields_as_series();
             let keys = &fields[index];
@@ -52,7 +52,7 @@ impl PlotView<'_> {
                 let values = values.unwrap();
                 let mut value = values.f64()?.get(index).unwrap();
                 let key = keys.str_value(row)?;
-                let x = match self.settings.confirmable.selections[index].composition {
+                let x = match self.settings.special.selections[index].composition {
                     MMC => keys.f64()?.get(row).unwrap(),
                     NMC => keys.i64()?.get(row).unwrap() as _,
                     UMC => keys.i64()?.get(row).unwrap() as _,

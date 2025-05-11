@@ -7,12 +7,13 @@ use crate::{
 use egui::{Frame, Id, Margin, TextStyle, Ui};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::HASH;
-use egui_table::{
-    AutoSizeMode, CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState,
-};
+use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use polars::prelude::*;
 use polars_ext::series::round;
-use std::ops::{Add, Range};
+use std::{
+    ops::{Add, Range},
+    process::exit,
+};
 use tracing::instrument;
 
 const INDEX: Range<usize> = 0..1;
@@ -51,7 +52,7 @@ impl TableView<'_> {
         }
         let height = ui.text_style_height(&TextStyle::Heading);
         let num_rows = self.data_frame.height() as u64 + 1;
-        let num_columns = self.settings.confirmable.selections.len() * 2 + 1;
+        let num_columns = self.settings.special.selections.len() * 2 + 1;
         let top = vec![0..1, 1..num_columns];
         let mut middle = vec![0..1];
         const STEP: usize = 2;
@@ -93,7 +94,7 @@ impl TableView<'_> {
             (1, column) => {
                 if column.start % 2 == 1 {
                     let index = column.start / 2;
-                    let composition = self.settings.confirmable.selections[index].composition;
+                    let composition = self.settings.special.selections[index].composition;
                     ui.heading(ui.localize(composition.text()))
                         .on_hover_text(ui.localize(composition.hover_text()));
                 } else if column.start != 0 {
@@ -141,7 +142,7 @@ impl TableView<'_> {
                 if column.start % 2 == 1 {
                     let keys = self.data_frame["Keys"].struct_()?;
                     let key = &keys.fields_as_series()[index];
-                    match self.settings.confirmable.selections[index].composition {
+                    match self.settings.special.selections[index].composition {
                         MMC => {
                             FloatWidget::new(|| Ok(key.f64()?.get(row)))
                                 .precision(Some(self.settings.precision))
@@ -173,7 +174,16 @@ impl TableView<'_> {
                                 .to_string();
                             ui.label(format!("{{{sn1},{sn2},{sn3}}}"));
                         }
-                        TMC | TPC | TSC => {
+                        TMC => {
+                            match key.u32()?.get(row) {
+                                Some(0) => ui.label("S3"),
+                                Some(1) => ui.label("S2U"),
+                                Some(2) => ui.label("SU2"),
+                                Some(3) => ui.label("U3"),
+                                _ => ui.label("None"),
+                            };
+                        }
+                        TPC | TSC => {
                             let r#type = tag_map(r#type)(key)?;
                             let sn1 = r#type
                                 .struct_()?
@@ -212,12 +222,12 @@ impl TableView<'_> {
 
     fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         // Last column
-        if column.start == self.settings.confirmable.selections.len() * 2 {
+        if column.start == self.settings.special.selections.len() * 2 {
             self.value(
                 ui,
                 self.data_frame["Values"].as_materialized_series(),
                 None,
-                self.settings.confirmable.selections.len() - 1,
+                self.settings.special.selections.len() - 1,
                 self.settings.percent,
             )?;
         }

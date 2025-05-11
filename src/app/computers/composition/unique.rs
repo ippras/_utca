@@ -5,9 +5,10 @@ use crate::{
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::polars::ExprExt;
+use metadata::MetaDataFrame;
 use polars::prelude::*;
 use std::{
-    collections::VecDeque,
+    collections::{BTreeSet, HashSet},
     hash::{Hash, Hasher},
 };
 
@@ -20,51 +21,16 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let lazy_frame = key.data_frame.value.clone().lazy();
-        let mut exprs = Vec::new();
-        // println!(
-        //     "lazy_frame unique x: {}",
-        //     lazy_frame.clone().collect().unwrap()
-        // );
-        for (index, selection) in key.selections.iter().enumerate() {
-            match selection.composition {
-                MMC | NMC | SMC | TMC | UMC => {
-                    println!(
-                        "lazy_frame y: {}",
-                        lazy_frame
-                            .clone()
-                            .select([col("Keys")
-                                .struct_()
-                                .field_by_index(index as _)
-                                .unique()
-                                .sort(Default::default())])
-                            .collect()
-                            .unwrap()
-                    );
-                    exprs.push(
-                        col("Keys")
-                            .struct_()
-                            .field_by_index(index as _)
-                            .unique()
-                            .sort(Default::default()),
-                    )
+        let mut hashes = HashSet::new();
+        let mut labels = Vec::new();
+        for frame in &key.frames[..] {
+            for label in frame.data["Label"].str()? {
+                if hashes.insert(label) {
+                    labels.push(label.unwrap_or_default().to_owned());
                 }
-                MSC | NSC | SPC | SSC | TPC | TSC | USC => exprs.push(
-                    col("Keys")
-                        .tag()
-                        .sn1()
-                        .struct_()
-                        .field_by_index(index as _)
-                        .unique()
-                        .sort(Default::default()),
-                ),
             }
         }
-        // println!(
-        //     "lazy_frame y: {exprs:?} {}",
-        //     lazy_frame.clone().select(exprs.clone()).collect().unwrap()
-        // );
-        lazy_frame.select(exprs).collect()
+        Ok(labels)
     }
 }
 
@@ -77,16 +43,14 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Unique composition key
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Key<'a> {
-    pub(crate) data_frame: &'a Hashed<DataFrame>,
-    pub(crate) selections: &'a VecDeque<Selection>,
+    pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
 }
 
 impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.data_frame.hash(state);
-        self.selections.hash(state);
+        self.frames.hash(state);
     }
 }
 
 /// Unique composition value
-type Value = DataFrame;
+type Value = Vec<String>;

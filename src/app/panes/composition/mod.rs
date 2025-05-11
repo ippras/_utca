@@ -9,7 +9,7 @@ use crate::{
     app::{
         computers::{
             CompositionComputed, CompositionKey, FilteredCompositionComputed,
-            FilteredCompositionKey,
+            FilteredCompositionKey, UniqueCompositionComputed, UniqueCompositionKey,
         },
         text::Text,
     },
@@ -185,6 +185,17 @@ impl Pane {
     }
 
     fn windows(&mut self, ui: &mut Ui) {
+        if self.settings.special.discriminants.is_empty() {
+            let unique = ui.memory_mut(|memory| {
+                memory
+                    .caches
+                    .cache::<UniqueCompositionComputed>()
+                    .get(UniqueCompositionKey {
+                        frames: &self.source,
+                    })
+            });
+            self.settings.special.discriminants = unique.into_iter().collect();
+        }
         Window::new(format!("{GEAR} Composition settings"))
             .id(ui.auto_id_with(ID_SOURCE))
             .default_pos(ui.next_widget_position())
