@@ -18,20 +18,30 @@ Ultimate Triacylglycerol Calculation Application
 * link:https://ippras.github.io/utca[title=Latest Release, window=_blank]
 * link:https://ippras.github.io/utca/{version}[title=Release Version, window=_blank]
 
+== Build
+
+=== Web
+
+[source,shell]
+trunk build --release --filehash=false --public-url=https://ippras.github.io/utca
+
 == Run
 
 === Native
 
-`cargo run`
+[source,shell]
+cargo run
 
 === Web (http://127.0.0.1:8080)
 
-`trunk serve --release --filehash=false`
+[source,shell]
+trunk serve --release --filehash=false
 
 ==== Requirements
 
-`rustup target add wasm32-unknown-unknown`
-
+[source,shell]
+rustup target add wasm32-unknown-unknown
+ 
 ==== Errors
 
 integrity:
@@ -40,6 +50,8 @@ integrity:
 * `Дополнительные`
 * `Изображения и другие файлы, сохраненные в кеше`
 * `Удалить данные`
+
+* Check dist index.html urls
 
 == See Also
 

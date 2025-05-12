@@ -16,7 +16,7 @@ use egui::{
 };
 use egui_ext::LabeledSeparator;
 use egui_l20n::UiExt;
-use egui_phosphor::regular::{MINUS, PLUS};
+use egui_phosphor::regular::{ARROWS_CLOCKWISE, ERASER, MINUS, PLUS};
 use indexmap::IndexMap;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -456,13 +456,18 @@ impl Discriminants {
                     });
                 })
                 .response;
+            if ui.button(ERASER).clicked() {
+                for values in self.0.values_mut() {
+                    *values = [1.0; 3]
+                }
+            }
         });
     }
 }
 
 impl FromIterator<String> for Discriminants {
     fn from_iter<T: IntoIterator<Item = String>>(iter: T) -> Self {
-        Self(iter.into_iter().map(|key| (key, [0.0; 3])).collect())
+        Self(iter.into_iter().map(|key| (key, [1.0; 3])).collect())
     }
 }
 
