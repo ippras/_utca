@@ -196,7 +196,11 @@ fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<Lazy
             [col("TMC")],
             JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
         )
-        .select([col("Label"), col("FattyAcid"), col("Value") * col("Factor")]);
+        .select([
+            col("Label"),
+            col("FattyAcid"),
+            (col("Value") * col("Factor")).normalize(),
+        ]);
     println!("lazy_frame g4: {}", lazy_frame.clone().collect().unwrap());
 
     // Compose
