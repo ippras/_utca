@@ -97,7 +97,9 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 # web
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.7"
-getrandom = { version = "0.3.0", features = ["wasm_js"] }
+getrandom = { version = "0.3.0", default-features = false, features = [
+    "wasm_js",
+] }
 poll-promise = { version = "0.3.0", features = ["web"] }
 tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.50"
