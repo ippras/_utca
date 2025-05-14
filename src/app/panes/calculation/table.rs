@@ -237,9 +237,7 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         match (row, column) {
             (row, id::INDEX) => {
-                let indices = self.data_frame["Index"].u32()?;
-                let index = indices.get(row).unwrap();
-                ui.label(index.to_string());
+                ui.label(row.to_string());
             }
             (row, id::LABEL) => {
                 let labels = self.data_frame["Label"].str()?;
