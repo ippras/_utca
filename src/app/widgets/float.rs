@@ -50,34 +50,46 @@ impl<'a> FloatWidget<'a> {
             ui.disable();
         }
         let mut inner = (self.value)();
-        let Ok(Some(mut value)) = inner else {
-            // Null
-            let response = ui.label(AnyValue::Null.to_string());
+        // let Ok(Some(mut value)) = inner else {
+        //     // Null
+        //     let response = ui.label(AnyValue::Null.to_string());
+        //     return InnerResponse::new(inner, response);
+        // };
+        let Ok(mut value) = inner else {
+            let response = ui.label("");
             return InnerResponse::new(inner, response);
         };
+        let value = value.get_or_insert_default();
+        // let Ok(Some(mut value)) = match inner {
+        //     Ok(Some(mut value)) => value,
+        //     Ok(None) => ,
+        //     // Null
+        //     let response = ui.label(AnyValue::Null.to_string());
+        //     return InnerResponse::new(inner, response);
+        // };
         // Percent
         if self.settings.percent {
-            value *= 100.0;
+            *value *= 100.0;
         }
         // Editable
         let mut response = if self.settings.editable {
             // Writable
             let response = ui.add_sized(
                 vec2(ui.available_width(), ui.spacing().interact_size.y),
-                DragValue::new(&mut value)
+                DragValue::new(value)
                     .range(0.0..=f64::MAX)
                     .custom_formatter(|value, _| format(value)),
             );
             if response.changed() {
-                inner = Ok(Some(value));
+                inner = Ok(Some(*value));
             }
             response
         } else {
             // Readable
-            ui.label(format(value))
+            ui.label(format(*value))
         };
         if self.settings.hover {
-            response = response.on_hover_text(RichText::new(AnyValue::Float64(value).to_string()));
+            response = response.on_hover_text(RichText::new(AnyValue::Float64(*value).to_string()));
         }
         InnerResponse::new(inner, response)
     }
