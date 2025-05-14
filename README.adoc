@@ -41,7 +41,7 @@ trunk serve --release --filehash=false
 
 [source,shell]
 rustup target add wasm32-unknown-unknown
- 
+
 ==== Errors
 
 integrity:
