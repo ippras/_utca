@@ -115,10 +115,10 @@ impl Pane {
         );
         ui.separator();
         // Save
-        ui.menu_button(FLOPPY_DISK, |ui| {
+        ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             let title = self.title();
             if ui
-                .button(RichText::new("IPC").heading())
+                .button("IPC")
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("save"));
                 })
@@ -137,7 +137,7 @@ impl Pane {
                 });
             };
             if ui
-                .button(RichText::new("XLSX").heading())
+                .button("XLSX")
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("save"));
                 })
