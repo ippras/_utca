@@ -2,6 +2,7 @@ use egui::{
     Button, DragValue, Grid, Id, InnerResponse, Response, Sense, Ui, Vec2, Widget,
     collapsing_header, style::Widgets,
 };
+use egui_l20n::ResponseExt as _;
 use egui_phosphor::regular::{ASTERISK, EQUALS, LIST};
 use lipid::fatty_acid::{
     FattyAcid, FattyAcidExt as _, Isomerism, Unsaturated, Unsaturation,
@@ -48,14 +49,6 @@ impl<'a> FattyAcidWidget<'a> {
 impl FattyAcidWidget<'_> {
     pub(crate) fn show(self, ui: &mut Ui) -> InnerResponse<Option<FattyAcid>> {
         let mut inner = None;
-        // // Error
-        // let value = match (self.fatty_acid)() {
-        //     Ok(value) => value,
-        //     Err(error) => {
-        //         let response = ui.label("Error").on_hover_text(error.to_string());
-        //         return InnerResponse::new(inner, response);
-        //     }
-        // };
         // None
         let Some(fatty_acid) = self.fatty_acid else {
             let mut response = ui.label("None");
@@ -148,7 +141,7 @@ impl<'a> FattyAcidContent<'a> {
             // Carbons
             let response = ui
                 .add(DragValue::new(&mut self.fatty_acid.carbons))
-                .on_hover_text("Carbons");
+                .on_hover_localized("carbons.hover");
             outer_response |= response;
             // Unsaturated
             let mut unsaturated = self.fatty_acid.unsaturated.len();
@@ -158,7 +151,7 @@ impl<'a> FattyAcidContent<'a> {
                         .range(0..=self.fatty_acid.carbons)
                         .clamp_existing_to_range(true),
                 )
-                .on_hover_text("Unsaturated");
+                .on_hover_localized("unsaturated.hover");
             if response.changed() {
                 loop {
                     match unsaturated.cmp(&self.fatty_acid.unsaturated.len()) {
@@ -180,8 +173,8 @@ impl<'a> FattyAcidContent<'a> {
             if unsaturated == 0 {
                 ui.disable();
             }
-            let (_, response) =
-                ui.allocate_exact_size(Vec2::splat(ui.spacing().interact_size.y), Sense::click());
+            // let (_, response) = ui.allocate_exact_size(Vec2::splat(ui.spacing().interact_size.y), Sense::click());
+            let (_, response) = ui.allocate_exact_size(Vec2::splat(10.0), Sense::click());
             collapsing_header::paint_default_icon(ui, openness, &response);
             if response.clicked() {
                 state.is_opened ^= true;

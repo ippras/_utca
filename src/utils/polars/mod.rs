@@ -32,9 +32,6 @@ pub fn tag_map(
     }
 }
 
-pub mod expr;
-pub mod schema;
-
 // pub use self::expr::ExprExt;
 
 // pub fn column(

@@ -115,30 +115,52 @@ impl Pane {
         );
         ui.separator();
         // Save
-        let file = format!("{}.utca.xlsx", self.title());
-        if ui
-            .button(RichText::new(FLOPPY_DISK).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("save"));
-            })
-            .on_hover_text(&file)
-            .clicked()
-        {
-            let mut data_frame = ui.memory_mut(|memory| {
-                memory
-                    .caches
-                    .cache::<FilteredCompositionComputed>()
-                    .get(FilteredCompositionKey {
-                        data_frame: &self.target,
-                        settings: &self.settings,
-                    })
-            });
-            data_frame = data_frame.unnest(["Keys"]).unwrap();
-            let _ = xlsx::save(&data_frame, &file);
-            // if let Err(error) = self.save() {
-            //     ui.ctx().error(error);
-            // }
-        }
+        ui.menu_button(FLOPPY_DISK, |ui| {
+            let title = self.title();
+            if ui
+                .button(RichText::new("IPC").heading())
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("save"));
+                })
+                .on_hover_ui(|ui| {
+                    ui.label(&format!("{title}.utca.ipc"));
+                })
+                .clicked()
+            {
+                let mut data_frame = ui.memory_mut(|memory| {
+                    memory.caches.cache::<FilteredCompositionComputed>().get(
+                        FilteredCompositionKey {
+                            data_frame: &self.target,
+                            settings: &self.settings,
+                        },
+                    )
+                });
+            };
+            if ui
+                .button(RichText::new("XLSX").heading())
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("save"));
+                })
+                .on_hover_ui(|ui| {
+                    ui.label(&format!("{title}.utca.xlsx"));
+                })
+                .clicked()
+            {
+                let mut data_frame = ui.memory_mut(|memory| {
+                    memory.caches.cache::<FilteredCompositionComputed>().get(
+                        FilteredCompositionKey {
+                            data_frame: &self.target,
+                            settings: &self.settings,
+                        },
+                    )
+                });
+                data_frame = data_frame.unnest(["Keys"]).unwrap();
+                let _ = xlsx::save(&data_frame, &format!("{title}.utca.xlsx"));
+                // if let Err(error) = self.save() {
+                //     ui.ctx().error(error);
+                // }
+            }
+        });
         ui.separator();
         // View
         ui.menu_button(RichText::new(self.state.view.icon()).heading(), |ui| {
