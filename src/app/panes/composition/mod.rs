@@ -13,7 +13,7 @@ use crate::{
         },
         text::Text,
     },
-    export::xlsx,
+    export::{ipc, xlsx},
     utils::{Hashed, title},
 };
 use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
@@ -144,6 +144,18 @@ impl Pane {
                         },
                     )
                 });
+                data_frame = data_frame
+                    .lazy()
+                    .select([col("Species").explode()])
+                    .unnest([col("Species")])
+                    .sort(
+                        ["Value"],
+                        SortMultipleOptions::default().with_order_descending(true),
+                    )
+                    .collect()
+                    .unwrap();
+                println!("data_frame: {data_frame}");
+                let _ = ipc::save_data(&mut data_frame, &format!("{title}.utca.ipc"));
             };
             if ui
                 .button("XLSX")

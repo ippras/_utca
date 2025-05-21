@@ -1,0 +1,116 @@
+.Лепестки
+|===
+| Обозначение  | Компонент                                            | Время (мин)   | Площадь (мВ*с)| Площадь (%)
+| 14:0         | Methyl tetradecanoate                                | 22.162 ±0.0034| 111004499.412 | 0.474  ±0.0213
+| 16:0         | Hexadecanoic acid, methyl ester                      | 24.993 ±0.0060| 5592905904.337| 23.867 ±0.7288
+| 16:1-7       | 7-Hexadecenoic acid, methyl ester, (Z)-              | 25.694 ±0.0054| 17769513.306  | 0.076  ±0.0283
+| 16:1-9       | 9-Hexadecenoic acid, methyl ester, (Z)-              | 25.783 ±0.0037| 20714915.131  | 0.088  ±0.0284
+| 16:1-11      | (Z)-Methyl hexadec-11-enoate                         | 25.841 ±0.0034| 27164751.240  | 0.116  ±0.0034
+| 17:0         | Heptadecanoic acid, methyl ester                     | 26.499 ±0.0039| 1317019453.118| 5.620  ±0.2609
+| 16:2-7,10    | 7,10-Hexadecadienoic acid, methyl ester              | 26.916 ±0.0045| 7877087.940   | 0.034  ±0.0035
+| 18:0         | Methyl stearate                                      | 28.014 ±0.0037| 608884837.739 | 2.598  ±0.7100
+| 16:3-7,10,13 | 7,10,13-Hexadecatrienoic acid, methyl ester          | 28.308 ±0.0065| 96275879.552  | 0.411  ±0.0233
+| 18:1-9       | 9-Octadecenoic acid (Z)-, methyl ester               | 28.709 ±0.0034| 850591881.590 | 3.630  ±0.9880
+| 18:1-11      | 11-Octadecenoic acid, methyl ester, (Z)-             | 28.828 ±0.0064| 157613709.787 | 0.673  ±0.0518
+| 19:0         | Nonadecanoic acid, methyl ester                      | 29.394 ±0.0052| 10432717.744  | 0.045  ±0.0065
+| 18:2-9,12    | 9,12-Octadecadienoic acid (Z,Z)-, methyl ester       | 29.867 ±0.0078| 7054598145.355| 30.105 ±2.3736
+| 20:0         | Eicosanoic acid, methyl ester                        | 30.699 ±0.0057| 209370386.505 | 0.893  ±0.1497
+| 18:3-9,12,15 | 9,12,15-Octadecatrienoic acid, methyl ester, (Z,Z,Z)-| 31.093 ±0.0034| 7399065538.003| 31.575 ±1.6784
+| 20:1-11      | cis-Methyl 11-eicosenoate                            | 31.302 ±0.0078| 78526443.798  | 0.335  ±0.0733
+| 20:2-11,14   | cis-11,14-Eicosadienoic acid, methyl ester           | 32.265 ±0.0081| 165858224.805 | 0.708  ±0.1223
+| 22:0         | Docosanoic acid, methyl ester                        | 33.031 ±0.0100| 136659439.397 | 0.583  ±0.1223
+| 20:3-11,14,17| 11,14,17-Eicosatrienoic acid, methyl ester           | 33.329 ±0.0101| 167175433.666 | 0.713  ±0.1107
+| 22:1-13      | 13-Docosenoic acid, methyl ester                     | 33.562 ±0.0107| 10379528.296  | 0.044  ±0.0099
+| 24:0         | Tetracosanoic acid, methyl ester                     | 35.072 ±0.0085| 169869773.032 | 0.725  ±0.1603
+| 24:1-15      | 15-Tetracosenoic acid, methyl ester                  | 35.547 ±0.0093| 160853107.491 | 0.686  ±0.2003
+| 25:0         | Pentacosanoic acid, methyl ester                     | 36.026 ±0.0125| 7155408.449   | 0.031  ±0.0084
+| 26:0         | Hexacosanoic acid, methyl ester                      | 37.042 ±0.0119| 55372547.375  | 0.236  ±0.0564
+|===
+
+.Пестики
+|===
+| Обозначение  | Компонент                                            | Время (мин)   | Площадь (мВ*с)| Площадь (%)
+| 12:0         | Dodecanoic acid, methyl ester                        | 20.081 ±0.0107| 2279611.851   | 0.024 ±0.0035
+| 14:0         | Methyl tetradecanoate                                | 22.174 ±0.0119| 40998330.882  | 0.425 ±0.0101
+| 16:0         | Hexadecanoic acid, methyl ester                      | 24.975 ±0.0101| 2046530892.856| 21.230 ±0.2145
+| 16:1-7       | 7-Hexadecenoic acid, methyl ester, (Z)-              | 25.701 ±0.0115| 10046835.107  | 0.104 ±0.0145
+| 16:1-11      | (Z)-Methyl hexadec-11-enoate                         | 25.845 ±0.0116| 10166824.786  | 0.105 ±0.0116
+| 17:0         | Heptadecanoic acid, methyl ester                     | 26.508 ±0.0143| 792845361.707 | 8.225 ±0.3509
+| 16:2-7,10    | 7,10-Hexadecadienoic acid, methyl ester              | 26.923 ±0.0115| 4056655.711   | 0.042 ±0.0017
+| 18:0         | Methyl stearate                                      | 28.005 ±0.0118| 184442104.961 | 1.913 ±0.1830
+| 16:3-7,10,13 | 7,10,13-Hexadecatrienoic acid, methyl ester          | 28.320 ±0.0119| 126707739.563 | 1.314 ±0.0247
+| 18:1-9       | 9-Octadecenoic acid (Z)-, methyl ester               | 28.706 ±0.0109| 271293852.071 | 2.814 ±0.2910
+| 18:1-11      | 11-Octadecenoic acid, methyl ester, (Z)-             | 28.826 ±0.0103| 127750273.040 | 1.325 ±0.0700
+| 18:2-9,12    | 9,12-Octadecadienoic acid (Z,Z)-, methyl ester       | 29.848 ±0.0090| 2221985468.426| 23.050 ±0.8444
+| 20:0         | Eicosanoic acid, methyl ester                        | 30.702 ±0.0146| 52050205.563  | 0.540 ±0.0078
+| 18:3-9,12,15 | 9,12,15-Octadecatrienoic acid, methyl ester, (Z,Z,Z)-| 31.091 ±0.0101| 3558224176.588| 36.912 ±0.5164
+| 20:1-11      | 11-Eicosenoic acid, methyl ester                     | 31.309 ±0.0126| 9973282.262   | 0.103 ±0.0120
+| 20:2-11,14   | cis-11,14-Eicosadienoic acid, methyl ester           | 32.273 ±0.0133| 14758743.606  | 0.153 ±0.0118
+| 22:0         | Docosanoic acid, methyl ester                        | 33.039 ±0.0186| 37626175.898  | 0.390 ±0.0176
+| 20:3-11,14,17| 11,14,17-Eicosatrienoic acid, methyl ester           | 33.341 ±0.0170| 18032488.243  | 0.187 ±0.0070
+| 22:1-11      | Methyl 11-docosenoate                                | 33.572 ±0.0178| 4281673.139   | 0.044 ±0.0301
+| 23:0         | Tricosanoic acid, methyl ester                       | 34.086 ±0.0156| 4480279.895   | 0.046 ±0.0070
+| 24:0         | Tetracosanoic acid, methyl ester                     | 35.075 ±0.0191| 71455693.523  | 0.741 ±0.0388
+| 24:1-15      | 15-Tetracosenoic acid, methyl ester                  | 35.551 ±0.0133| 19195621.518  | 0.199 ±0.0072
+| 26:0         | Hexacosanoic acid, methyl ester                      | 37.043 ±0.0188| 10616005.591  | 0.110 ±0.0331
+|===
+
+.Пыльца
+|===
+| Обозначение  | Компонент                                            | Время (мин)   | Площадь (мВ*с)| Площадь (%)
+| 12:0         | Dodecanoic acid, methyl ester                        | 9.949 ±0.0191 | 71110425.274  | 0.412 ±0.2536
+| 14:0         | Methyl tetradecanoate                                | 13.611 ±0.0364| 856425708.987 | 4.961 ±0.8094
+| 15:0         | Pentadecanoic acid, methyl ester                     | 15.481 ±0.0323| 24203611.570  | 0.140 ±0.0201
+| 16:0         | Hexadecanoic acid, methyl ester                      | 17.499 ±0.0285| 3316031264.952| 19.212 ±2.0718
+| 16:1-7       | 7-Hexadecenoic acid, methyl ester, (Z)-              | 18.393 ±0.0386| 25510454.756  | 0.148 ±0.0246
+| 16:1-9       | 9-Hexadecenoic acid, methyl ester, (Z)-              | 18.597 ±0.0365| 12192298.608  | 0.071 ±0.0085
+| 17:0         | Heptadecanoic acid, methyl ester                     | 19.641 ±0.0399| 395540967.262 | 2.291 ±0.5492
+| 16:2-7,10    | 7,10-Hexadecadienoic acid, methyl ester              | 20.205 ±0.0471| 9771658.715   | 0.057 ±0.0234
+| 18:0         | Methyl stearate                                      | 22.394 ±0.0562| 1001853635.113| 5.802 ±0.3515
+| 16:3-7,10,13 | 7,10,13-Hexadecatrienoic acid, methyl ester          | 22.713 ±0.0588| 533104820.676 | 3.088 ±1.4957
+| 18:1-9       | 9-Octadecenoic acid (Z)-, methyl ester               | 23.586 ±0.0512| 839146454.947 | 4.861 ±1.0370
+| 18:1-11      | 11-Octadecenoic acid, methyl ester, (Z)-             | 23.800 ±0.0567| 119914621.176 | 0.694 ±0.1044
+| 18:2-9,12    | 9,12-Octadecadienoic acid (Z,Z)-, methyl ester       | 25.755 ±0.0588| 4999500282.631| 28.959 ±0.7171
+| 20:0         | Eicosanoic acid, methyl ester                        | 27.551 ±0.0509| 138665646.555 | 0.803 ±0.2614
+| 18:3-9,12,15 | 9,12,15-Octadecatrienoic acid, methyl ester, (Z,Z,Z)-| 28.090 ±0.0634| 4706191836.518| 27.258 ±2.3221
+| 20:1-9       | Methyl 9-eicosenoate                                 | 28.497 ±0.0501| 10284109.456  | 0.060 ±0.0190
+| 20:1-11      | 11-Eicosenoic acid, methyl ester                     | 28.619 ±0.0514| 15562625.064  | 0.090 ±0.0294
+| 20:1-13      | cis-13-Eicosenoic acid, methyl ester                 | 28.866 ±0.0485| 7642573.416   | 0.044 ±0.0125
+| 20:2-11,14   | cis-11,14-Eicosadienoic acid, methyl ester           | 30.482 ±0.0475| 55552475.363  | 0.322 ±0.0378
+| 22:0         | Docosanoic acid, methyl ester                        | 32.213 ±0.0488| 21873216.106  | 0.127 ±0.0243
+| 20:3-11,14,17| 11,14,17-Eicosatrienoic acid, methyl ester           | 32.578 ±0.0506| 3447998.639   | 0.020 ±0.0026
+| 22:1-13      | 13-Docosenoic acid, methyl ester, (Z)-               | 33.190 ±0.0522| 2591095.647   | 0.015 ±0.0012
+| 22:2-13,16   | cis-13,16-Docasadienoic acid, methyl ester           | 34.857 ±0.0630| 3241806.665   | 0.019 ±0.0064
+| 23:1-22      | 22-Tricosenoic acid                                  | 35.298 ±0.0411| 5970344.647   | 0.035 ±0.0065
+| 24:0         | Tetracosanoic acid, methyl ester                     | 36.413 ±0.0345| 62313841.750  | 0.361 ±0.0982
+| 24:1-15      | 15-Tetracosenoic acid, methyl ester                  | 37.302 ±0.0348| 49724045.856  | 0.288 ±0.0768
+| 26:0         | Hexacosanoic acid, methyl ester                      | 40.207 ±0.0271| 8420761.923   | 0.049 ±0.0312
+|===
+
+.Тычинки
+|===
+| Обозначение  | Компонент                                            | Время (мин)   | Площадь (мВ*с)| Площадь (%)
+| 14:0         | Methyl tetradecanoate                                | 22.167 ±0.0057| 710395143.068 | 3.298 ±0.2524
+| 16:0         | Hexadecanoic acid, methyl ester                      | 24.983 ±0.0059| 4276049617.901| 19.854 ±0.5502
+| 16:1-7       | 7-Hexadecenoic acid, methyl ester, (Z)-              | 25.699 ±0.0056| 24210119.809  | 0.112 ±0.0137
+| 16:1-11      | (Z)-Methyl hexadec-11-enoate                         | 25.845 ±0.0085| 24616587.095  | 0.114 ±0.0174
+| 17:0         | Heptadecanoic acid, methyl ester                     | 26.505 ±0.0065| 1380107558.385| 6.409 ±1.6346
+| 16:2-7,10    | 7,10-Hexadecadienoic acid, methyl ester              | 26.919 ±0.0092| 8967314.280   | 0.042 ±0.0056
+| 18:0         | Methyl stearate                                      | 28.021 ±0.0080| 1119641424.763| 5.199 ±0.4802
+| 16:3-7,10,13 | 7,10,13-Hexadecatrienoic acid, methyl ester          | 28.314 ±0.0079| 382662236.435 | 1.777 ±0.2053
+| 18:1-9       | 9-Octadecenoic acid (Z)-, methyl ester               | 28.709 ±0.0103| 785875290.069 | 3.649 ±0.4588
+| 18:1-11      | 11-Octadecenoic acid, methyl ester, (Z)-             | 28.829 ±0.0091| 250198135.208 | 1.162 ±0.0645
+| 19:0         | Nonadecanoic acid, methyl ester                      | 29.393 ±0.0081| 13434537.405  | 0.062 ±0.0160
+| 18:2-9,12    | 9,12-Octadecadienoic acid (Z,Z)-, methyl ester       | 29.858 ±0.0097| 5555198244.904| 25.792 ±1.2730
+| 20:0         | Eicosanoic acid, methyl ester                        | 30.701 ±0.0088| 223603259.214 | 1.038 ±0.0918
+| 18:3-9,12,15 | 9,12,15-Octadecatrienoic acid, methyl ester, (Z,Z,Z)-| 31.088 ±0.0101| 6452910110.732| 29.962 ±0.8001
+| 20:1-11      | cis-Methyl 11-eicosenoate                            | 31.305 ±0.0115| 30105288.874  | 0.140 ±0.0293
+| 20:2-11,14   | cis-11,14-Eicosadienoic acid, methyl ester           | 32.267 ±0.0102| 57988911.891  | 0.269 ±0.0294
+| 22:0         | Docosanoic acid, methyl ester                        | 33.029 ±0.0116| 61116743.827  | 0.284 ±0.0418
+| 20:3-11,14,17| 11,14,17-Eicosatrienoic acid, methyl ester           | 33.330 ±0.0100| 26723900.804  | 0.124 ±0.0101
+| 22:1-13      | 13-Docosenoic acid, methyl ester                     | 33.565 ±0.0142| 7159926.229   | 0.033 ±0.0073
+| 24:0         | Tetracosanoic acid, methyl ester                     | 35.072 ±0.0113| 113080298.389 | 0.525 ±0.1094
+| 24:1-15      | 15-Tetracosenoic acid, methyl ester                  | 35.545 ±0.0103| 83415385.086  | 0.387 ±0.0290
+| 25:0         | Pentacosanoic acid, methyl ester                     | 36.024 ±0.0110| 4027603.367   | 0.019 ±0.0045
+| 26:0         | Hexacosanoic acid, methyl ester                      | 37.039 ±0.0109| 16657264.381  | 0.077 ±0.0172
+|===
