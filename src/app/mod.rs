@@ -2,6 +2,7 @@ use self::{
     data::Data,
     identifiers::{DATA, ERROR, GITHUB_TOKEN},
     panes::{Pane, behavior::Behavior},
+    widgets::Presets,
     windows::{About, GithubWindow},
 };
 use crate::localization::ContextExt as _;
@@ -24,7 +25,7 @@ use egui_phosphor::{
     },
 };
 use egui_tiles::{ContainerKind, Tile, Tree};
-use egui_tiles_ext::{TreeExt as _, VERTICAL};
+use egui_tiles_ext::{HORIZONTAL, TreeExt as _, VERTICAL};
 use metadata::{MetaDataFrame, Metadata};
 use panes::configuration::SCHEMA;
 use polars::prelude::*;
@@ -369,6 +370,8 @@ impl App {
                         });
                     }
                     // Load
+                    ui.add(Presets);
+                    ui.separator();
                     if ui
                         .button(RichText::new(CLOUD_ARROW_DOWN).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
@@ -420,6 +423,14 @@ impl App {
 
 // Copy/Paste, Drag&Drop
 impl App {
+    fn input(&mut self, ctx: &Context) {
+        if let Some(frame) =
+            ctx.data_mut(|data| data.remove_temp::<MetaDataFrame>(Id::new("Input")))
+        {
+            self.data.add(frame);
+        }
+    }
+
     fn configure(&mut self, ctx: &Context) {
         if let Some(frames) =
             ctx.data_mut(|data| data.remove_temp::<Vec<MetaDataFrame>>(Id::new("Configure")))
@@ -443,7 +454,7 @@ impl App {
             data.remove_temp::<(Vec<MetaDataFrame>, Option<usize>)>(Id::new("Compose"))
         }) {
             self.tree
-                .insert_pane::<VERTICAL>(Pane::composition(frames, index));
+                .insert_pane::<HORIZONTAL>(Pane::composition(frames, index));
         }
     }
 
@@ -497,11 +508,19 @@ impl App {
     fn parse(&mut self, ctx: &Context) {
         for bytes in self.data_channel.1.try_iter() {
             trace!(?bytes);
-            match MetaDataFrame::read(Cursor::new(bytes)) {
+            let mut reader = Cursor::new(bytes);
+            match MetaDataFrame::read(&mut reader) {
                 Ok(frame) => {
                     trace!(?frame);
                     self.data.add(frame);
-                    ctx.request_repaint();
+                }
+                Err(error) => error!(%error),
+            };
+            reader.set_position(0);
+            match JsonLineReader::new(&mut reader).finish() {
+                Ok(data) => {
+                    trace!(?data);
+                    self.data.add(MetaDataFrame::new(Default::default(), data));
                 }
                 Err(error) => error!(%error),
             };
@@ -607,6 +626,7 @@ impl eframe::App for App {
     /// Called each time the UI needs repainting, which may be many times per
     /// second.
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+        self.input(ctx);
         self.configure(ctx);
         self.calculate(ctx);
         self.compose(ctx);

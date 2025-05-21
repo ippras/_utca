@@ -1,0 +1,17 @@
+   | ID          | Name                                                 | RT1   | Area1        | %1    | RT2   | Area2        | %2
+Myr| 14:0        | Methyl tetradecanoate                                | 21.896| 673222.095   | 0.101 | 21.924| 251737.363   | 0.066
+Pam| 16:0        | Hexadecanoic acid, methyl ester                      | 24.573| 162912045.944| 24.386| 24.583| 47497434.933 | 12.440
+Hdd| 16:2-7,10   | 7,10-Hexadecadienoic acid, methyl ester              | 26.556| 28570887.812 | 4.277 | 26.582| 63113012.473 | 16.530
+Ste| 18:0        | Methyl stearate                                      | 27.629| 23890259.572 | 3.576 | 27.647| 1828997.359  | 0.479
+Hdt| 16:3-7,10,13| 7,10,13-Hexadecatrienoic acid, methyl ester          | 27.962| 5693206.453  | 0.852 | 27.980| 12533531.014 | 3.283
+Ole| 18:1-9      | 6-Octadecenoic acid, methyl ester, (Z)-              | 28.370| 275246393.442| 41.201| 28.378| 121039957.994| 31.701
+Vac| 18:1-11     | 11-Octadecenoic acid, methyl ester                   | 28.461| 4853679.244  | 0.727 | 28.485| 749807.601   | 0.196
+Lin| 18:2-9,12   | 9,12-Octadecadienoic acid, methyl ester              | 29.452| 84661404.933 | 12.673| 29.478| 80336052.625 | 21.041
+Ach| 20:0        | Eicosanoic acid, methyl ester                        | 30.339| 2374234.101  | 0.355 | 0.000 | 0.000        | 0.000
+Ala| 18:3-9,12,15| 9,12,15-Octadecatrienoic acid, methyl ester, (Z,Z,Z)-| 30.686| 69861987.915 | 10.457| 30.700| 47937203.656 | 12.555
+Gdo| 20:1-11     | 11-Eicosenoic acid, methyl ester                     | 30.951| 2222305.618  | 0.333 | 0.000 | 0.000        | 0.000
+Beh| 22:0        | Docosanoic acid, methyl ester                        | 32.690| 5718332.370  | 0.856 | 32.732| 164001.951   | 0.043
+Lig| 24:0        | Tetracosanoic acid, methyl ester                     | 34.731| 1379823.978  | 0.207 | 0.000 | 0.000        | 0.000
+
+| 16:1-7| 7-Hexadecenoic acid, methyl ester, (Z)-| 0.000| 0.000| 0.000| 25.343| 6208005.437| 1.626
+| 16:1-9| 9-Hexadecenoic acid, methyl ester, (Z)-| 0.000| 0.000| 0.000| 25.497| 152433.808 | 0.040

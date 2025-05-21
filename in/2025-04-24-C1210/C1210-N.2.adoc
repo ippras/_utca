@@ -1,0 +1,16 @@
+   | ID          | Name                                       | RT1   | Area1        | %1    | RT2   | Area2        | %2
+Myr| 14:0        | Methyl tetradecanoate                      | 21.907| 212062.990   | 0.060 | 21.917| 822275.652   | 0.158
+Pam| 16:0        | Hexadecanoic acid, methyl ester            | 24.570| 140129837.296| 39.853| 24.572| 13879029.075 | 2.663
+Hdd| 16:2-7,10   | 7,10-Hexadecadienoic acid, methyl ester    | 26.556| 5631217.181  | 1.602 | 26.572| 31495820.254 | 6.042
+Ste| 18:0        | Methyl stearate                            | 27.612| 3272341.329  | 0.931 | 27.647| 1489003.882  | 0.286
+Hdt| 16:3-7,10,13| 7,10,13-Hexadecatrienoic acid, methyl ester| 27.959| 9879567.969  | 2.810 | 27.984| 65418124.428 | 12.550
+Ole| 18:1-9      | 9-Octadecenoic acid, methyl ester          | 28.344| 81236387.874 | 23.104| 28.385| 196944375.322| 37.782
+Vac| 18:1-11     | 11-Octadecenoic acid, methyl ester         | 28.452| 2711757.961  | 0.771 | 0.000 | 0.000        | 0.000
+Lin| 18:2-9,12   | 9.12-Octadecadienoic acid, methyl ester    | 29.449| 85080751.108 | 24.197| 29.489| 191063613.478| 36.654
+Ala| 18:3-9,12,15| 9,12,15-Octadecatrienoic acid, methyl ester| 30.677| 22104652.018 | 6.287 | 30.703| 15290079.269 | 2.933
+Emo| 20:1-9      | Methyl 9-eicosenoate                       | 30.945| 273046.597   | 0.078 | 0.000 | 0.000        | 0.000
+Beh| 22:0        | Docosanoic acid, methyl ester              | 32.687| 348886.718   | 0.099 | 32.725| 326019.099   | 0.063
+Lig| 24:0        | Tetracosanoic acid, methyl ester           | 34.728| 738813.327   | 0.210 | 0.000 | 0.000        | 0.000
+
+| 16:1-7| 7-Hexadecenoic acid, methyl ester, (Z)-| 0.000| 0.000| 0.000| 25.343| 4325026.305| 0.830
+| 20:0  | Eicosanoic acid, methyl ester          | 0.000| 0.000| 0.000| 30.356| 208038.781 | 0.040

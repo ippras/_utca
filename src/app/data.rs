@@ -1,4 +1,4 @@
-use crate::app::panes::configuration::Pane as ConfigurationPane;
+use crate::{app::panes::configuration::Pane as ConfigurationPane, utils::title};
 use egui::{Color32, Frame, Grid, Id, Label, RichText, Sense, Stroke, Ui, menu::bar};
 use egui_extras::{Column, TableBuilder};
 use egui_l20n::{ResponseExt, UiExt as _};
@@ -126,11 +126,7 @@ impl Data {
                             });
                             // Label
                             row.col(|ui| {
-                                let text = if let Some(version) = &frame.meta.version {
-                                    &format!("{} {version}", frame.meta.name)
-                                } else {
-                                    &frame.meta.name
-                                };
+                                let text = title(&frame.meta, " ");
                                 let response = ui
                                     .add(Label::new(text).sense(Sense::click()).truncate())
                                     .on_hover_ui(|ui| {
