@@ -14,7 +14,7 @@ use crate::{
         text::Text,
     },
     export::xlsx,
-    utils::Hashed,
+    utils::{Hashed, title},
 };
 use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -55,10 +55,19 @@ impl Pane {
     }
 
     pub(crate) fn title(&self) -> String {
+        self.title_with_separator(" ")
+    }
+
+    fn title_with_separator(&self, separator: &str) -> String {
         match self.settings.index {
-            Some(index) => self.source[index].meta.title(),
+            Some(index) => title(&self.source[index].meta, separator),
             None => {
-                format_list_truncated!(self.source.iter().map(|frame| frame.meta.title()), 2)
+                format_list_truncated!(
+                    self.source
+                        .iter()
+                        .map(|frame| title(&frame.meta, separator)),
+                    2
+                )
             }
         }
     }
@@ -115,30 +124,52 @@ impl Pane {
         );
         ui.separator();
         // Save
-        let file = format!("{}.utca.xlsx", self.title());
-        if ui
-            .button(RichText::new(FLOPPY_DISK).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("save"));
-            })
-            .on_hover_text(&file)
-            .clicked()
-        {
-            let mut data_frame = ui.memory_mut(|memory| {
-                memory
-                    .caches
-                    .cache::<FilteredCompositionComputed>()
-                    .get(FilteredCompositionKey {
-                        data_frame: &self.target,
-                        settings: &self.settings,
-                    })
-            });
-            data_frame = data_frame.unnest(["Keys"]).unwrap();
-            let _ = xlsx::save(&data_frame, &file);
-            // if let Err(error) = self.save() {
-            //     ui.ctx().error(error);
-            // }
-        }
+        ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
+            let title = self.title_with_separator(".");
+            if ui
+                .button("IPC")
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("save"));
+                })
+                .on_hover_ui(|ui| {
+                    ui.label(&format!("{title}.utca.ipc"));
+                })
+                .clicked()
+            {
+                let mut data_frame = ui.memory_mut(|memory| {
+                    memory.caches.cache::<FilteredCompositionComputed>().get(
+                        FilteredCompositionKey {
+                            data_frame: &self.target,
+                            settings: &self.settings,
+                        },
+                    )
+                });
+            };
+            if ui
+                .button("XLSX")
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("save"));
+                })
+                .on_hover_ui(|ui| {
+                    ui.label(&format!("{title}.utca.xlsx"));
+                })
+                .clicked()
+            {
+                let mut data_frame = ui.memory_mut(|memory| {
+                    memory.caches.cache::<FilteredCompositionComputed>().get(
+                        FilteredCompositionKey {
+                            data_frame: &self.target,
+                            settings: &self.settings,
+                        },
+                    )
+                });
+                data_frame = data_frame.unnest(["Keys"]).unwrap();
+                let _ = xlsx::save(&data_frame, &format!("{title}.utca.xlsx"));
+                // if let Err(error) = self.save() {
+                //     ui.ctx().error(error);
+                // }
+            }
+        });
         ui.separator();
         // View
         ui.menu_button(RichText::new(self.state.view.icon()).heading(), |ui| {

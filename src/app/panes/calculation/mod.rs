@@ -1,9 +1,12 @@
 use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
-use crate::app::{
-    computers::{CalculationComputed, CalculationKey},
-    presets::CHRISTIE,
-    widgets::{FattyAcidWidget, FloatWidget},
+use crate::{
+    app::{
+        computers::{CalculationComputed, CalculationKey},
+        presets::CHRISTIE,
+        widgets::{FattyAcidWidget, FloatWidget},
+    },
+    utils::title,
 };
 use egui::{CursorIcon, Grid, Id, Response, RichText, ScrollArea, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -43,8 +46,10 @@ impl Pane {
 
     pub(crate) fn title(&self) -> String {
         match self.settings.index {
-            Some(index) => self.source[index].meta.title(),
-            None => format_list_truncated!(self.source.iter().map(|frame| frame.meta.title()), 2),
+            Some(index) => title(&self.source[index].meta, " "),
+            None => {
+                format_list_truncated!(self.source.iter().map(|frame| title(&frame.meta, " ")), 2)
+            }
         }
     }
 

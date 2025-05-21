@@ -9,71 +9,9 @@
 //!
 //! [Determination of the Positional-Species Composition of Plant Reserve Triacylglycerols by Partial Chemical Deacylation](https://sci-hub.ru/10.1023/A:1016732708350)
 
-// #![feature(anonymous_lifetime_in_impl_trait)]
-// #![feature(associated_type_defaults)]
-// #![feature(decl_macro)]
-// #![feature(float_next_up_down)]
-// #![feature(hash_extract_if)]
-// #![feature(impl_trait_in_assoc_type)]
-// #![feature(lazy_get)]
-// #![feature(slice_split_once)]
-// #![feature(step_trait)]
-
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use utca::App;
-
-// fn main() -> Result<(), eframe::Error> {
-//     let mut list: Vec<String> = Vec::new();
-//     let mut index = None;
-//     eframe::run_simple_native("combo test", Default::default(), move |ctx, _| {
-//         use eframe::egui;
-//         egui::CentralPanel::default().show(ctx, |ui| {
-//             let mut show_combo = |ui: &mut egui::Ui| {
-//                 ui.set_min_height(100.0);
-//                 ui.horizontal(|ui| {
-//                     let mut remove_at = None;
-//                     egui::ComboBox::from_id_source("select")
-//                         .width(125.0)
-//                         .selected_text(match index {
-//                             // for some reason this is necessary
-//                             Some(i) => &list[i] as &str,
-//                             None => "none",
-//                         })
-//                         .show_ui(ui, |ui| {
-//                             if ui.selectable_label(index.is_none(), "none").clicked() {
-//                                 index = None;
-//                             }
-//                             for (i, pak) in list.iter().enumerate() {
-//                                 ui.horizontal(|ui| {
-//                                     if ui.selectable_label(index == Some(i), pak).clicked() {
-//                                         index = Some(i);
-//                                     }
-//                                     if ui.button("x").clicked() {
-//                                         remove_at = Some(i);
-//                                         if index == remove_at {
-//                                             index = None
-//                                         }
-//                                         if index.is_some_and(|index| index > i) {
-//                                             index.as_mut().map(|i| *i -= 1);
-//                                         }
-//                                     }
-//                                 });
-//                             }
-//                         });
-//                     if let Some(i) = remove_at {
-//                         list.remove(i);
-//                     }
-//                     if ui.button("+").clicked() {
-//                         list.push("test".to_string())
-//                     }
-//                 })
-//             };
-//             show_combo(ui);
-//             ui.menu_button("test", show_combo);
-//         });
-//     })
-// }
 
 // When compiling natively
 #[cfg(not(target_arch = "wasm32"))]

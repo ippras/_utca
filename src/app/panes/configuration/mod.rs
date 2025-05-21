@@ -1,6 +1,6 @@
 use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
-use crate::{app::ContextExt, export::ipc::save};
+use crate::{app::ContextExt, export::ipc::save, utils::title};
 use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -61,7 +61,11 @@ impl Pane {
     }
 
     pub(crate) fn title(&self) -> String {
-        self.frames[self.settings.index].meta.title()
+        self.title_with_separator(" ")
+    }
+
+    fn title_with_separator(&self, separator: &str) -> String {
+        title(&self.frames[self.settings.index].meta, separator)
     }
 
     fn header_content(&mut self, ui: &mut Ui) -> Response {
@@ -162,13 +166,27 @@ impl Pane {
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("save"));
             })
-            .on_hover_text(format!("{}.utca.ipc", self.title()))
+            .on_hover_text(format!("{}.utca.ipc", self.title_with_separator(".")))
             .clicked()
         {
             if let Err(error) = self.save() {
                 ui.ctx().error(error);
             }
         }
+        // if ui
+        //     .button(RichText::new("JSON").heading())
+        //     .on_hover_ui(|ui| {
+        //         ui.label(ui.localize("save"));
+        //     })
+        //     .on_hover_text(format!("{}.utca.json", self.title()))
+        //     .clicked()
+        // {
+        //     let mut file = std::fs::File::create(format!("{}.utca.json", self.title())).unwrap();
+        //     JsonWriter::new(&mut file)
+        //         .with_json_format(JsonFormat::JsonLines)
+        //         .finish(&mut self.frames[self.settings.index].data)
+        //         .unwrap();
+        // }
         ui.separator();
         // Calculation
         if ui
@@ -260,7 +278,7 @@ impl Pane {
     }
 
     fn save(&mut self) -> Result<()> {
-        let name = format!("{}.utca.ipc", self.title());
+        let name = format!("{}.utca.ipc", self.title_with_separator("."));
         save(&mut self.frames[self.settings.index], &name)?;
         Ok(())
     }

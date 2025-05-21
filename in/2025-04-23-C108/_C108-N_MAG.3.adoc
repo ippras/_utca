@@ -1,0 +1,14 @@
+| 14:0          | Methyl tetradecanoate                                 | 21.895| 1555401.263  | 0.124
+| 16:0          | Hexadecanoic acid, methyl ester                       | 24.558| 73069031.684 | 5.842
+| 16:1-7        | 7-Hexadecenoic acid, methyl ester, (Z)-               | 25.317| 16517297.773 | 1.321
+| 16:2-7,10     | 7,10-Hexadecadienoic acid, methyl ester               | 26.557| 140969643.995| 11.271
+| 16:3-4,7,10   | 4,7,10-Hexadecatrienoic acid, methyl ester            | 27.134| 322547.572   | 0.026
+| 18:0          | Methyl stearate                                       | 27.640| 3327228.341  | 0.266
+| 16:3-7,10,13  | 7,10,13-Hexadecatrienoic acid, methyl ester           | 27.959| 96073072.573 | 7.682
+| 18:1-9        | 9-Octadecenoic acid (Z)-, methyl ester                | 28.378| 379142759.686| 30.315
+| 18:2-9,12     | 9,12-Octadecadienoic acid (Z,Z)-, methyl ester        | 29.489| 471677356.351| 37.714
+| 18:3-6,9,12   | Methyl y-linolenate                                   | 30.213| 695779.136   | 0.056
+| 20:0          | Eicosanoic acid, methyl ester                         | 30.334| 422365.270   | 0.034
+| 18:3-9,12,15  | 9,12,15-Octadecatrienoic acid, methyl ester, (Z,Z,Z)- | 30.686| 65837427.466 | 5.264
+| 18:4-6,9,12,15| (6Z,9Z,12Z,15Z)-Methyl octadeca-6,9,12,15- tetraenoate| 31.427| 489565.954   | 0.039
+| 22:0          | Docosanoic acid, methyl ester                         | 32.703| 579239.859   | 0.046

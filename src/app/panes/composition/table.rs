@@ -10,10 +10,7 @@ use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use polars::prelude::*;
 use polars_ext::series::round;
-use std::{
-    ops::{Add, Range},
-    process::exit,
-};
+use std::ops::{Add, Range};
 use tracing::instrument;
 
 const INDEX: Range<usize> = 0..1;
