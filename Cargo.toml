@@ -60,7 +60,7 @@ serde = { version = "1.0.219", features = ["derive", "std"] }
 thiserror = "2.0.12"
 tracing = "0.1.41"
 unic-langid = { version = "0.9.5", features = ["macros"] }
-uom = "0.36.0"
+uom = "0.37.0"
 url = { version = "2.5.4", features = ["serde"] }
 
 # egui-any = "0.1.0"
