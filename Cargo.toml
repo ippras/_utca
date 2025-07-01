@@ -55,7 +55,7 @@ polars = { version = "0.46.0", default-features = false, features = [
 ] }
 polars-utils = { version = "0.47.1", features = ["nightly"] }
 radix_trie = "0.2.1"
-rust_xlsxwriter = { version = "0.87.0", features = ["chrono", "wasm"] }
+rust_xlsxwriter = { version = "0.89.0", features = ["chrono", "wasm"] }
 serde = { version = "1.0.219", features = ["derive", "std"] }
 thiserror = "2.0.12"
 tracing = "0.1.41"
