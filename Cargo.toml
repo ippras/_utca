@@ -9,7 +9,7 @@ ahash = "0.8.12"
 anyhow = "1.0.98"
 base64 = "0.22.1"
 chrono = "0.4.41"
-constcat = "0.6.0"
+constcat = "0.6.1"
 eframe = { version = "0.31.1", features = [
     "accesskit",
     "default_fonts",
@@ -26,10 +26,10 @@ egui_plot = "0.32.1"
 egui_table = "0.3.0"
 egui_tiles = "0.12.0"
 ehttp = { version = "0.5.0", features = ["json", "native-async"] }
-indexmap = "2.9.0"
+indexmap = "2.10.0"
 itertools = "0.14.0"
 log = "0.4.27"
-polars = { version = "0.46.0", default-features = false, features = [
+polars = { version = "0.49.1", default-features = false, features = [
     "concat_str",
     "cross_join",
     "cum_agg",
@@ -39,6 +39,7 @@ polars = { version = "0.46.0", default-features = false, features = [
     "dtype-u8",
     "fmt_no_tty",
     "ipc",
+    "json",
     "lazy",
     "list_any_all",
     "list_eval",
@@ -47,20 +48,19 @@ polars = { version = "0.46.0", default-features = false, features = [
     "serde-lazy",
     "sign",
     "strings",
-    "json",
     #
     # "diagonal_concat",
     # "list_drop_nulls",
     # "semi_anti_join",
 ] }
-polars-utils = { version = "0.47.1", features = ["nightly"] }
+polars-utils = { version = "0.49.1", features = ["nightly"] }
 radix_trie = "0.2.1"
-rust_xlsxwriter = { version = "0.87.0", features = ["chrono", "wasm"] }
+rust_xlsxwriter = { version = "0.89.0", features = ["chrono", "wasm"] }
 serde = { version = "1.0.219", features = ["derive", "std"] }
 thiserror = "2.0.12"
 tracing = "0.1.41"
-unic-langid = { version = "0.9.5", features = ["macros"] }
-uom = "0.36.0"
+unic-langid = { version = "0.9.6", features = ["macros"] }
+uom = "0.37.0"
 url = { version = "2.5.4", features = ["serde"] }
 
 # egui-any = "0.1.0"
@@ -75,30 +75,28 @@ url = { version = "2.5.4", features = ["serde"] }
 # re_ui = "0.22.0"
 # semver = { version = "1.0.26", features = ["serde"] }
 
-egui_ext = { git = "https://github.com/kgv/egui_ext", rev = "2c56702380d81e199a1d1996a87933925111e642", features = [
-    "tracing",
-] }
+egui_ext = { git = "https://github.com/kgv/egui_ext", features = ["tracing"] }
 egui_l20n = { git = "https://github.com/kgv/egui_l20n", features = ["macros"] }
 egui_tiles_ext = { git = "https://github.com/kgv/egui_tiles_ext" }
-lipid = { git = "https://github.com/ippras/lipid", rev = "95eb839cd461819184aa110e544adab4949f1888", features = [
+lipid = { git = "https://github.com/ippras/lipid", features = [
     "polars",
-] }
+], branch = "cui" }
 metadata = { git = "https://github.com/ippras/metadata" }
 molecule = { git = "https://github.com/ippras/molecule" }
-polars_ext = { git = "https://github.com/kgv/polars_ext", rev = "c86e4e53e63d79f6619e95242324522a252b9643", features = [
+polars_ext = { git = "https://github.com/kgv/polars_ext", features = [
     "temporal_conversions",
 ] }
 
 # native
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 poll-promise = { version = "0.3.0", features = ["tokio"] }
-tokio = { version = "1.45.0", features = ["full"] }
+tokio = { version = "1.46.0", features = ["full"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 # web
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.7"
-getrandom = { version = "0.3.0", default-features = false, features = [
+getrandom = { version = "0.3.3", default-features = false, features = [
     "wasm_js",
 ] }
 poll-promise = { version = "0.3.0", features = ["web"] }
