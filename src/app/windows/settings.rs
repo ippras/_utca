@@ -1,6 +1,6 @@
 use crate::{app::identifiers::GITHUB_TOKEN, utils::egui::State};
 use constcat::concat;
-use egui::{Context, Id, Response, SelectableLabel, TextEdit, Ui, Window};
+use egui::{Button, Context, Id, Response, TextEdit, Ui, Window};
 use egui_phosphor::regular::{EYE, GEAR};
 use serde::{Deserialize, Serialize};
 
@@ -49,7 +49,7 @@ fn ui(ui: &mut Ui) -> Response {
             ui.label("Token");
             ui.add(TextEdit::singleline(&mut token).password(!state.password));
             let response = ui
-                .add(SelectableLabel::new(state.password, EYE))
+                .add(Button::selectable(state.password, EYE))
                 .on_hover_text("Show/hide token");
             if response.clicked() {
                 state.password = !state.password;

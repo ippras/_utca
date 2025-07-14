@@ -102,7 +102,7 @@ impl Settings {
                                         filter: Default::default(),
                                     });
                                     current_value = None;
-                                    ui.close_menu();
+                                    ui.close();
                                 }
                             }
                         });
@@ -591,6 +591,7 @@ impl Order {
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub(crate) struct Selection {
     pub(crate) composition: Composition,
+    #[serde(skip)]
     pub(crate) filter: Filter,
 }
 

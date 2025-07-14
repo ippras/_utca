@@ -204,11 +204,11 @@ impl<'a> Widget for ColumnWidget1<'a> {
                                         .entry(key.into_static())
                                         .or_insert();
                                 }
-                                ui.close_menu();
+                                ui.close();
                             }
                             if ui.button(format!("{FUNNEL_X} Unselect all")).clicked() {
                                 self.selection.filter.key.clear();
-                                ui.close_menu();
+                                ui.close();
                             }
                         });
                     }
@@ -277,11 +277,11 @@ impl<'a> Widget for ColumnWidget1<'a> {
 //                                             .entry(key.into_static())
 //                                             .or_insert();
 //                                     }
-//                                     ui.close_menu();
+//                                     ui.close();
 //                                 }
 //                                 if ui.button(format!("{FUNNEL_X} Unselect all")).clicked() {
 //                                     self.selection.filter.key.clear();
-//                                     ui.close_menu();
+//                                     ui.close();
 //                                 }
 //                             });
 //                         }

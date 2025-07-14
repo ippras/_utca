@@ -113,7 +113,7 @@ impl Settings {
     //                                 filter: Default::default(),
     //                             });
     //                             current_value = None;
-    //                             ui.close_menu();
+    //                             ui.close();
     //                         }
     //                     }
     //                 });

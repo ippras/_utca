@@ -1,16 +1,26 @@
 use super::{ID_SOURCE, Settings, State};
 use crate::{
-    app::{ResultExt, panes::MARGIN, text::Text, widgets::FloatWidget},
+    app::{
+        ResultExt,
+        computers::{CompositionIndicesComputed, CompositionIndicesKey},
+        panes::MARGIN,
+        text::Text,
+        widgets::FloatWidget,
+    },
     special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
     utils::polars::{tag_map, r#type},
 };
-use egui::{Frame, Id, Margin, TextStyle, Ui};
-use egui_l20n::UiExt as _;
+use egui::{Frame, Grid, Id, InnerResponse, Margin, Popup, PopupCloseBehavior, TextStyle, Ui};
+use egui_l20n::{ResponseExt as _, UiExt as _};
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
+use lipid::expr::ExprExt;
 use polars::prelude::*;
 use polars_ext::series::round;
-use std::ops::{Add, Range};
+use std::{
+    num::NonZeroI8,
+    ops::{Add, Range},
+};
 use tracing::instrument;
 
 const INDEX: Range<usize> = 0..1;
@@ -81,9 +91,7 @@ impl TableView<'_> {
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
         match (row, column) {
             (0, INDEX) => {
-                ui.heading(HASH).on_hover_ui(|ui| {
-                    ui.label(ui.localize("index"));
-                });
+                ui.heading(HASH).on_hover_localized("index");
             }
             (0, _) => {
                 ui.heading("Compositions");
@@ -141,9 +149,9 @@ impl TableView<'_> {
                     let key = &keys.fields_as_series()[index];
                     match self.settings.special.selections[index].composition {
                         MMC => {
-                            FloatWidget::new(|| Ok(key.f64()?.get(row)))
+                            FloatWidget::new(key.f64()?.get(row))
                                 .precision(Some(self.settings.precision))
-                                .hover()
+                                .hover(true)
                                 .show(ui);
                         }
                         MSC => {
@@ -241,57 +249,51 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         Ok(match series.dtype() {
             DataType::Array(inner, _) if inner.is_float() => {
-                FloatWidget::new(|| {
-                    Ok(if let Some(row) = row {
-                        array_value(series, row, |list| Ok(list.f64()?.get(index)))?
-                    } else {
-                        array_sum(series, |list| Ok(list.f64()?.get(index)))?
-                    })
+                FloatWidget::new(if let Some(row) = row {
+                    array_value(series, row, |list| Ok(list.f64()?.get(index)))?
+                } else {
+                    array_sum(series, |list| Ok(list.f64()?.get(index)))?
                 })
                 .percent(percent)
                 .precision(Some(self.settings.precision))
-                .hover()
+                .hover(true)
                 .show(ui);
             }
             DataType::Array(inner, _) if inner.is_struct() => {
-                FloatWidget::new(|| {
-                    Ok(if let Some(row) = row {
-                        array_value(series, row, |list| {
-                            Ok(list.struct_()?.field_by_name("Mean")?.f64()?.get(index))
-                        })?
-                    } else {
-                        array_sum(series, |list| {
-                            Ok(list.struct_()?.field_by_name("Mean")?.f64()?.get(index))
-                        })?
-                    })
+                FloatWidget::new(if let Some(row) = row {
+                    array_value(series, row, |list| {
+                        Ok(list.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+                    })?
+                } else {
+                    array_sum(series, |list| {
+                        Ok(list.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+                    })?
                 })
                 .percent(percent)
                 .precision(Some(self.settings.precision))
-                .hover()
+                .hover(true)
                 .show(ui);
                 ui.label("±");
-                FloatWidget::new(|| {
-                    Ok(if let Some(row) = row {
-                        array_value(series, row, |list| {
-                            Ok(list
-                                .struct_()?
-                                .field_by_name("StandardDeviation")?
-                                .f64()?
-                                .get(index))
-                        })?
-                    } else {
-                        array_sum(series, |list| {
-                            Ok(list
-                                .struct_()?
-                                .field_by_name("StandardDeviation")?
-                                .f64()?
-                                .get(index))
-                        })?
-                    })
+                FloatWidget::new(if let Some(row) = row {
+                    array_value(series, row, |list| {
+                        Ok(list
+                            .struct_()?
+                            .field_by_name("StandardDeviation")?
+                            .f64()?
+                            .get(index))
+                    })?
+                } else {
+                    array_sum(series, |list| {
+                        Ok(list
+                            .struct_()?
+                            .field_by_name("StandardDeviation")?
+                            .f64()?
+                            .get(index))
+                    })?
                 })
                 .percent(percent)
                 .precision(Some(self.settings.precision))
-                .hover()
+                .hover(true)
                 .show(ui);
             }
             data_type => panic!("value not implemented for {data_type:?}"),

@@ -1,0 +1,361 @@
+# IPPRAS
+
+[c4]
+abbreviation = ["Bu"]
+common_name = ["Butyric"]
+systematic_name = "Butanoic"
+
+[c5]
+abbreviation = ["V"]
+common_name = ["Valeric"]
+systematic_name = "Pentanoic"
+
+[c6]
+abbreviation = ["Co"]
+common_name = ["Caproic"]
+systematic_name = "Hexanoic"
+
+[c7]
+abbreviation = ["En"]
+common_name = ["Enanthic"]
+systematic_name = "Heptanoic"
+
+[c8]
+abbreviation = ["Cy"]
+common_name = ["Caprylic"]
+systematic_name = "Octanoic"
+
+[c9]
+common_name = ["Pelargonic"]
+systematic_name = "Nonanoic"
+
+[c10]
+abbreviation = ["Ca"]
+common_name = ["Capric"]
+systematic_name = "Decanoic"
+
+[c11]
+common_name = ["Undecylic"]
+systematic_name = "Hendecanoic"
+
+[c12]
+abbreviation = ["La"]
+common_name = ["Lauric"]
+systematic_name = "Dodecanoic"
+
+[c13]
+common_name = ["Tridecylic"]
+systematic_name = "Tridecanoic"
+
+[c14]
+abbreviation = ["M"]
+common_name = ["Myristic"]
+systematic_name = "Tetradecanoic"
+
+[c15]
+common_name = ["Pentadecylic"]
+systematic_name = "Pentadecanoic"
+
+[c16]
+abbreviation = ["P"]
+common_name = ["Palmitic"]
+systematic_name = "Hexadecanoic"
+
+[c16c9]
+abbreviation = ["Po"]
+common_name = ["Palmitoleic"]
+systematic_name = "c-9-Hexadecenoic"
+
+[c16t9]
+abbreviation = ["Pe"]
+common_name = ["Palmitelaidic"]
+systematic_name = "t-9-Hexadecenoic"
+
+[c17]
+common_name = ["Margaric"]
+systematic_name = "Heptadecanoic"
+
+[c18]
+abbreviation = ["S"]
+common_name = ["Stearic"]
+systematic_name = "Octadecanoic"
+
+[c18c9]
+abbreviation = ["O"]
+common_name = ["Oleic"]
+systematic_name = "c-9-Octadecenoic"
+
+[c18t9]
+abbreviation = ["El"]
+common_name = ["Elaidic"]
+systematic_name = "t-9-Octadecenoic"
+
+[c18c9c12]
+abbreviation = ["L"]
+common_name = ["Linoleic"]
+systematic_name = "c-9,12-Octadecadienoic"
+
+[c18c9c12c15]
+abbreviation = ["α-Ln"]
+common_name = ["α-Linolenic"]
+systematic_name = "c-9,12,15-Octadecatrienoic"
+
+[c18c6c9]
+abbreviation = ["γ-Ln", "Gla"]
+common_name = [""]
+iupac = "(6Z,9Z)-octadeca-6,9-dienoic acid"
+
+[c18c6c9c12]
+abbreviation = ["γ-Ln", "Gla"]
+common_name = ["γ-Linolenic"]
+systematic_name = "c-6,9,12-Octadecatrienoic"
+
+[c18c9t11t13]
+abbreviation = ["Eo"]
+common_name = ["α-Eleostearic"]
+systematic_name = "9c,11t,13t-Octadecatrienoic"
+
+[c18t9t11t13]
+common_name = ["β-Eleostearic"]
+systematic_name = "9t,11t,13t-Octadecatrienoic"
+
+[c18c8t10c12]
+abbreviation = ["Ja"]
+common_name = ["Jacaric"]
+systematic_name = "8c,10t,12c-Octadecatrienoic"
+
+[c18t9t11c13]
+abbreviation = ["Ct"]
+common_name = ["Catalpic"]
+systematic_name = "9t,11t,13c-Octadecatrienoic"
+
+[c18c6c9c12c15]
+abbreviation = ["St"]
+common_name = ["Stearidonic"]
+systematic_name = "c-6,9,12,15-Octadecatetraenoic"
+
+[c19]
+common_name = ["Nonadecylic"]
+systematic_name = "Nonadecanoic"
+
+[c20]
+abbreviation = ["A"]
+common_name = ["Arachidic"]
+systematic_name = "Eicosanoic"
+
+[c20c9]
+abbreviation = ["G"]
+common_name = ["Gadoleic"]
+systematic_name = "c-9-Eicosenoic"
+
+[c20c11]
+abbreviation = ["Go"]
+common_name = ["Gondoic"]
+systematic_name = "c-11-Eicosenoic"
+
+[c20c11c14]
+common_name = ["DihomoLinoleic"]
+systematic_name = "c-11,14-Eicosadienoic"
+
+[c20c11c14c17]
+common_name = ["Bis-homo-α-Linolenic, ETA"]
+systematic_name = "c-11,14,17-Eicosatrienoic"
+
+[c20c8c11c14]
+common_name = ["Bis-homo-γ-Linolenic"]
+systematic_name = "c-8,11,14-Eicosatrienoic"
+
+[c20c5c8c11]
+common_name = ["Mead"]
+systematic_name = "c-5,8,11-Eicosatrienoic"
+
+[c20c5c8c11c14]
+abbreviation = ["Ao"]
+common_name = ["Arachidonic"]
+systematic_name = "c-5,8,11,14-Eicosatetraenoic"
+
+[c20c8c11c14c17]
+common_name = ["Eicosatetraenoic"]
+systematic_name = "c-8,11,14,17-Eicosatetraenoic"
+
+[c20c5c8c11c14c17]
+abbreviation = ["Ep"]
+common_name = ["EPA"]
+systematic_name = "c-5,8,11,14,17-EicosaPentaenoic"
+
+[c21]
+common_name = ["Heneicosylic"]
+systematic_name = "Heneicosanoic"
+
+[c22]
+abbreviation = ["B"]
+common_name = ["Behenic"]
+systematic_name = "Docosanoic"
+
+[c22c13]
+abbreviation = ["E"]
+common_name = ["Erucic"]
+systematic_name = "c-13-Docosenoic"
+
+[c22c13c16]
+common_name = ["Docosadienoic"]
+systematic_name = "c-13,16-Docosadienoic"
+
+[c22c5c13c16]
+common_name = ["Eranthic"]
+systematic_name = "c-5,13,16-Docosatrienoic"
+
+[c22c7c10c13c16]
+common_name = ["Adrenic"]
+systematic_name = "c-7,10,13,16-Docosatetraenoic"
+
+[c22c7c10c13c16c19]
+abbreviation = ["Dp"]
+common_name = ["DPA"]
+systematic_name = "c-7,10,13,16,19-DocosaPentaenoic"
+
+[c22c4c7c10c13c16c19]
+abbreviation = ["Dh"]
+common_name = ["DHA"]
+systematic_name = "c-4,7,10,13,16,19-DocosaHexaenoic"
+
+[c23]
+common_name = ["Tricosylic"]
+systematic_name = "Tricosanoic"
+
+[c24]
+abbreviation = ["Lg"]
+common_name = ["Lignoceric"]
+systematic_name = "Tetracosanoic"
+
+[c24c15]
+abbreviation = ["N"]
+common_name = ["Nervonic"]
+systematic_name = "c-15-Tetracosenoic"
+
+[c24c15c18]
+common_name = ["Tetracosadienoic"]
+systematic_name = "c-15,18-Tetracosadienoic"
+
+[c24c12c15c18]
+common_name = ["Tetracosatrienylic"]
+systematic_name = "c-12,15,18-Tetracosatrienoic"
+
+[c24c9c12c15c18]
+common_name = ["Tetracosatetraenylic"]
+systematic_name = "c-9,12,15,18-Tetracosatetraenoic"
+
+[c24c6c9c12c15c18]
+common_name = ["Tetracosapentaenylic"]
+systematic_name = "c-6,9,12,15,18-Tetracosapentaenoic"
+
+[c24c6c9c12c15c18c21]
+common_name = ["Tetracosahexaenylic"]
+systematic_name = "c-6,9,12,15,18,21-Tetracosahexaenoic"
+
+[c25]
+common_name = ["Hyenic"]
+systematic_name = "Pentacosanoic"
+
+[c26]
+abbreviation = ["Ce"]
+common_name = ["Cerotic"]
+systematic_name = "Hexacosanoic"
+
+[c26c17]
+abbreviation = ["Xi"]
+common_name = ["Ximenic"]
+systematic_name = "c-17-Hexacosenoic"
+
+[c26u0u0]
+common_name = ["Hexacosadienylic"]
+systematic_name = "Hexacosadienoic"
+
+[c26u0u0u0]
+common_name = ["Hexacosatrienylic"]
+systematic_name = "Hexacosatrienoic"
+
+[c26u0u0u0u0]
+common_name = ["Hexacosatetraenylic"]
+systematic_name = "Hexacosatetraenoic"
+
+[c26u0u0u0u0u0]
+common_name = ["Hexacosapentaenylic"]
+systematic_name = "Hexacosapentaenoic"
+
+[c26u0u0u0u0u0u0]
+common_name = ["Hexacosahexaenylic"]
+systematic_name = "Hexacosahexaenoic"
+
+[c27]
+common_name = ["Carboceric"]
+systematic_name = "Heptacosanoic"
+
+[c28]
+abbreviation = ["Mo"]
+common_name = ["Montanic"]
+systematic_name = "Octacosanoic"
+
+[c28u0]
+common_name = ["Octacosenylic"]
+systematic_name = "Octacosenoic"
+
+[c28u0u0]
+systematic_name = "Octacosadienoic"
+
+[c29]
+common_name = ["Nonacosylic"]
+systematic_name = "Nonacosanoic"
+
+[c30]
+common_name = ["Melissic"]
+systematic_name = "Triacontanoic"
+
+[c30c21]
+common_name = ["Lumequeic"]
+systematic_name = "c-21-Triacontenoic"
+
+[c31]
+common_name = ["Henatriacontylic"]
+systematic_name = "Henatriacontanoic"
+
+[c32]
+common_name = ["Lacceroic"]
+systematic_name = "Dotriacontanoic"
+
+[c32u0]
+common_name = ["Dotriacontenylic"]
+systematic_name = "Dotriacontenoic"
+
+[c32u0u0]
+systematic_name = "Dotriacontadienoic"
+
+[c33]
+common_name = ["Psyllic"]
+systematic_name = "Triatriacontanoic"
+
+[c34]
+common_name = ["Gheddic"]
+systematic_name = "Tetratriacontanoic"
+
+[c34u0]
+common_name = ["Tetratriacontenylic"]
+systematic_name = "Tetratriacontenoic"
+
+[c34u0u0]
+systematic_name = "Tetratriacontadienoic"
+
+[c35]
+common_name = ["Ceroplastic"]
+systematic_name = "Pentatriacontanoic"
+
+[c36]
+common_name = ["Hexatriacontylic"]
+systematic_name = "Hexatriacontanoic"
+
+[c36u0]
+common_name = ["Hexatriacontenylic"]
+systematic_name = "Hexatriacontenoic"
+
+[c36u0u0]
+systematic_name = "Hexatriacontadienoic"

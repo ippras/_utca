@@ -2,13 +2,9 @@ use super::{
     ID_SOURCE, State,
     settings::{From, Settings},
 };
-use crate::app::{
-    ContextExt as _,
-    panes::MARGIN,
-    widgets::{FattyAcidWidget, FloatWidget},
-};
+use crate::app::{ContextExt as _, panes::MARGIN, widgets::FloatWidget};
 use egui::{Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
-use egui_l20n::UiExt as _;
+use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use lipid::prelude::*;
@@ -99,9 +95,7 @@ impl TableView<'_> {
             // Top
             (0, ID) => {
                 ui.heading(ui.localize("identifier.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("identifier"));
-                    });
+                    .on_hover_localized("identifier");
             }
             (0, EXPERIMENTAL) => {
                 ui.heading(ui.localize("experimental"));
@@ -114,9 +108,7 @@ impl TableView<'_> {
             }
             // Middle
             (1, id::INDEX) => {
-                ui.heading(HASH).on_hover_ui(|ui| {
-                    ui.label(ui.localize("index"));
-                });
+                ui.heading(HASH).on_hover_localized("index");
             }
             (1, id::LABEL) => {
                 ui.heading(ui.localize("label"));
@@ -243,8 +235,10 @@ impl TableView<'_> {
                 ui.label(label);
             }
             (row, id::FA) => {
-                let mut fatty_acid = self.data_frame.fa().get(row)?;
-                FattyAcidWidget::new(fatty_acid.as_mut()).hover().show(ui);
+                if let Some(fatty_acid) = self.data_frame.try_fatty_acid()?.delta()?.get(row) {
+                    ui.label(fatty_acid);
+                }
+                // FattyAcidWidget::new(fatty_acid).hover(true).show(ui);
             }
             (row, experimental::TAG) => {
                 self.value(
@@ -486,26 +480,27 @@ impl TableView<'_> {
             } else {
                 r#struct.field_by_name("Mean")?.f64()?.sum()
             };
-            FloatWidget::new(|| Ok(mean))
+            let response = FloatWidget::new(mean)
                 .percent(percent)
                 .precision(Some(self.settings.precision))
                 .disable(disable)
-                .hover()
-                .show(ui);
+                .hover(true)
+                .show(ui)
+                .response;
+            if let Some(row) = row {
+                response.on_hover_text(r#struct.field_by_name("Values")?.str_value(row)?);
+            }
             ui.label("±");
             let standard_deviation = if let Some(row) = row {
-                r#struct
-                    .field_by_name("StandardDeviations")?
-                    .f64()?
-                    .get(row)
+                r#struct.field_by_name("StandardDeviation")?.f64()?.get(row)
             } else {
-                r#struct.field_by_name("StandardDeviations")?.f64()?.sum()
+                r#struct.field_by_name("StandardDeviation")?.f64()?.sum()
             };
-            FloatWidget::new(|| Ok(standard_deviation))
+            FloatWidget::new(standard_deviation)
                 .percent(percent)
                 .precision(Some(self.settings.precision))
                 .disable(disable)
-                .hover()
+                .hover(true)
                 .show(ui)
                 .response
         } else {
@@ -515,11 +510,11 @@ impl TableView<'_> {
             } else {
                 values.sum()
             };
-            FloatWidget::new(|| Ok(value))
+            FloatWidget::new(value)
                 .percent(percent)
                 .precision(Some(self.settings.precision))
                 .disable(disable)
-                .hover()
+                .hover(true)
                 .show(ui)
                 .response
         })

@@ -1,7 +1,7 @@
 use super::{ContextExt as _, ID_SOURCE, Settings, State};
 use crate::app::{
     panes::MARGIN,
-    widgets::{FattyAcidWidget, FloatWidget, NamesWidget},
+    widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
 };
 use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
 use egui_l20n::UiExt;
@@ -146,44 +146,44 @@ impl TableView<'_> {
                 ui.label(row.to_string());
             }
             (row, LABEL) => {
-                let labels = self.data_frame["Label"].str()?;
-                let label = labels.get(row).unwrap_or_default();
-                if self.settings.editable {
-                    let mut label = label.to_owned();
-                    if ui.text_edit_singleline(&mut label).changed() {
-                        self.data_frame
-                            .try_apply("Label", change_label(row, &label))?;
+                let fatty_acid = self.data_frame.try_fatty_acid()?;
+                let label = self.data_frame["Label"].str()?;
+                let inner_response = LabelWidget::new(label, fatty_acid, row)
+                    .editable(self.settings.editable)
+                    .hover(true)
+                    .show(ui);
+                if inner_response.response.changed() {
+                    match inner_response.inner? {
+                        Some(Inner::Cell(new)) => {
+                            self.data_frame
+                                .try_apply("Label", change_label(row, &new))?;
+                        }
+                        Some(Inner::Column(new_col)) => {
+                            self.data_frame.replace("Label", new_col)?;
+                        }
+                        None => todo!(),
                     }
-                } else {
-                    ui.label(label);
                 }
             }
             (row, FA) => {
-                let mut fatty_acid = self.data_frame.fa().get(row)?;
-                let mut inner_response = FattyAcidWidget::new(fatty_acid.as_mut())
+                let fatty_acid = self.data_frame.try_fatty_acid()?.get(row)?;
+                let inner_response = FattyAcidWidget::new(fatty_acid.as_ref())
                     .editable(self.settings.editable)
-                    .hover()
+                    .hover(true)
                     .show(ui);
-                if self.settings.names {
-                    if let Some(fatty_acid) = &fatty_acid {
-                        inner_response.response = inner_response.response.on_hover_ui(|ui| {
-                            ui.add(NamesWidget::new(fatty_acid));
-                        });
-                    }
-                }
                 if inner_response.response.changed() {
                     self.data_frame
-                        .try_apply("FattyAcid", update_fatty_acid(row, inner_response.inner))?;
+                        .try_apply("FattyAcid", change_fatty_acid(row, inner_response.inner))?;
                 }
             }
             (row, TAG) => {
-                self.rw(ui, row, "Triacylglycerol")?;
+                self.f64_cell(ui, row, "Triacylglycerol")?;
             }
             (row, DAG1223) => {
-                self.rw(ui, row, "Diacylglycerol1223")?;
+                self.f64_cell(ui, row, "Diacylglycerol1223")?;
             }
             (row, MAG2) => {
-                self.rw(ui, row, "Monoacylglycerol2")?;
+                self.f64_cell(ui, row, "Monoacylglycerol2")?;
             }
             _ => {}
         }
@@ -200,25 +200,25 @@ impl TableView<'_> {
                 }
             }
             TAG => {
-                FloatWidget::new(|| Ok(self.data_frame["Triacylglycerol"].f64()?.sum()))
+                FloatWidget::new(self.data_frame["Triacylglycerol"].f64()?.sum())
                     .precision(Some(self.settings.precision))
-                    .hover()
+                    .hover(true)
                     .show(ui)
                     .response
                     .on_hover_text("∑ TAG");
             }
             DAG1223 => {
-                FloatWidget::new(|| Ok(self.data_frame["Diacylglycerol1223"].f64()?.sum()))
+                FloatWidget::new(self.data_frame["Diacylglycerol1223"].f64()?.sum())
                     .precision(Some(self.settings.precision))
-                    .hover()
+                    .hover(true)
                     .show(ui)
                     .response
                     .on_hover_text("∑ DAG1223");
             }
             MAG2 => {
-                FloatWidget::new(|| Ok(self.data_frame["Monoacylglycerol2"].f64()?.sum()))
+                FloatWidget::new(self.data_frame["Monoacylglycerol2"].f64()?.sum())
                     .precision(Some(self.settings.precision))
-                    .hover()
+                    .hover(true)
                     .show(ui)
                     .response
                     .on_hover_text("∑ MAG");
@@ -228,15 +228,15 @@ impl TableView<'_> {
         Ok(())
     }
 
-    fn rw(&mut self, ui: &mut Ui, row: usize, column: &str) -> PolarsResult<Response> {
-        let inner_response = FloatWidget::new(|| Ok(self.data_frame[column].f64()?.get(row)))
+    fn f64_cell(&mut self, ui: &mut Ui, row: usize, column: &str) -> PolarsResult<Response> {
+        let value = self.data_frame[column].f64()?.get(row);
+        let inner_response = FloatWidget::new(value)
             .editable(self.settings.editable)
             .precision(Some(self.settings.precision))
-            .hover()
+            .hover(true)
             .show(ui);
         if let Some(value) = inner_response.inner {
-            self.data_frame
-                .try_apply(column, update_f64(row, Some(value)))?;
+            self.data_frame.try_apply(column, change_f64(row, value))?;
         }
         Ok(inner_response.response)
     }
@@ -273,76 +273,68 @@ impl TableDelegate for TableView<'_> {
     }
 }
 
-// TODO: change existing `ChunkedArrays` rather than creating new ones
-fn update_fatty_acid(
+fn change_fatty_acid(
     row: usize,
     value: Option<FattyAcid>,
-) -> impl FnMut(&Series) -> PolarsResult<Series> + 'static {
+) -> impl FnMut(&Series) -> PolarsResult<Series> {
     move |series| {
-        let fatty_acid_series = series.fa();
-        let mut carbons = PrimitiveChunkedBuilder::<UInt8Type>::new(
-            fatty_acid_series.carbons.name().clone(),
-            fatty_acid_series.len(),
+        // Ok(series.clone())
+        let fatty_acid = series.try_fatty_acid()?;
+        let carbon = fatty_acid.carbon()?;
+        let mut carbon_builder =
+            PrimitiveChunkedBuilder::<UInt8Type>::new(carbon.name().clone(), carbon.len());
+        let indices = fatty_acid.indices()?;
+        let mut indices_builder = AnonymousOwnedListBuilder::new(
+            indices.name().clone(),
+            indices.len(),
+            indices.dtype().inner_dtype().cloned(),
         );
-        let mut unsaturated = AnonymousOwnedListBuilder::new(
-            fatty_acid_series.unsaturated.name().clone(),
-            fatty_acid_series.len(),
-            fatty_acid_series.unsaturated.dtype().inner_dtype().cloned(),
-        );
-        for index in 0..fatty_acid_series.len() {
-            let mut fatty_acid = fatty_acid_series.get(index)?;
+        for index in 0..series.len() {
+            let mut fatty_acid = fatty_acid.get(index)?;
             if index == row {
                 fatty_acid = value.clone();
             }
             let fatty_acid = fatty_acid.as_ref();
             // Carbons
-            carbons.append_option(fatty_acid.map(|fatty_acid| fatty_acid.carbons));
+            carbon_builder.append_option(fatty_acid.map(|fatty_acid| fatty_acid.carbon));
             // Unsaturated
             if let Some(fatty_acid) = fatty_acid {
-                let mut index = PrimitiveChunkedBuilder::<UInt8Type>::new(
+                let mut index_builder = PrimitiveChunkedBuilder::<UInt8Type>::new(
                     "Index".into(),
                     fatty_acid.unsaturated.len(),
                 );
-                let mut isomerism = PrimitiveChunkedBuilder::<Int8Type>::new(
-                    "Isomerism".into(),
-                    fatty_acid.unsaturated.len(),
-                );
-                let mut unsaturation = PrimitiveChunkedBuilder::<UInt8Type>::new(
-                    "Unsaturation".into(),
-                    fatty_acid.unsaturated.len(),
-                );
+                let mut triple_builder =
+                    BooleanChunkedBuilder::new("Triple".into(), fatty_acid.unsaturated.len());
+                let mut parity_builder =
+                    BooleanChunkedBuilder::new("Parity".into(), fatty_acid.unsaturated.len());
                 for unsaturated in &fatty_acid.unsaturated {
-                    index.append_option(unsaturated.index);
-                    isomerism.append_option(unsaturated.isomerism.map(|isomerism| isomerism as _));
-                    unsaturation.append_option(
-                        unsaturated
-                            .unsaturation
-                            .map(|unsaturation| unsaturation as _),
-                    );
+                    index_builder.append_option(unsaturated.index);
+                    triple_builder.append_option(unsaturated.triple);
+                    parity_builder.append_option(unsaturated.parity);
                 }
-                unsaturated.append_series(
+                indices_builder.append_series(
                     &StructChunked::from_series(
                         PlSmallStr::EMPTY,
                         fatty_acid.unsaturated.len(),
                         [
-                            index.finish().into_series(),
-                            isomerism.finish().into_series(),
-                            unsaturation.finish().into_series(),
+                            index_builder.finish().into_series(),
+                            triple_builder.finish().into_series(),
+                            parity_builder.finish().into_series(),
                         ]
                         .iter(),
                     )?
                     .into_series(),
                 )?;
             } else {
-                unsaturated.append_opt_series(None)?;
+                indices_builder.append_opt_series(None)?;
             }
         }
         Ok(StructChunked::from_series(
             series.name().clone(),
-            fatty_acid_series.len(),
+            series.len(),
             [
-                carbons.finish().into_series(),
-                unsaturated.finish().into_series(),
+                carbon_builder.finish().into_series(),
+                indices_builder.finish().into_series(),
             ]
             .iter(),
         )?
@@ -350,7 +342,7 @@ fn update_fatty_acid(
     }
 }
 
-fn update_f64(row: usize, value: Option<f64>) -> impl FnMut(&Series) -> PolarsResult<Series> {
+fn change_f64(row: usize, value: Option<f64>) -> impl FnMut(&Series) -> PolarsResult<Series> {
     move |series| {
         Ok(series
             .f64()?
@@ -379,96 +371,96 @@ fn change_label(row: usize, new: &str) -> impl FnMut(&Series) -> PolarsResult<Se
     }
 }
 
-fn change_fatty_acid(
-    row: usize,
-    new: &FattyAcid,
-) -> impl FnMut(&Series) -> PolarsResult<Series> + '_ {
-    move |series| {
-        let fatty_acid_series = series.fa();
-        let mut carbons = PrimitiveChunkedBuilder::<UInt8Type>::new(
-            fatty_acid_series.carbons.name().clone(),
-            fatty_acid_series.len(),
-        );
-        let mut unsaturated = AnonymousOwnedListBuilder::new(
-            fatty_acid_series.unsaturated.name().clone(),
-            fatty_acid_series.len(),
-            fatty_acid_series.unsaturated.dtype().inner_dtype().cloned(),
-        );
-        for index in 0..fatty_acid_series.len() {
-            let mut fatty_acid = fatty_acid_series.get(index)?;
-            if index == row {
-                fatty_acid = Some(new.clone());
-            }
-            let fatty_acid = fatty_acid.as_ref();
-            // Carbons
-            carbons.append_option(fatty_acid.map(|fatty_acid| fatty_acid.carbons));
-            // Unsaturated
-            if let Some(fatty_acid) = fatty_acid {
-                // let mut fields = Vec::with_capacity(fatty_acid.unsaturated.len());
-                // if let Some(unsaturated_series) = fatty_acid_series.unsaturated(index)? {
-                //     fields.push(unsaturated_series.index);
-                //     fields.push(unsaturated_series.isomerism);
-                //     fields.push(unsaturated_series.unsaturation);
-                // }
-                // unsaturated.append_series(
-                //     &StructChunked::from_series(
-                //         PlSmallStr::EMPTY,
-                //         fatty_acid.unsaturated.len(),
-                //         fields.iter(),
-                //     )?
-                //     .into_series(),
-                // )?;
-                let mut index = PrimitiveChunkedBuilder::<UInt8Type>::new(
-                    "Index".into(),
-                    fatty_acid.unsaturated.len(),
-                );
-                let mut isomerism = PrimitiveChunkedBuilder::<Int8Type>::new(
-                    "Isomerism".into(),
-                    fatty_acid.unsaturated.len(),
-                );
-                let mut unsaturation = PrimitiveChunkedBuilder::<UInt8Type>::new(
-                    "Unsaturation".into(),
-                    fatty_acid.unsaturated.len(),
-                );
-                for unsaturated in &fatty_acid.unsaturated {
-                    index.append_option(unsaturated.index);
-                    isomerism.append_option(unsaturated.isomerism.map(|isomerism| isomerism as _));
-                    unsaturation.append_option(
-                        unsaturated
-                            .unsaturation
-                            .map(|unsaturation| unsaturation as _),
-                    );
-                }
-                unsaturated.append_series(
-                    &StructChunked::from_series(
-                        PlSmallStr::EMPTY,
-                        fatty_acid.unsaturated.len(),
-                        [
-                            index.finish().into_series(),
-                            isomerism.finish().into_series(),
-                            unsaturation.finish().into_series(),
-                        ]
-                        .iter(),
-                    )?
-                    .into_series(),
-                )?;
-            } else {
-                println!("HERE1");
-                unsaturated.append_opt_series(None)?;
-            }
-        }
-        Ok(StructChunked::from_series(
-            series.name().clone(),
-            fatty_acid_series.len(),
-            [
-                carbons.finish().into_series(),
-                unsaturated.finish().into_series(),
-            ]
-            .iter(),
-        )?
-        .into_series())
-    }
-}
+// fn change_fatty_acid(
+//     row: usize,
+//     new: &FattyAcid,
+// ) -> impl FnMut(&Series) -> PolarsResult<Series> + '_ {
+//     move |series| {
+//         let fatty_acid_series = series.fa();
+//         let mut carbons = PrimitiveChunkedBuilder::<UInt8Type>::new(
+//             fatty_acid_series.carbons.name().clone(),
+//             fatty_acid_series.len(),
+//         );
+//         let mut unsaturated = AnonymousOwnedListBuilder::new(
+//             fatty_acid_series.unsaturated.name().clone(),
+//             fatty_acid_series.len(),
+//             fatty_acid_series.unsaturated.dtype().inner_dtype().cloned(),
+//         );
+//         for index in 0..fatty_acid_series.len() {
+//             let mut fatty_acid = fatty_acid_series.get(index)?;
+//             if index == row {
+//                 fatty_acid = Some(new.clone());
+//             }
+//             let fatty_acid = fatty_acid.as_ref();
+//             // Carbons
+//             carbons.append_option(fatty_acid.map(|fatty_acid| fatty_acid.carbons));
+//             // Unsaturated
+//             if let Some(fatty_acid) = fatty_acid {
+//                 // let mut fields = Vec::with_capacity(fatty_acid.unsaturated.len());
+//                 // if let Some(unsaturated_series) = fatty_acid_series.unsaturated(index)? {
+//                 //     fields.push(unsaturated_series.index);
+//                 //     fields.push(unsaturated_series.isomerism);
+//                 //     fields.push(unsaturated_series.unsaturation);
+//                 // }
+//                 // unsaturated.append_series(
+//                 //     &StructChunked::from_series(
+//                 //         PlSmallStr::EMPTY,
+//                 //         fatty_acid.unsaturated.len(),
+//                 //         fields.iter(),
+//                 //     )?
+//                 //     .into_series(),
+//                 // )?;
+//                 let mut index = PrimitiveChunkedBuilder::<UInt8Type>::new(
+//                     "Index".into(),
+//                     fatty_acid.unsaturated.len(),
+//                 );
+//                 let mut isomerism = PrimitiveChunkedBuilder::<Int8Type>::new(
+//                     "Isomerism".into(),
+//                     fatty_acid.unsaturated.len(),
+//                 );
+//                 let mut unsaturation = PrimitiveChunkedBuilder::<UInt8Type>::new(
+//                     "Unsaturation".into(),
+//                     fatty_acid.unsaturated.len(),
+//                 );
+//                 for unsaturated in &fatty_acid.unsaturated {
+//                     index.append_option(unsaturated.index);
+//                     isomerism.append_option(unsaturated.isomerism.map(|isomerism| isomerism as _));
+//                     unsaturation.append_option(
+//                         unsaturated
+//                             .unsaturation
+//                             .map(|unsaturation| unsaturation as _),
+//                     );
+//                 }
+//                 unsaturated.append_series(
+//                     &StructChunked::from_series(
+//                         PlSmallStr::EMPTY,
+//                         fatty_acid.unsaturated.len(),
+//                         [
+//                             index.finish().into_series(),
+//                             isomerism.finish().into_series(),
+//                             unsaturation.finish().into_series(),
+//                         ]
+//                         .iter(),
+//                     )?
+//                     .into_series(),
+//                 )?;
+//             } else {
+//                 println!("HERE1");
+//                 unsaturated.append_opt_series(None)?;
+//             }
+//         }
+//         Ok(StructChunked::from_series(
+//             series.name().clone(),
+//             fatty_acid_series.len(),
+//             [
+//                 carbons.finish().into_series(),
+//                 unsaturated.finish().into_series(),
+//             ]
+//             .iter(),
+//         )?
+//         .into_series())
+//     }
+// }
 
 // fn change_experimental(row: usize, new: f64) -> impl FnMut(&Series) -> PolarsResult<Series> {
 //     move |series| {

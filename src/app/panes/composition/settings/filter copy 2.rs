@@ -249,11 +249,11 @@ impl StereospecificNumberWidget<'_> {
                         .entry(key.into_static())
                         .or_insert();
                 }
-                ui.close_menu();
+                ui.close();
             }
             if ui.button(format!("{FUNNEL_X} Unselect all")).clicked() {
                 self.selection.filter.key.clear();
-                ui.close_menu();
+                ui.close();
             }
         });
         Ok(response)
@@ -311,13 +311,13 @@ impl<'a> Widget for StereospecificNumberWidget<'a> {
         //             let value = self.filter.key.entry(key.into_static()).or_default();
         //             value[self.number] = true;
         //         }
-        //         ui.close_menu();
+        //         ui.close();
         //     }
         //     if ui.button(format!("{FUNNEL_X} Unselect all")).clicked() {
         //         for value in self.filter.key.values_mut() {
         //             value[self.number] = false;
         //         }
-        //         ui.close_menu();
+        //         ui.close();
         //     }
         // });
         // response

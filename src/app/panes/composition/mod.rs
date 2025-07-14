@@ -8,23 +8,26 @@ use super::PaneDelegate;
 use crate::{
     app::{
         computers::{
-            CompositionComputed, CompositionKey, FilteredCompositionComputed,
+            CompositionComputed, CompositionIndicesComputed, CompositionIndicesKey, CompositionKey,
+            CompositionSpeciesComputed, CompositionSpeciesKey, FilteredCompositionComputed,
             FilteredCompositionKey, UniqueCompositionComputed, UniqueCompositionKey,
         },
         text::Text,
+        widgets::IndicesWidget,
     },
-    export::{ipc, xlsx},
-    utils::{Hashed, title},
+    export::{parquet, xlsx},
+    utils::Hashed,
 };
-use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
+use egui::{CursorIcon, InnerResponse, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
-    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CHECK, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST,
+    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, SIGMA,
 };
 use metadata::MetaDataFrame;
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
+use tracing::{error, instrument};
 
 const ID_SOURCE: &str = "Composition";
 
@@ -60,12 +63,12 @@ impl Pane {
 
     fn title_with_separator(&self, separator: &str) -> String {
         match self.settings.index {
-            Some(index) => title(&self.source[index].meta, separator),
+            Some(index) => self.source[index].meta.format(separator).to_string(),
             None => {
                 format_list_truncated!(
                     self.source
                         .iter()
-                        .map(|frame| title(&frame.meta, separator)),
+                        .map(|frame| frame.meta.format(separator).to_string()),
                     2
                 )
             }
@@ -89,7 +92,7 @@ impl Pane {
                     .selectable_value(
                         &mut self.settings.index,
                         Some(index),
-                        self.source[index].meta.title(),
+                        self.source[index].meta.format(".").to_string(),
                     )
                     .clicked()
             }
@@ -97,7 +100,7 @@ impl Pane {
                 .selectable_value(&mut self.settings.index, None, "Mean ± standard deviations")
                 .clicked();
             if clicked {
-                ui.close_menu();
+                ui.close();
             }
         })
         .response
@@ -123,16 +126,25 @@ impl Pane {
             RichText::new(GEAR).heading(),
         );
         ui.separator();
+        // Indices
+        ui.toggle_value(
+            &mut self.state.open_indices_window,
+            RichText::new(SIGMA).heading(),
+        )
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("indices"));
+        });
+        ui.separator();
         // Save
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             let title = self.title_with_separator(".");
             if ui
-                .button("IPC")
+                .button("PARQUET")
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("save"));
                 })
                 .on_hover_ui(|ui| {
-                    ui.label(&format!("{title}.utca.ipc"));
+                    ui.label(&format!("{title}.utca.parquet"));
                 })
                 .clicked()
             {
@@ -147,16 +159,55 @@ impl Pane {
                 data_frame = data_frame
                     .lazy()
                     .select([col("Species").explode()])
-                    .unnest([col("Species")])
+                    .unnest(by_name(["Species"], true))
                     .sort(
                         ["Value"],
                         SortMultipleOptions::default().with_order_descending(true),
                     )
                     .collect()
                     .unwrap();
-                println!("data_frame: {data_frame}");
-                let _ = ipc::save_data(&mut data_frame, &format!("{title}.utca.ipc"));
-            };
+                println!(
+                    "data_frame unnest: {}",
+                    data_frame
+                        .clone()
+                        .unnest(["FattyAcid"])
+                        .unwrap()
+                        .unnest(["StereospecificNumber1"])
+                        .unwrap()
+                );
+                let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
+            }
+            // if ui
+            //     .button("IPC")
+            //     .on_hover_ui(|ui| {
+            //         ui.label(ui.localize("save"));
+            //     })
+            //     .on_hover_ui(|ui| {
+            //         ui.label(&format!("{title}.utca.ipc"));
+            //     })
+            //     .clicked()
+            // {
+            //     let mut data_frame = ui.memory_mut(|memory| {
+            //         memory.caches.cache::<FilteredCompositionComputed>().get(
+            //             FilteredCompositionKey {
+            //                 data_frame: &self.target,
+            //                 settings: &self.settings,
+            //             },
+            //         )
+            //     });
+            //     data_frame = data_frame
+            //         .lazy()
+            //         .select([col("Species").explode()])
+            //         .unnest([col("Species")])
+            //         .sort(
+            //             ["Value"],
+            //             SortMultipleOptions::default().with_order_descending(true),
+            //         )
+            //         .collect()
+            //         .unwrap();
+            //     println!("data_frame: {data_frame}");
+            //     let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.ipc"));
+            // };
             if ui
                 .button("XLSX")
                 .on_hover_ui(|ui| {
@@ -226,8 +277,56 @@ impl Pane {
             }
         }
     }
+}
 
+impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
+        self.indices(ui);
+        self.settings(ui);
+    }
+
+    fn indices(&mut self, ui: &mut Ui) {
+        let mut open_indices_window = self.state.open_indices_window;
+        Window::new(format!("{SIGMA} Composition indices"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
+            .open(&mut open_indices_window)
+            .show(ui.ctx(), |ui| {
+                // Species
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<CompositionSpeciesComputed>()
+                        .get(CompositionSpeciesKey {
+                            frames: &self.source,
+                            settings: &self.settings,
+                        })
+                });
+                // Indices
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<CompositionIndicesComputed>()
+                        .get(CompositionIndicesKey {
+                            data_frame: Hashed {
+                                value: &data_frame,
+                                hash: hash(self.settings.index),
+                            },
+                            ddof: self.settings.special.ddof,
+                        })
+                });
+                if let Err(error) = IndicesWidget::new(&data_frame)
+                    .hover(true)
+                    .precision(Some(self.settings.precision))
+                    .show(ui)
+                    .inner
+                {
+                    error!(%error);
+                }
+            });
+        self.state.open_indices_window = open_indices_window;
+    }
+
+    fn settings(&mut self, ui: &mut Ui) {
         if self.settings.special.discriminants.is_empty() {
             let unique = ui.memory_mut(|memory| {
                 memory
@@ -255,8 +354,8 @@ impl PaneDelegate for Pane {
     }
 
     fn body(&mut self, ui: &mut Ui) {
-        self.windows(ui);
         self.body_content(ui);
+        self.windows(ui);
     }
 }
 

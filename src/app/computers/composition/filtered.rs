@@ -54,18 +54,27 @@ fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
                     predicate = predicate.and(expr.neq(lit(LiteralValue::from(key.clone()))));
                 }
                 _ => {
-                    let expr = expr.tag();
+                    let expr = expr.triacylglycerol();
                     if value[0] {
-                        predicate = predicate
-                            .and(expr.clone().sn1().neq(lit(LiteralValue::from(key.clone()))));
+                        predicate = predicate.and(
+                            expr.clone()
+                                .stereospecific_number1()
+                                .neq(lit(LiteralValue::from(key.clone()))),
+                        );
                     }
                     if value[1] {
-                        predicate = predicate
-                            .and(expr.clone().sn2().neq(lit(LiteralValue::from(key.clone()))));
+                        predicate = predicate.and(
+                            expr.clone()
+                                .stereospecific_number2()
+                                .neq(lit(LiteralValue::from(key.clone()))),
+                        );
                     }
                     if value[2] {
-                        predicate = predicate
-                            .and(expr.clone().sn3().neq(lit(LiteralValue::from(key.clone()))));
+                        predicate = predicate.and(
+                            expr.clone()
+                                .stereospecific_number3()
+                                .neq(lit(LiteralValue::from(key.clone()))),
+                        );
                     }
                 }
             }
