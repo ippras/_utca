@@ -1,2 +1,2 @@
-pub mod ipc;
+pub mod parquet;
 pub mod xlsx;

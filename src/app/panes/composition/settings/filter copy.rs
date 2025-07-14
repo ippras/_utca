@@ -215,11 +215,11 @@ impl Widget for FilterWidget<'_> {
                                         .iter()
                                         .map(AnyValue::into_static)
                                         .collect();
-                                    ui.close_menu();
+                                    ui.close();
                                 }
                                 if ui.button(format!("{FUNNEL_X} Unselect all")).clicked() {
                                     self.filter.key = Vec::new();
-                                    ui.close_menu();
+                                    ui.close();
                                 }
                             });
                     });

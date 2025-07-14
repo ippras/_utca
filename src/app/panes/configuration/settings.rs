@@ -24,7 +24,7 @@ impl Settings {
             index: 0,
             resizable: false,
             editable: false,
-            precision: 2,
+            precision: 3,
             sticky: 0,
             truncate: false,
             names: true,

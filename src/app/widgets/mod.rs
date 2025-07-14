@@ -1,8 +1,13 @@
 pub(super) use self::{
-    fatty_acid::FattyAcidWidget, float::FloatWidget, names::NamesWidget, presets::Presets,
+    fatty_acid::FattyAcidWidget,
+    float::FloatWidget,
+    indices::IndicesWidget,
+    label::{Inner, LabelWidget},
+    presets::Presets,
 };
 
 mod fatty_acid;
 mod float;
-mod names;
+mod indices;
+mod label;
 mod presets;

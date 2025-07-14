@@ -4,7 +4,7 @@ use crate::{
     utils::Hashed,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
-use lipid::polars::ExprExt;
+use lipid::prelude::*;
 use metadata::MetaDataFrame;
 use polars::prelude::*;
 use std::{

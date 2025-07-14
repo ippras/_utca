@@ -11,12 +11,11 @@ use chrono::Local;
 use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
     Align, Align2, CentralPanel, Color32, Context, FontDefinitions, Frame, Id, LayerId, Layout,
-    Order, RichText, ScrollArea, SidePanel, Sides, TextStyle, TopBottomPanel, Visuals, menu::bar,
+    MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle, TopBottomPanel, Visuals,
     util::IdTypeMap, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
 use egui_l20n::{ResponseExt, UiExt as _};
-use egui_notify::Toasts;
 use egui_phosphor::{
     Variant, add_to_fonts,
     regular::{
@@ -26,7 +25,7 @@ use egui_phosphor::{
 };
 use egui_tiles::{ContainerKind, Tile, Tree};
 use egui_tiles_ext::{HORIZONTAL, TreeExt as _, VERTICAL};
-use metadata::{MetaDataFrame, Metadata};
+use metadata::{DATE, MetaDataFrame, Metadata, NAME};
 use panes::configuration::SCHEMA;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -36,14 +35,12 @@ use std::{
     io::Cursor,
     str,
     sync::mpsc::{Receiver, Sender, channel},
-    time::Duration,
 };
 use tracing::{error, info, trace};
 use windows::SettingsWindow;
 
 /// IEEE 754-2008
 const MAX_PRECISION: usize = 16;
-const NOTIFICATIONS_DURATION: Duration = Duration::from_secs(15);
 const ICON_SIZE: f32 = 32.0;
 
 // const DESCRIPTION: &str = "Positional-species and positional-type composition of TAG from mature fruit arils of the Euonymus section species, mol % of total TAG";
@@ -80,10 +77,6 @@ pub struct App {
     about: About,
     github: GithubWindow,
     settings: SettingsWindow,
-
-    // Notifications
-    #[serde(skip)]
-    toasts: Toasts,
 }
 
 impl Default for App {
@@ -94,7 +87,6 @@ impl Default for App {
             data: Default::default(),
             data_channel: channel(),
             error_channel: channel(),
-            toasts: Default::default(),
             about: Default::default(),
             github: Default::default(),
             settings: SettingsWindow::default(),
@@ -189,7 +181,7 @@ impl App {
     // Top panel
     fn top_panel(&mut self, ctx: &Context) {
         TopBottomPanel::top("TopPanel").show(ctx, |ui| {
-            bar(ui, |ui| {
+            MenuBar::new().ui(ui, |ui| {
                 ScrollArea::horizontal().show(ui, |ui| {
                     // Left panel
                     ui.toggle_value(
@@ -357,17 +349,11 @@ impl App {
                         .on_hover_localized("create")
                         .clicked()
                     {
-                        let data_frame = DataFrame::empty_with_schema(&SCHEMA);
-                        self.data.add(MetaDataFrame {
-                            meta: Metadata {
-                                version: None,
-                                name: "Untitled".to_owned(),
-                                description: "".to_owned(),
-                                authors: Vec::new(),
-                                date: Some(Local::now().date_naive()),
-                            },
-                            data: data_frame,
-                        });
+                        let data = DataFrame::empty_with_schema(&SCHEMA);
+                        let mut meta = Metadata::default();
+                        meta.insert(NAME.to_owned(), "Untitled".to_owned());
+                        meta.insert(DATE.to_owned(), Local::now().date_naive().to_string());
+                        self.data.add(MetaDataFrame::new(meta, data));
                     }
                     // Load
                     ui.add(Presets);
@@ -414,12 +400,12 @@ impl App {
     }
 }
 
-// Notifications
-impl App {
-    fn notifications(&mut self, ctx: &Context) {
-        self.toasts.show(ctx);
-    }
-}
+// // Notifications
+// impl App {
+//     fn notifications(&mut self, ctx: &Context) {
+//         self.toasts.show(ctx);
+//     }
+// }
 
 // Copy/Paste, Drag&Drop
 impl App {
@@ -492,10 +478,6 @@ impl App {
                     Ok(bytes) => bytes,
                     Err(error) => {
                         error!(%error);
-                        self.toasts
-                            .error(format!("{}: {error}", dropped.display()))
-                            .closable(true)
-                            .duration(Some(NOTIFICATIONS_DURATION));
                         continue;
                     }
                 };
@@ -509,7 +491,7 @@ impl App {
         for bytes in self.data_channel.1.try_iter() {
             trace!(?bytes);
             let mut reader = Cursor::new(bytes);
-            match MetaDataFrame::read(&mut reader) {
+            match MetaDataFrame::read_parquet(&mut reader) {
                 Ok(frame) => {
                     trace!(?frame);
                     self.data.add(frame);
@@ -517,10 +499,10 @@ impl App {
                 Err(error) => error!(%error),
             };
             reader.set_position(0);
-            match JsonLineReader::new(&mut reader).finish() {
-                Ok(data) => {
-                    trace!(?data);
-                    self.data.add(MetaDataFrame::new(Default::default(), data));
+            match MetaDataFrame::read_ipc(&mut reader) {
+                Ok(frame) => {
+                    trace!(?frame);
+                    self.data.add(frame);
                 }
                 Err(error) => error!(%error),
             };
@@ -528,13 +510,8 @@ impl App {
     }
 
     fn error(&mut self, ctx: &Context) {
-        let available_width = ctx.available_rect().width() / 2.0;
         for error in self.error_channel.1.try_iter() {
-            self.toasts
-                .error(error.to_string())
-                .width(available_width)
-                .duration(Some(NOTIFICATIONS_DURATION))
-                .closable(true);
+            error!(%error);
         }
     }
 
@@ -633,7 +610,7 @@ impl eframe::App for App {
         // Pre update
         self.panels(ctx);
         self.windows(ctx);
-        self.notifications(ctx);
+        // self.notifications(ctx);
         // Post update
         self.drag_and_drop(ctx);
         self.parse(ctx);

@@ -39,7 +39,7 @@ const DEFAULT: [bool; 3] = [false; 3];
 // }
 
 /// Filter
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default)]
 pub struct Filter {
     pub key: HashMap<AnyValue<'static>, [bool; 3]>,
     pub value: f64,
@@ -314,7 +314,7 @@ impl<'a> Widget for ColumnWidget<'a> {
                                         value[index] = true;
                                     }
                                 }
-                                ui.close_menu();
+                                ui.close();
                             }
                             if ui.button(format!("{FUNNEL_X} Unselect all")).clicked() {
                                 self.selection.filter.key.retain(|_, value| {
@@ -323,7 +323,7 @@ impl<'a> Widget for ColumnWidget<'a> {
                                     }
                                     *value != DEFAULT
                                 });
-                                ui.close_menu();
+                                ui.close();
                             }
                         });
                     }
@@ -392,11 +392,11 @@ impl<'a> Widget for ColumnWidget<'a> {
 //                                             .entry(key.into_static())
 //                                             .or_insert();
 //                                     }
-//                                     ui.close_menu();
+//                                     ui.close();
 //                                 }
 //                                 if ui.button(format!("{FUNNEL_X} Unselect all")).clicked() {
 //                                     self.selection.filter.key.clear();
-//                                     ui.close_menu();
+//                                     ui.close();
 //                                 }
 //                             });
 //                         }

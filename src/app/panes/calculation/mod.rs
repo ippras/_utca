@@ -2,29 +2,33 @@ use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
 use crate::{
     app::{
-        computers::{CalculationComputed, CalculationKey},
+        computers::{
+            CalculationComputed, CalculationIndicesComputed, CalculationIndicesKey, CalculationKey,
+        },
         presets::CHRISTIE,
-        widgets::{FattyAcidWidget, FloatWidget},
+        widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
     },
-    utils::title,
+    utils::Hashed,
 };
 use egui::{CursorIcon, Grid, Id, Response, RichText, ScrollArea, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS,
+    SIGMA,
 };
 use lipid::prelude::DataFrameExt as _;
 use metadata::MetaDataFrame;
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 
 const ID_SOURCE: &str = "Calculation";
 
 /// Calculation pane
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Pane {
-    source: Vec<MetaDataFrame>,
+    source: Hashed<Vec<MetaDataFrame>>,
     target: DataFrame,
     settings: Settings,
     state: State,
@@ -33,7 +37,7 @@ pub(crate) struct Pane {
 impl Pane {
     pub(crate) fn new(frames: Vec<MetaDataFrame>, index: usize) -> Self {
         Self {
-            source: frames,
+            source: Hashed::new(frames),
             target: DataFrame::empty(),
             settings: Settings::new(Some(index)),
             state: State::new(),
@@ -46,9 +50,14 @@ impl Pane {
 
     pub(crate) fn title(&self) -> String {
         match self.settings.index {
-            Some(index) => title(&self.source[index].meta, " "),
+            Some(index) => self.source[index].meta.format(" ").to_string(),
             None => {
-                format_list_truncated!(self.source.iter().map(|frame| title(&frame.meta, " ")), 2)
+                format_list_truncated!(
+                    self.source
+                        .iter()
+                        .map(|frame| frame.meta.format(" ").to_string()),
+                    2
+                )
             }
         }
     }
@@ -70,13 +79,13 @@ impl Pane {
                     .selectable_value(
                         &mut self.settings.index,
                         Some(index),
-                        self.source[index].meta.title(),
+                        self.source[index].meta.format(".").to_string(),
                     )
                     .clicked()
             }
             ui.selectable_value(&mut self.settings.index, None, "Mean ± standard deviations");
             if clicked {
-                ui.close_menu();
+                ui.close();
             }
         })
         .response
@@ -110,6 +119,15 @@ impl Pane {
         )
         .on_hover_ui(|ui| {
             ui.label(ui.localize("settings"));
+        });
+        ui.separator();
+        // Indices
+        ui.toggle_value(
+            &mut self.state.open_indices_window,
+            RichText::new(SIGMA).heading(),
+        )
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("indices"));
         });
         ui.separator();
         // Composition
@@ -156,18 +174,19 @@ impl Pane {
         TableView::new(&self.target, &self.settings, &mut self.state).show(ui);
     }
 
+    fn hash(&self) -> u64 {
+        hash(&self.source)
+    }
+}
+
+impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
-        // Settings
-        let mut open_settings_window = self.state.open_settings_window;
-        Window::new(format!("{GEAR} Calculation settings"))
-            .id(ui.auto_id_with(ID_SOURCE))
-            .default_pos(ui.next_widget_position())
-            .open(&mut open_settings_window)
-            .show(ui.ctx(), |ui| {
-                self.settings.show(ui, &mut self.state);
-            });
-        self.state.open_settings_window = open_settings_window;
-        // Christie
+        self.christie(ui);
+        self.indices(ui);
+        self.settings(ui);
+    }
+
+    fn christie(&mut self, ui: &mut Ui) {
         let mut open_christie_window = self.state.open_christie_window;
         Window::new(format!("{MATH_OPERATIONS} Christie"))
             .default_pos(ui.next_widget_position())
@@ -180,12 +199,12 @@ impl Pane {
                         ui.heading("Value");
                         ui.end_row();
                         for index in 0..CHRISTIE.data.height() {
-                            let mut fatty_acid = CHRISTIE.data.fa().get(index).unwrap();
-                            FattyAcidWidget::new(fatty_acid.as_mut()).hover().show(ui);
-                            FloatWidget::new(move || {
-                                Ok(CHRISTIE.data["Christie"].f64()?.get(index))
-                            })
-                            .show(ui);
+                            let fatty_acid = CHRISTIE.data.fatty_acid().get(index).unwrap();
+                            FattyAcidWidget::new(fatty_acid.as_ref())
+                                .hover(true)
+                                .show(ui);
+                            FloatWidget::new(CHRISTIE.data["Christie"].f64().unwrap().get(index))
+                                .show(ui);
                             ui.end_row();
                         }
                     });
@@ -194,19 +213,55 @@ impl Pane {
         self.state.open_christie_window = open_christie_window;
     }
 
-    fn hash(&self) -> u64 {
-        hash(&self.source)
+    fn indices(&mut self, ui: &mut Ui) {
+        let mut open_indices_window = self.state.open_indices_window;
+        Window::new(format!("{SIGMA} Calculation indices"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
+            .open(&mut open_indices_window)
+            .show(ui.ctx(), |ui| {
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<CalculationIndicesComputed>()
+                        .get(CalculationIndicesKey {
+                            data_frame: Hashed {
+                                value: &self.target,
+                                hash: hash(self.settings.index),
+                            },
+                            ddof: self.settings.ddof,
+                        })
+                });
+                if let Err(error) = IndicesWidget::new(&data_frame)
+                    .hover(true)
+                    .precision(Some(self.settings.precision))
+                    .show(ui)
+                    .inner
+                {
+                    error!(%error);
+                }
+            });
+        self.state.open_indices_window = open_indices_window;
+    }
+
+    fn settings(&mut self, ui: &mut Ui) {
+        let mut open_settings_window = self.state.open_settings_window;
+        Window::new(format!("{GEAR} Calculation settings"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
+            .open(&mut open_settings_window)
+            .show(ui.ctx(), |ui| {
+                self.settings.show(ui, &mut self.state);
+            });
+        self.state.open_settings_window = open_settings_window;
     }
 }
-
 impl PaneDelegate for Pane {
     fn header(&mut self, ui: &mut Ui) -> Response {
         self.header_content(ui)
     }
 
     fn body(&mut self, ui: &mut Ui) {
-        self.windows(ui);
         self.body_content(ui);
+        self.windows(ui);
     }
 }
 

@@ -1,6 +1,6 @@
 use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
-use crate::{app::ContextExt, export::ipc::save, utils::title};
+use crate::{app::ContextExt, export::parquet::save};
 use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -8,6 +8,7 @@ use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, ERASER, FLOPPY_DISK, GEAR, LIST, NOTE_PENCIL,
     PENCIL, TAG, TRASH,
 };
+use lipid::prelude::*;
 use metadata::{MetaDataFrame, egui::MetadataWidget};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -17,22 +18,8 @@ const ID_SOURCE: &str = "Configuration";
 
 pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
     Schema::from_iter([
-        Field::new("Index".into(), DataType::UInt32),
         Field::new("Label".into(), DataType::String),
-        Field::new(
-            "FattyAcid".into(),
-            DataType::Struct(vec![
-                Field::new("Carbons".into(), DataType::UInt8),
-                Field::new(
-                    "Unsaturated".into(),
-                    DataType::List(Box::new(DataType::Struct(vec![
-                        Field::new("Index".into(), DataType::UInt8),
-                        Field::new("Isomerism".into(), DataType::Int8),
-                        Field::new("Unsaturation".into(), DataType::UInt8),
-                    ]))),
-                ),
-            ]),
-        ),
+        field!(FATTY_ACID),
         Field::new("Triacylglycerol".into(), DataType::Float64),
         Field::new("Diacylglycerol1223".into(), DataType::Float64),
         Field::new("Monoacylglycerol2".into(), DataType::Float64),
@@ -65,7 +52,10 @@ impl Pane {
     }
 
     fn title_with_separator(&self, separator: &str) -> String {
-        title(&self.frames[self.settings.index].meta, separator)
+        self.frames[self.settings.index]
+            .meta
+            .format(separator)
+            .to_string()
     }
 
     fn header_content(&mut self, ui: &mut Ui) -> Response {
@@ -85,11 +75,11 @@ impl Pane {
                     .selectable_value(
                         &mut self.settings.index,
                         index,
-                        self.frames[index].meta.title(),
+                        self.frames[index].meta.format(" ").to_string(),
                     )
                     .clicked()
                 {
-                    ui.close_menu();
+                    ui.close();
                 }
             }
         })
@@ -166,7 +156,7 @@ impl Pane {
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("save"));
             })
-            .on_hover_text(format!("{}.utca.ipc", self.title_with_separator(".")))
+            .on_hover_text(format!("{}.utca.parquet", self.title_with_separator(".")))
             .clicked()
         {
             if let Err(error) = self.save() {
@@ -211,7 +201,7 @@ impl Pane {
         ui.style_mut().visuals.collapsing_header_frame = true;
         ui.collapsing(RichText::new(format!("{TAG} Metadata")).heading(), |ui| {
             MetadataWidget::new(&mut self.frames[index].meta)
-                .writable(true)
+                .with_writable(true)
                 .show(ui);
         });
     }
@@ -219,50 +209,6 @@ impl Pane {
     fn body_content_data(&mut self, ui: &mut Ui, index: usize) {
         let data_frame = &mut self.frames[index].data;
         TableView::new(data_frame, &self.settings, &mut self.state).show(ui);
-    }
-
-    fn _add_row(&mut self) -> PolarsResult<()> {
-        let data_frame = &mut self.frames[self.settings.index].data;
-        *data_frame = concat(
-            [
-                data_frame.clone().lazy(),
-                df! {
-                    data_frame[0].name().clone() => [data_frame.height() as u32],
-                    "Label" => [""],
-                    "FattyAcid" => df! {
-                        "Carbons" => [0u8],
-                        "Unsaturated" => [
-                            df! {
-                                "Index" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8),
-                                "Isomerism" => Series::new_empty(PlSmallStr::EMPTY, &DataType::Int8),
-                                "Unsaturation" => Series::new_empty(PlSmallStr::EMPTY, &DataType::UInt8),
-                            }?.into_struct(PlSmallStr::EMPTY).into_series(),
-                        ],
-                    }?.into_struct(PlSmallStr::EMPTY),
-                    "Triacylglycerol" => [0f64],
-                    "Diacylglycerol1223" => [0f64],
-                    "Monoacylglycerol2" => [0f64],
-                }?
-                .lazy(),
-            ],
-            UnionArgs {
-                rechunk: true,
-                diagonal: true,
-                ..Default::default()
-            },
-        )?
-        .collect()?;
-        Ok(())
-    }
-
-    fn _delete_row(&mut self, row: usize) -> PolarsResult<()> {
-        let data_frame = &mut self.frames[self.settings.index].data;
-        let mut lazy_frame = data_frame.clone().lazy();
-        lazy_frame = lazy_frame
-            .filter(nth(0).neq(lit(row as u32)))
-            .with_column(nth(0).cum_count(false) - lit(1));
-        *data_frame = lazy_frame.collect()?;
-        Ok(())
     }
 
     pub(crate) fn windows(&mut self, ui: &mut Ui) {
@@ -278,7 +224,7 @@ impl Pane {
     }
 
     fn save(&mut self) -> Result<()> {
-        let name = format!("{}.utca.ipc", self.title_with_separator("."));
+        let name = format!("{}.utca.parquet", self.title_with_separator("."));
         save(&mut self.frames[self.settings.index], &name)?;
         Ok(())
     }
@@ -290,11 +236,11 @@ impl PaneDelegate for Pane {
     }
 
     fn body(&mut self, ui: &mut Ui) {
-        self.windows(ui);
         if self.settings.editable {
             self.body_content_meta(ui, self.settings.index);
         }
         self.body_content_data(ui, self.settings.index);
+        self.windows(ui);
     }
 }
 

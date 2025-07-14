@@ -1,4 +1,7 @@
 // #![feature(hash_set_entry)]
+// #![feature(debug_closure_helpers)]
+#![feature(box_patterns)]
+#![feature(result_option_map_or_default)]
 
 pub use app::App;
 

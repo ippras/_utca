@@ -1,5 +1,5 @@
-use crate::{app::panes::configuration::Pane as ConfigurationPane, utils::title};
-use egui::{Color32, Frame, Grid, Id, Label, RichText, Sense, Stroke, Ui, menu::bar};
+use crate::app::panes::configuration::Pane as ConfigurationPane;
+use egui::{Color32, Frame, Grid, Id, Label, MenuBar, RichText, Sense, Stroke, Ui};
 use egui_extras::{Column, TableBuilder};
 use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::{CHECK, TRASH};
@@ -30,7 +30,7 @@ impl Data {
 impl Data {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         // Header
-        bar(ui, |ui| {
+        MenuBar::new().ui(ui, |ui| {
             ui.heading(ui.localize("loaded-files"))
                 .on_hover_localized("loaded-files.hover");
             ui.separator();
@@ -126,7 +126,7 @@ impl Data {
                             });
                             // Label
                             row.col(|ui| {
-                                let text = title(&frame.meta, " ");
+                                let text = frame.meta.format(" ").to_string();
                                 let response = ui
                                     .add(Label::new(text).sense(Sense::click()).truncate())
                                     .on_hover_ui(|ui| {

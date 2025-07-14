@@ -6,7 +6,7 @@ use std::{
 };
 
 /// Hashed
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Hashed<T> {
     pub value: T,
     pub hash: u64,
