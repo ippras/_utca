@@ -81,7 +81,7 @@ url = { version = "2.5.4", features = ["serde"] }
 egui_ext = { git = "https://github.com/kgv/egui_ext", features = ["tracing"] }
 egui_l20n = { git = "https://github.com/kgv/egui_l20n", features = ["macros"] }
 egui_tiles_ext = { git = "https://github.com/kgv/egui_tiles_ext" }
-lipid = { git = "https://github.com/ippras/lipid", rev = "0aaaca9a2e024d9bb56dd067dccf7da89f1c5e68" }
+lipid = { git = "https://github.com/ippras/lipid" }
 metadata = { git = "https://github.com/ippras/metadata", branch = "map" }
 molecule = { git = "https://github.com/ippras/molecule" }
 polars_ext = { git = "https://github.com/kgv/polars_ext", features = [

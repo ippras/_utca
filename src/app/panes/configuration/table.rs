@@ -146,6 +146,10 @@ impl TableView<'_> {
                 ui.label(row.to_string());
             }
             (row, LABEL) => {
+                // println!(
+                //     "self.data_frame: {:?}",
+                //     self.data_frame.clone().unnest(["FattyAcid"])
+                // );
                 let fatty_acid = self.data_frame.try_fatty_acid()?;
                 let label = self.data_frame["Label"].str()?;
                 let inner_response = LabelWidget::new(label, fatty_acid, row)
@@ -166,15 +170,15 @@ impl TableView<'_> {
                 }
             }
             (row, FA) => {
-                let fatty_acid = self.data_frame.try_fatty_acid()?.get(row)?;
-                let inner_response = FattyAcidWidget::new(fatty_acid.as_ref())
-                    .editable(self.settings.editable)
-                    .hover(true)
-                    .show(ui);
-                if inner_response.response.changed() {
-                    self.data_frame
-                        .try_apply("FattyAcid", change_fatty_acid(row, inner_response.inner))?;
-                }
+                // let fatty_acid = self.data_frame.try_fatty_acid()?.get(row)?;
+                // let inner_response = FattyAcidWidget::new(fatty_acid.as_ref())
+                //     .editable(self.settings.editable)
+                //     .hover(true)
+                //     .show(ui);
+                // if inner_response.response.changed() {
+                //     self.data_frame
+                //         .try_apply("FattyAcid", change_fatty_acid(row, inner_response.inner))?;
+                // }
             }
             (row, TAG) => {
                 self.f64_cell(ui, row, "Triacylglycerol")?;
@@ -273,22 +277,21 @@ impl TableDelegate for TableView<'_> {
     }
 }
 
-// TODO: change existing `ChunkedArrays` rather than creating new ones
 fn change_fatty_acid(
     row: usize,
     value: Option<FattyAcid>,
-) -> impl FnMut(&Series) -> PolarsResult<Series> + 'static {
+) -> impl FnMut(&Series) -> PolarsResult<Series> {
     move |series| {
         // Ok(series.clone())
         let fatty_acid = series.try_fatty_acid()?;
         let carbon = fatty_acid.carbon()?;
         let mut carbon_builder =
             PrimitiveChunkedBuilder::<UInt8Type>::new(carbon.name().clone(), carbon.len());
-        let bounds = fatty_acid.bounds()?;
-        let mut bounds_builder = AnonymousOwnedListBuilder::new(
-            bounds.name().clone(),
-            bounds.len(),
-            bounds.dtype().inner_dtype().cloned(),
+        let indices = fatty_acid.indices()?;
+        let mut indices_builder = AnonymousOwnedListBuilder::new(
+            indices.name().clone(),
+            indices.len(),
+            indices.dtype().inner_dtype().cloned(),
         );
         for index in 0..series.len() {
             let mut fatty_acid = fatty_acid.get(index)?;
@@ -304,30 +307,30 @@ fn change_fatty_acid(
                     "Index".into(),
                     fatty_acid.unsaturated.len(),
                 );
-                let mut parity_builder =
-                    BooleanChunkedBuilder::new("Parity".into(), fatty_acid.unsaturated.len());
                 let mut triple_builder =
                     BooleanChunkedBuilder::new("Triple".into(), fatty_acid.unsaturated.len());
+                let mut parity_builder =
+                    BooleanChunkedBuilder::new("Parity".into(), fatty_acid.unsaturated.len());
                 for unsaturated in &fatty_acid.unsaturated {
                     index_builder.append_option(unsaturated.index);
-                    parity_builder.append_option(unsaturated.parity);
                     triple_builder.append_option(unsaturated.triple);
+                    parity_builder.append_option(unsaturated.parity);
                 }
-                bounds_builder.append_series(
+                indices_builder.append_series(
                     &StructChunked::from_series(
                         PlSmallStr::EMPTY,
                         fatty_acid.unsaturated.len(),
                         [
                             index_builder.finish().into_series(),
-                            parity_builder.finish().into_series(),
                             triple_builder.finish().into_series(),
+                            parity_builder.finish().into_series(),
                         ]
                         .iter(),
                     )?
                     .into_series(),
                 )?;
             } else {
-                bounds_builder.append_opt_series(None)?;
+                indices_builder.append_opt_series(None)?;
             }
         }
         Ok(StructChunked::from_series(
@@ -335,7 +338,7 @@ fn change_fatty_acid(
             series.len(),
             [
                 carbon_builder.finish().into_series(),
-                bounds_builder.finish().into_series(),
+                indices_builder.finish().into_series(),
             ]
             .iter(),
         )?
