@@ -41,7 +41,7 @@ impl<'a> IndicesWidget<'a> {
                     .on_hover_text(r#struct.field_by_name("Repetitions")?.str_value(0)?);
                 Ok(())
             };
-        let value = |ui: &mut Ui, name: &str| -> PolarsResult<()> {
+        let index = |ui: &mut Ui, name: &str| -> PolarsResult<()> {
             let column = &self.data_frame[name];
             match column.dtype() {
                 DataType::Float64 => {
@@ -89,59 +89,59 @@ impl<'a> IndicesWidget<'a> {
         Grid::new(ui.auto_id_with("Indices")).show(ui, |ui| -> PolarsResult<()> {
             // Simple
             ui.label("Saturated");
-            value(ui, "Saturated")?;
+            index(ui, "Saturated")?;
             ui.end_row();
             ui.label("Monounsaturated");
-            value(ui, "Monounsaturated")?;
+            index(ui, "Monounsaturated")?;
             ui.end_row();
             ui.label("Polyunsaturated");
-            value(ui, "Polyunsaturated")?;
+            index(ui, "Polyunsaturated")?;
             ui.end_row();
             ui.label("Unsaturated");
-            value(ui, "Unsaturated")?;
+            index(ui, "Unsaturated")?;
             ui.end_row();
             ui.label("Omega -9");
-            value(ui, "Unsaturated-9")?;
+            index(ui, "Unsaturated-9")?;
             ui.end_row();
             ui.label("Omega -6");
-            value(ui, "Unsaturated-6")?;
+            index(ui, "Unsaturated-6")?;
             ui.end_row();
             ui.label("Omega -3");
-            value(ui, "Unsaturated-3")?;
+            index(ui, "Unsaturated-3")?;
             ui.end_row();
             ui.label("Delta 9");
-            value(ui, "Unsaturated9")?;
+            index(ui, "Unsaturated9")?;
             ui.end_row();
             ui.label("Trans");
-            value(ui, "Trans")?;
+            index(ui, "Trans")?;
             ui.end_row();
             // Complex
             ui.label("Eicosapentaenoic and Docosahexaenoic");
-            value(ui, "EicosapentaenoicAndDocosahexaenoic")?;
+            index(ui, "EicosapentaenoicAndDocosahexaenoic")?;
             ui.end_row();
             ui.label("Fish Lipid Quality");
-            value(ui, "FishLipidQuality")?;
+            index(ui, "FishLipidQuality")?;
             ui.end_row();
             ui.label("Health Promoting Index");
-            value(ui, "HealthPromotingIndex")?;
+            index(ui, "HealthPromotingIndex")?;
             ui.end_row();
             ui.label("Hypocholesterolemic to Hypercholesterolemic");
-            value(ui, "HypocholesterolemicToHypercholesterolemic")?;
+            index(ui, "HypocholesterolemicToHypercholesterolemic")?;
             ui.end_row();
             ui.label("Index of Atherogenicity");
-            value(ui, "IndexOfAtherogenicity")?;
+            index(ui, "IndexOfAtherogenicity")?;
             ui.end_row();
             ui.label("Index of Thrombogenicity");
-            value(ui, "IndexOfThrombogenicity")?;
+            index(ui, "IndexOfThrombogenicity")?;
             ui.end_row();
             ui.label("Linoleic to αLinolenic");
-            value(ui, "LinoleicToAlphaLinolenic")?;
+            index(ui, "LinoleicToAlphaLinolenic")?;
             ui.end_row();
             ui.label("Polyunsaturated to Saturated");
-            value(ui, "PolyunsaturatedToSaturated")?;
+            index(ui, "PolyunsaturatedToSaturated")?;
             ui.end_row();
             ui.label("Unsaturation Index");
-            value(ui, "UnsaturationIndex")?;
+            index(ui, "UnsaturationIndex")?;
             Ok(())
         })
     }

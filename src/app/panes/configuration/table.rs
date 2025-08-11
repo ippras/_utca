@@ -146,10 +146,6 @@ impl TableView<'_> {
                 ui.label(row.to_string());
             }
             (row, LABEL) => {
-                // println!(
-                //     "self.data_frame: {:?}",
-                //     self.data_frame.clone().unnest(["FattyAcid"])
-                // );
                 let fatty_acid = self.data_frame.try_fatty_acid()?;
                 let label = self.data_frame["Label"].str()?;
                 let inner_response = LabelWidget::new(label, fatty_acid, row)
@@ -170,15 +166,15 @@ impl TableView<'_> {
                 }
             }
             (row, FA) => {
-                // let fatty_acid = self.data_frame.try_fatty_acid()?.get(row)?;
-                // let inner_response = FattyAcidWidget::new(fatty_acid.as_ref())
-                //     .editable(self.settings.editable)
-                //     .hover(true)
-                //     .show(ui);
-                // if inner_response.response.changed() {
-                //     self.data_frame
-                //         .try_apply("FattyAcid", change_fatty_acid(row, inner_response.inner))?;
-                // }
+                let fatty_acid = self.data_frame.try_fatty_acid()?.get(row)?;
+                let inner_response = FattyAcidWidget::new(fatty_acid.as_ref())
+                    .editable(self.settings.editable)
+                    .hover(true)
+                    .show(ui);
+                if inner_response.response.changed() {
+                    self.data_frame
+                        .try_apply("FattyAcid", change_fatty_acid(row, inner_response.inner))?;
+                }
             }
             (row, TAG) => {
                 self.f64_cell(ui, row, "Triacylglycerol")?;

@@ -166,7 +166,15 @@ impl Pane {
                     )
                     .collect()
                     .unwrap();
-                println!("data_frame: {data_frame}");
+                println!(
+                    "data_frame unnest: {}",
+                    data_frame
+                        .clone()
+                        .unnest(["FattyAcid"])
+                        .unwrap()
+                        .unnest(["StereospecificNumber1"])
+                        .unwrap()
+                );
                 let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
             }
             // if ui

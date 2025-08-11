@@ -25,6 +25,10 @@ impl Computer {
                     .alias("Value"),
             ));
         } else {
+            println!(
+                "lazy_frame1!!!!!!!!!!!!!: {}",
+                lazy_frame.clone().collect().unwrap()
+            );
             // Repetitions
             let exprs = compute_many(
                 col("FattyAcid").fatty_acid(),
@@ -38,18 +42,32 @@ impl Computer {
                         .list()
                         .get(index.into(), false)
                 }),
+                // col("Experimental")
+                //     .struct_()
+                //     .field_by_name("Triacylglycerol")
+                //     .alias("Value")
+                //     .struct_()
+                //     .field_by_name("Values")
+                //     .list()
+                //     .eval(col("")),
             )?;
             lazy_frame = lazy_frame.select(exprs);
+            println!(
+                "lazy_frame2!!!!!!!!!!!!!: {}",
+                lazy_frame.clone().collect().unwrap()
+            );
             // Mean and standard deviation
             let exprs = lazy_frame
                 .collect_schema()?
                 .iter_names()
                 .map(|name| {
-                    let list = || col(name.clone()).arr().to_list().list();
                     as_struct(vec![
-                        list().mean().alias("Mean"),
-                        list().std(key.ddof).alias("StandardDeviation"),
-                        col(name.clone()).alias("Repetitions"),
+                        col(name.as_str()).arr().mean().alias("Mean"),
+                        col(name.as_str())
+                            .arr()
+                            .std(key.ddof)
+                            .alias("StandardDeviation"),
+                        col(name.as_str()).alias("Repetitions"),
                     ])
                     .alias(name.clone())
                 })
