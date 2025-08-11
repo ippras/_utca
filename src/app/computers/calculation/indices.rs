@@ -106,17 +106,21 @@ macro_rules! index {
 }
 
 fn is_many(data_frame: &DataFrame) -> PolarsResult<bool> {
+    // let Some(fatty_acid) = data_frame.schema().get(FATTY_ACID) else {
+    //     polars_ensure!(fatty_acid == data_type!(FATTY_ACID), SchemaMismatch: r#"The "{FATTY_ACID}" field was not found in the scheme."#);
+    //     // polars_bail!(SchemaMismatch: r#"The "{FATTY_ACID}" field was not found in the scheme."#);
+    // };
     let Some(experimental) = data_frame.schema().get("Experimental") else {
-        polars_bail!(SchemaMismatch: "Поле 'Experimental' не найдено в схеме.");
+        polars_bail!(SchemaMismatch: r#"The "Experimental" field was not found in the scheme."#);
     };
-    let DataType::Struct(experimental_fields) = experimental else {
-        polars_bail!(SchemaMismatch: "Поле 'Experimental' не является Struct.");
+    let DataType::Struct(fields) = experimental else {
+        polars_bail!(SchemaMismatch: r#"The "Experimental" field is not `Struct`."#);
     };
-    let Some(triacylglycerol) = experimental_fields
+    let Some(triacylglycerol) = fields
         .iter()
         .find(|field| field.name() == "Triacylglycerol")
     else {
-        polars_bail!(SchemaMismatch: "Поле 'Triacylglycerol' не найдено внутри 'Experimental'.");
+        polars_bail!(SchemaMismatch: r#"The "Experimental.Triacylglycerol" field was not found in the scheme."#);
     };
     match triacylglycerol.dtype() {
         DataType::Struct(_) => {
@@ -126,7 +130,7 @@ fn is_many(data_frame: &DataFrame) -> PolarsResult<bool> {
             return Ok(false);
         }
         other_type => {
-            polars_bail!(SchemaMismatch: "Поле 'Experimental' -> 'Triacylglycerol' имеет другой тип: {:?}", other_type);
+            polars_bail!(SchemaMismatch: r#"The "Experimental.Triacylglycerol" field has other type: {other_type:?}"#);
         }
     }
 }
@@ -158,24 +162,6 @@ fn compute_many(
         index!(linoleic_to_alpha_linolenic, fatty_acid, values)?,
         index!(polyunsaturated_to_saturated, fatty_acid, values)?,
         index!(unsaturation_index, fatty_acid, values)?,
-        // fa().monounsaturated(values()),
-        // fa().polyunsaturated(values()),
-        // fa().saturated(values()),
-        // fa().trans(values()),
-        // fa().unsaturated(values(), None),
-        // fa().unsaturated(values(), NonZeroI8::new(-9)),
-        // fa().unsaturated(values(), NonZeroI8::new(-6)),
-        // fa().unsaturated(values(), NonZeroI8::new(-3)),
-        // fa().unsaturated(values(), NonZeroI8::new(9)),
-        // fa().eicosapentaenoic_and_docosahexaenoic(values()),
-        // fa().fish_lipid_quality(values()),
-        // fa().health_promoting_index(values()),
-        // fa().hypocholesterolemic_to_hypercholesterolemic(values()),
-        // fa().index_of_atherogenicity(values()),
-        // fa().index_of_thrombogenicity(values()),
-        // fa().linoleic_to_alpha_linolenic(values()),
-        // fa().polyunsaturated_to_saturated(values()),
-        // fa().unsaturation_index(values()),
     ])
 }
 
