@@ -1,6 +1,9 @@
-use crate::{app::ICON_SIZE, presets::*};
+use crate::{
+    app::{ICON_SIZE, identifiers::DATA},
+    presets::*,
+};
 use egui::{
-    Id, PopupCloseBehavior, Response, RichText, ScrollArea, Separator, Ui, Widget,
+    PopupCloseBehavior, Response, RichText, ScrollArea, Separator, Ui, Widget,
     containers::menu::{MenuConfig, SubMenuButton},
 };
 use egui_ext::LabeledSeparator;
@@ -97,6 +100,6 @@ impl Widget for Presets {
 fn preset(ui: &mut Ui, frame: &MetaDataFrame) {
     let title = frame.meta.format(" ");
     if ui.button(format!("{DATABASE} {title}")).clicked() {
-        ui.data_mut(|data| data.insert_temp(Id::new("Input"), frame.clone()));
+        ui.data_mut(|data| data.insert_temp(*DATA, frame.clone()));
     }
 }

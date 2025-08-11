@@ -2,7 +2,7 @@ use super::{
     ID_SOURCE, State,
     settings::{From, Settings},
 };
-use crate::app::{ContextExt as _, panes::MARGIN, widgets::FloatWidget};
+use crate::app::{panes::MARGIN, widgets::FloatWidget};
 use egui::{Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
 use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::HASH;
@@ -10,6 +10,7 @@ use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelega
 use lipid::prelude::*;
 use polars::prelude::*;
 use std::ops::Range;
+use tracing::instrument;
 
 const ID: Range<usize> = 0..3;
 const EXPERIMENTAL: Range<usize> = ID.end..ID.end + 3;
@@ -205,6 +206,7 @@ impl TableView<'_> {
         };
     }
 
+    #[instrument(skip(self, ui), err)]
     fn cell_content_ui(
         &mut self,
         ui: &mut Ui,
@@ -538,12 +540,7 @@ impl TableDelegate for TableView<'_> {
         Frame::new()
             .inner_margin(Margin::from(MARGIN))
             .show(ui, |ui| {
-                if let Err(error) =
-                    self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1)
-                {
-                    ui.ctx()
-                        .error(error.context("Calculation table cell ui".into()));
-                }
+                let _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
             });
     }
 }

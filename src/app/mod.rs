@@ -1,18 +1,18 @@
 use self::{
     data::Data,
-    identifiers::{DATA, ERROR, GITHUB_TOKEN},
+    identifiers::{DATA, GITHUB_TOKEN},
     panes::{Pane, behavior::Behavior},
     widgets::Presets,
     windows::{About, GithubWindow},
 };
 use crate::localization::ContextExt as _;
-use anyhow::Error;
+use anyhow::{Error, Result};
 use chrono::Local;
 use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
-    Align, Align2, CentralPanel, Color32, Context, FontDefinitions, Frame, Id, LayerId, Layout,
-    MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle, TopBottomPanel, Visuals,
-    util::IdTypeMap, warn_if_debug_build,
+    Align, Align2, CentralPanel, Color32, Context, DroppedFile, FontDefinitions, Frame, Id,
+    LayerId, Layout, MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle,
+    TopBottomPanel, Visuals, util::IdTypeMap, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
 use egui_l20n::{ResponseExt, UiExt as _};
@@ -36,7 +36,7 @@ use std::{
     str,
     sync::mpsc::{Receiver, Sender, channel},
 };
-use tracing::{error, info, trace};
+use tracing::{error, info, instrument, trace};
 use windows::SettingsWindow;
 
 /// IEEE 754-2008
@@ -66,12 +66,6 @@ pub struct App {
     // Data
     data: Data,
 
-    // Data channel
-    #[serde(skip)]
-    data_channel: (Sender<Vec<u8>>, Receiver<Vec<u8>>),
-    #[serde(skip)]
-    error_channel: (Sender<Error>, Receiver<Error>),
-
     // Windows
     #[serde(skip)]
     about: About,
@@ -85,8 +79,6 @@ impl Default for App {
             left_panel: true,
             tree: Tree::empty("CentralTree"),
             data: Default::default(),
-            data_channel: channel(),
-            error_channel: channel(),
             about: Default::default(),
             github: Default::default(),
             settings: SettingsWindow::default(),
@@ -108,7 +100,6 @@ impl App {
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         let app = Self::load(cc).unwrap_or_default();
-        app.context(&cc.egui_ctx);
         app
     }
 
@@ -116,15 +107,6 @@ impl App {
         let storage = cc.storage?;
         let value = get_value(storage, APP_KEY)?;
         Some(value)
-    }
-
-    fn context(&self, ctx: &Context) {
-        ctx.data_mut(|data| {
-            // Data channel
-            data.insert_temp(*DATA, self.data_channel.0.clone());
-            // Error channel
-            data.insert_temp(*ERROR, self.error_channel.0.clone());
-        });
     }
 }
 
@@ -204,7 +186,6 @@ impl App {
                         .clicked()
                     {
                         *self = Default::default();
-                        self.context(ctx);
                     }
                     ui.separator();
                     // Reset app
@@ -233,7 +214,6 @@ impl App {
                             memory.data = data;
                         });
                         ui.ctx().set_localizations();
-                        self.context(ctx);
                     }
                     ui.separator();
                     if ui
@@ -400,19 +380,10 @@ impl App {
     }
 }
 
-// // Notifications
-// impl App {
-//     fn notifications(&mut self, ctx: &Context) {
-//         self.toasts.show(ctx);
-//     }
-// }
-
 // Copy/Paste, Drag&Drop
 impl App {
-    fn input(&mut self, ctx: &Context) {
-        if let Some(frame) =
-            ctx.data_mut(|data| data.remove_temp::<MetaDataFrame>(Id::new("Input")))
-        {
+    fn data(&mut self, ctx: &Context) {
+        if let Some(frame) = ctx.data_mut(|data| data.remove_temp::<MetaDataFrame>(*DATA)) {
             self.data.add(frame);
         }
     }
@@ -472,47 +443,19 @@ impl App {
             (!input.raw.dropped_files.is_empty()).then_some(input.raw.dropped_files.clone())
         }) {
             info!(?dropped_files);
-            for dropped in dropped_files {
-                trace!(?dropped);
-                let bytes = match dropped.bytes() {
-                    Ok(bytes) => bytes,
-                    Err(error) => {
-                        error!(%error);
-                        continue;
-                    }
-                };
-                trace!(?bytes);
-                self.data_channel.0.send(bytes).ok();
+            for dropped_file in dropped_files {
+                let _ = self.parse(dropped_file);
             }
         }
     }
 
-    fn parse(&mut self, ctx: &Context) {
-        for bytes in self.data_channel.1.try_iter() {
-            trace!(?bytes);
-            let mut reader = Cursor::new(bytes);
-            match MetaDataFrame::read_parquet(&mut reader) {
-                Ok(frame) => {
-                    trace!(?frame);
-                    self.data.add(frame);
-                }
-                Err(error) => error!(%error),
-            };
-            reader.set_position(0);
-            match MetaDataFrame::read_ipc(&mut reader) {
-                Ok(frame) => {
-                    trace!(?frame);
-                    self.data.add(frame);
-                }
-                Err(error) => error!(%error),
-            };
-        }
-    }
-
-    fn error(&mut self, ctx: &Context) {
-        for error in self.error_channel.1.try_iter() {
-            error!(%error);
-        }
+    #[instrument(skip_all, err)]
+    fn parse(&mut self, dropped_file: DroppedFile) -> Result<()> {
+        let bytes = dropped_file.bytes()?;
+        trace!(?bytes);
+        let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
+        self.data.add(frame);
+        Ok(())
     }
 
     // fn paste(&mut self, ctx: &Context) {
@@ -603,44 +546,15 @@ impl eframe::App for App {
     /// Called each time the UI needs repainting, which may be many times per
     /// second.
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        self.input(ctx);
+        self.data(ctx);
         self.configure(ctx);
         self.calculate(ctx);
         self.compose(ctx);
         // Pre update
         self.panels(ctx);
         self.windows(ctx);
-        // self.notifications(ctx);
         // Post update
         self.drag_and_drop(ctx);
-        self.parse(ctx);
-        self.error(ctx);
-    }
-}
-
-/// Extension methods for [`Context`]
-pub(crate) trait ContextExt {
-    fn error(&self, error: impl Into<Error>);
-}
-
-impl ContextExt for Context {
-    fn error(&self, error: impl Into<Error>) {
-        let error = error.into();
-        error!(%error);
-        if let Some(sender) = self.data_mut(|data| data.get_temp::<Sender<Error>>(*ERROR)) {
-            sender.send(error).ok();
-        }
-    }
-}
-
-/// Extension methods for [`Result`]
-pub trait ResultExt<T, E> {
-    fn context(self, ctx: &Context) -> Option<T>;
-}
-
-impl<T, E: Into<Error>> ResultExt<T, E> for Result<T, E> {
-    fn context(self, ctx: &Context) -> Option<T> {
-        self.map_err(|error| ctx.error(error)).ok()
     }
 }
 

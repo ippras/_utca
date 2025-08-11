@@ -1,4 +1,4 @@
-use super::{ContextExt as _, ID_SOURCE, Settings, State};
+use super::{ID_SOURCE, Settings, State};
 use crate::app::{
     panes::MARGIN,
     widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
@@ -11,6 +11,7 @@ use lipid::prelude::*;
 use polars::{chunked_array::builder::AnonymousOwnedListBuilder, prelude::*};
 use polars_ext::prelude::DataFrameExt as _;
 use std::ops::Range;
+use tracing::instrument;
 
 const INDEX: Range<usize> = 0..1;
 const LABEL: Range<usize> = INDEX.end..INDEX.end + 1;
@@ -116,6 +117,7 @@ impl TableView<'_> {
         };
     }
 
+    #[instrument(skip(self, ui), err)]
     fn cell_content_ui(
         &mut self,
         ui: &mut Ui,
@@ -259,12 +261,7 @@ impl TableDelegate for TableView<'_> {
         Frame::new()
             .inner_margin(Margin::from(MARGIN))
             .show(ui, |ui| {
-                if let Err(error) =
-                    self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1)
-                {
-                    ui.ctx()
-                        .error(error.context("Configuration table cell ui".into()));
-                }
+                let _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
             });
     }
 
