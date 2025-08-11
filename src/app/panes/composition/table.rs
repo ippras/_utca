@@ -1,7 +1,6 @@
 use super::{ID_SOURCE, Settings, State};
 use crate::{
     app::{
-        ResultExt,
         computers::{CompositionIndicesComputed, CompositionIndicesKey},
         panes::MARGIN,
         text::Text,
@@ -318,8 +317,7 @@ impl TableDelegate for TableView<'_> {
         Frame::new()
             .inner_margin(Margin::from(MARGIN))
             .show(ui, |ui| {
-                self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1)
-                    .context(ui.ctx())
+                let _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
             });
     }
 }

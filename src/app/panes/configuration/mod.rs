@@ -1,6 +1,6 @@
 use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
-use crate::{app::ContextExt, export::parquet::save};
+use crate::export::parquet::save;
 use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -13,6 +13,7 @@ use metadata::{MetaDataFrame, egui::MetadataWidget};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
+use tracing::instrument;
 
 const ID_SOURCE: &str = "Configuration";
 
@@ -159,9 +160,7 @@ impl Pane {
             .on_hover_text(format!("{}.utca.parquet", self.title_with_separator(".")))
             .clicked()
         {
-            if let Err(error) = self.save() {
-                ui.ctx().error(error);
-            }
+            let _ = self.save();
         }
         // if ui
         //     .button(RichText::new("JSON").heading())
@@ -223,6 +222,7 @@ impl Pane {
         hash(&self.frames)
     }
 
+    #[instrument(skip(self), err)]
     fn save(&mut self) -> Result<()> {
         let name = format!("{}.utca.parquet", self.title_with_separator("."));
         save(&mut self.frames[self.settings.index], &name)?;
