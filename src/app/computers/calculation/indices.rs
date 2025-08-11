@@ -15,66 +15,10 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let mut lazy_frame = key.data_frame.value.clone().lazy();
-        if !is_many(&key.data_frame)? {
-            lazy_frame = lazy_frame.select(compute_one(
-                col("FattyAcid").fatty_acid(),
-                col("Experimental")
-                    .struct_()
-                    .field_by_name("Triacylglycerol")
-                    .alias("Value"),
-            ));
-        } else {
-            println!(
-                "lazy_frame1!!!!!!!!!!!!!: {}",
-                lazy_frame.clone().collect().unwrap()
-            );
-            // Repetitions
-            let exprs = compute_many(
-                col("FattyAcid").fatty_acid(),
-                (0..3).map(|index| {
-                    col("Experimental")
-                        .struct_()
-                        .field_by_name("Triacylglycerol")
-                        .alias("Value")
-                        .struct_()
-                        .field_by_name("Values")
-                        .list()
-                        .get(index.into(), false)
-                }),
-                // col("Experimental")
-                //     .struct_()
-                //     .field_by_name("Triacylglycerol")
-                //     .alias("Value")
-                //     .struct_()
-                //     .field_by_name("Values")
-                //     .list()
-                //     .eval(col("")),
-            )?;
-            lazy_frame = lazy_frame.select(exprs);
-            println!(
-                "lazy_frame2!!!!!!!!!!!!!: {}",
-                lazy_frame.clone().collect().unwrap()
-            );
-            // Mean and standard deviation
-            let exprs = lazy_frame
-                .collect_schema()?
-                .iter_names()
-                .map(|name| {
-                    as_struct(vec![
-                        col(name.as_str()).arr().mean().alias("Mean"),
-                        col(name.as_str())
-                            .arr()
-                            .std(key.ddof)
-                            .alias("StandardDeviation"),
-                        col(name.as_str()).alias("Repetitions"),
-                    ])
-                    .alias(name.clone())
-                })
-                .collect::<Vec<_>>();
-            lazy_frame = lazy_frame.select(exprs);
+        match length(&key.data_frame)? {
+            1 => one::compute(key),
+            length => many::compute(key, length),
         }
-        lazy_frame.collect()
     }
 }
 
@@ -94,112 +38,147 @@ pub(crate) struct Key<'a> {
 /// Calculation indices value
 type Value = DataFrame;
 
-macro_rules! index {
-    ($f:ident, $fatty_acid:expr, $values:expr $(,$args:expr)*) => {{
-        concat_arr(
-            $values
-                .clone()
-                .map(|value| $fatty_acid.clone().$f(value $(,$args)*))
-                .collect(),
-        )
-    }};
-}
-
-fn is_many(data_frame: &DataFrame) -> PolarsResult<bool> {
-    // let Some(fatty_acid) = data_frame.schema().get(FATTY_ACID) else {
-    //     polars_ensure!(fatty_acid == data_type!(FATTY_ACID), SchemaMismatch: r#"The "{FATTY_ACID}" field was not found in the scheme."#);
-    //     // polars_bail!(SchemaMismatch: r#"The "{FATTY_ACID}" field was not found in the scheme."#);
-    // };
-    let Some(experimental) = data_frame.schema().get("Experimental") else {
-        polars_bail!(SchemaMismatch: r#"The "Experimental" field was not found in the scheme."#);
+fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
+    // FattyAcid
+    let Some(data_type) = data_frame.schema().get(FATTY_ACID) else {
+        polars_bail!(SchemaMismatch: "The `FATTY_ACID` field was not found in the scheme");
     };
-    let DataType::Struct(fields) = experimental else {
-        polars_bail!(SchemaMismatch: r#"The "Experimental" field is not `Struct`."#);
+    polars_ensure!(*data_type == data_type!(FATTY_ACID), SchemaMismatch: "Invalid `FATTY_ACID` data type: expected `FATTY_ACID`, got = `{data_type}`");
+    // Value
+    let Some(data_type) = data_frame.schema().get("Experimental") else {
+        polars_bail!(SchemaMismatch: r#"The "Experimental" field was not found in the scheme"#);
+    };
+    let DataType::Struct(fields) = data_type else {
+        polars_bail!(SchemaMismatch: r#"Invalid "Experimental" data type: expected `Struct`, got = `{data_type}`"#);
     };
     let Some(triacylglycerol) = fields
         .iter()
         .find(|field| field.name() == "Triacylglycerol")
     else {
-        polars_bail!(SchemaMismatch: r#"The "Experimental.Triacylglycerol" field was not found in the scheme."#);
+        polars_bail!(SchemaMismatch: r#"The "Experimental.Triacylglycerol" field was not found in the scheme"#);
     };
     match triacylglycerol.dtype() {
-        DataType::Struct(_) => {
-            return Ok(true);
-        }
         DataType::Float64 => {
-            return Ok(false);
+            return Ok(1);
         }
-        other_type => {
-            polars_bail!(SchemaMismatch: r#"The "Experimental.Triacylglycerol" field has other type: {other_type:?}"#);
+        DataType::Struct(fields) => {
+            let Some(values) = fields.iter().find(|field| field.name() == "Values") else {
+                polars_bail!(SchemaMismatch: r#"The "Experimental.Triacylglycerol.Values" field was not found in the scheme"#);
+            };
+            let data_type = values.dtype();
+            let &DataType::Array(box DataType::Float64, length) = data_type else {
+                polars_bail!(SchemaMismatch: r#"Invalid "Experimental.Triacylglycerol.Values" data type: expected `Array(Float64)`, got = `{data_type}`"#);
+            };
+            return Ok(length as _);
+        }
+        data_type => {
+            polars_bail!(SchemaMismatch: r#"Invalid "Experimental.Triacylglycerol" data type: expected [`Float64`, `Struct`], got = `{data_type}`"#);
         }
     }
 }
 
-fn compute_many(
-    fatty_acid: FattyAcidExpr,
-    values: impl Iterator<Item = Expr> + Clone,
-) -> PolarsResult<Vec<Expr>> {
-    Ok(vec![
-        index!(monounsaturated, fatty_acid, values)?,
-        index!(polyunsaturated, fatty_acid, values)?,
-        index!(saturated, fatty_acid, values)?,
-        index!(trans, fatty_acid, values)?,
-        index!(unsaturated, fatty_acid, values, None)?,
-        index!(unsaturated, fatty_acid, values, NonZeroI8::new(-9))?,
-        index!(unsaturated, fatty_acid, values, NonZeroI8::new(-6))?,
-        index!(unsaturated, fatty_acid, values, NonZeroI8::new(-3))?,
-        index!(unsaturated, fatty_acid, values, NonZeroI8::new(9))?,
-        index!(eicosapentaenoic_and_docosahexaenoic, fatty_acid, values)?,
-        index!(fish_lipid_quality, fatty_acid, values)?,
-        index!(health_promoting_index, fatty_acid, values)?,
-        index!(
-            hypocholesterolemic_to_hypercholesterolemic,
-            fatty_acid,
-            values
-        )?,
-        index!(index_of_atherogenicity, fatty_acid, values)?,
-        index!(index_of_thrombogenicity, fatty_acid, values)?,
-        index!(linoleic_to_alpha_linolenic, fatty_acid, values)?,
-        index!(polyunsaturated_to_saturated, fatty_acid, values)?,
-        index!(unsaturation_index, fatty_acid, values)?,
-    ])
+mod one {
+    use super::*;
+
+    pub(super) fn compute(key: Key) -> PolarsResult<Value> {
+        let mut lazy_frame = key.data_frame.value.clone().lazy();
+        let fatty_acid = col("FattyAcid").fatty_acid();
+        let value = {
+            col("Experimental")
+                .struct_()
+                .field_by_name("Triacylglycerol")
+        };
+        #[rustfmt::skip]
+        let exprs = vec![
+            fatty_acid.clone().monounsaturated(value.clone()),
+            fatty_acid.clone().polyunsaturated(value.clone()),
+            fatty_acid.clone().saturated(value.clone()),
+            fatty_acid.clone().trans(value.clone()),
+            fatty_acid.clone().unsaturated(value.clone(), None),
+            fatty_acid.clone().unsaturated(value.clone(), NonZeroI8::new(-9)),
+            fatty_acid.clone().unsaturated(value.clone(), NonZeroI8::new(-6)),
+            fatty_acid.clone().unsaturated(value.clone(), NonZeroI8::new(-3)),
+            fatty_acid.clone().unsaturated(value.clone(), NonZeroI8::new(9)),
+            fatty_acid.clone().eicosapentaenoic_and_docosahexaenoic(value.clone()),
+            fatty_acid.clone().fish_lipid_quality(value.clone()),
+            fatty_acid.clone().health_promoting_index(value.clone()),
+            fatty_acid.clone().hypocholesterolemic_to_hypercholesterolemic(value.clone()),
+            fatty_acid.clone().index_of_atherogenicity(value.clone()),
+            fatty_acid.clone().index_of_thrombogenicity(value.clone()),
+            fatty_acid.clone().linoleic_to_alpha_linolenic(value.clone()),
+            fatty_acid.clone().polyunsaturated_to_saturated(value.clone()),
+            fatty_acid.clone().unsaturation_index(value.clone()),
+        ];
+        lazy_frame = lazy_frame.select(exprs);
+        lazy_frame.collect()
+    }
 }
 
-fn compute_one(fatty_acid: FattyAcidExpr, value: Expr) -> Vec<Expr> {
-    vec![
-        fatty_acid.clone().monounsaturated(value.clone()),
-        fatty_acid.clone().polyunsaturated(value.clone()),
-        fatty_acid.clone().saturated(value.clone()),
-        fatty_acid.clone().trans(value.clone()),
-        fatty_acid.clone().unsaturated(value.clone(), None),
-        fatty_acid
-            .clone()
-            .unsaturated(value.clone(), NonZeroI8::new(-9)),
-        fatty_acid
-            .clone()
-            .unsaturated(value.clone(), NonZeroI8::new(-6)),
-        fatty_acid
-            .clone()
-            .unsaturated(value.clone(), NonZeroI8::new(-3)),
-        fatty_acid
-            .clone()
-            .unsaturated(value.clone(), NonZeroI8::new(9)),
-        fatty_acid
-            .clone()
-            .eicosapentaenoic_and_docosahexaenoic(value.clone()),
-        fatty_acid.clone().fish_lipid_quality(value.clone()),
-        fatty_acid.clone().health_promoting_index(value.clone()),
-        fatty_acid
-            .clone()
-            .hypocholesterolemic_to_hypercholesterolemic(value.clone()),
-        fatty_acid.clone().index_of_atherogenicity(value.clone()),
-        fatty_acid.clone().index_of_thrombogenicity(value.clone()),
-        fatty_acid
-            .clone()
-            .linoleic_to_alpha_linolenic(value.clone()),
-        fatty_acid
-            .clone()
-            .polyunsaturated_to_saturated(value.clone()),
-        fatty_acid.unsaturation_index(value),
-    ]
+mod many {
+    use super::*;
+
+    macro_rules! index {
+        ($f:ident, $fatty_acid:expr, $values:expr $(,$args:expr)*) => {{
+            concat_arr(
+                $values
+                    .clone()
+                    .map(|value| $fatty_acid.clone().$f(value $(,$args)*))
+                    .collect(),
+            )
+        }};
+    }
+
+    pub(super) fn compute(key: Key, length: u64) -> PolarsResult<Value> {
+        let mut lazy_frame = key.data_frame.value.clone().lazy();
+        let fatty_acid = col("FattyAcid").fatty_acid();
+        let values = (0..length).map(|index| {
+            col("Experimental")
+                .struct_()
+                .field_by_name("Triacylglycerol")
+                .struct_()
+                .field_by_name("Values")
+                .arr()
+                .get(index.into(), false)
+        });
+        #[rustfmt::skip]
+        let exprs = vec![
+            index!(monounsaturated, fatty_acid, values)?,
+            index!(polyunsaturated, fatty_acid, values)?,
+            index!(saturated, fatty_acid, values)?,
+            index!(trans, fatty_acid, values)?,
+            index!(unsaturated, fatty_acid, values, None)?,
+            index!(unsaturated, fatty_acid, values, NonZeroI8::new(-9))?,
+            index!(unsaturated, fatty_acid, values, NonZeroI8::new(-6))?,
+            index!(unsaturated, fatty_acid, values, NonZeroI8::new(-3))?,
+            index!(unsaturated, fatty_acid, values, NonZeroI8::new(9))?,
+            index!(eicosapentaenoic_and_docosahexaenoic, fatty_acid, values)?,
+            index!(fish_lipid_quality, fatty_acid, values)?,
+            index!(health_promoting_index, fatty_acid, values)?,
+            index!(hypocholesterolemic_to_hypercholesterolemic, fatty_acid, values)?,
+            index!(index_of_atherogenicity, fatty_acid, values)?,
+            index!(index_of_thrombogenicity, fatty_acid, values)?,
+            index!(linoleic_to_alpha_linolenic, fatty_acid, values)?,
+            index!(polyunsaturated_to_saturated, fatty_acid, values)?,
+            index!(unsaturation_index, fatty_acid, values)?,
+        ];
+        lazy_frame = lazy_frame.select(exprs);
+        // Mean and standard deviation
+        let exprs = lazy_frame
+            .collect_schema()?
+            .iter_names()
+            .map(|name| {
+                as_struct(vec![
+                    col(name.as_str()).arr().mean().alias("Mean"),
+                    col(name.as_str())
+                        .arr()
+                        .std(key.ddof)
+                        .alias("StandardDeviation"),
+                    col(name.as_str()).alias("Repetitions"),
+                ])
+                .alias(name.clone())
+            })
+            .collect::<Vec<_>>();
+        lazy_frame = lazy_frame.select(exprs);
+        lazy_frame.collect()
+    }
 }
