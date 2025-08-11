@@ -21,7 +21,7 @@ use metadata::MetaDataFrame;
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::instrument;
 
 const ID_SOURCE: &str = "Calculation";
 
@@ -46,6 +46,14 @@ impl Pane {
 
     pub(crate) const fn icon() -> &'static str {
         CALCULATOR
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        if self.settings.index.is_some() {
+            1
+        } else {
+            self.source.len()
+        }
     }
 
     pub(crate) fn title(&self) -> String {
@@ -181,12 +189,12 @@ impl Pane {
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
-        self.christie(ui);
-        self.indices(ui);
-        self.settings(ui);
+        self.christie_window(ui);
+        self.indices_window(ui);
+        self.settings_window(ui);
     }
 
-    fn christie(&mut self, ui: &mut Ui) {
+    fn christie_window(&mut self, ui: &mut Ui) {
         let mut open_christie_window = self.state.open_christie_window;
         Window::new(format!("{MATH_OPERATIONS} Christie"))
             .default_pos(ui.next_widget_position())
@@ -213,44 +221,42 @@ impl Pane {
         self.state.open_christie_window = open_christie_window;
     }
 
-    fn indices(&mut self, ui: &mut Ui) {
+    fn indices_window(&mut self, ui: &mut Ui) {
         let mut open_indices_window = self.state.open_indices_window;
         Window::new(format!("{SIGMA} Calculation indices"))
             .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
             .open(&mut open_indices_window)
-            .show(ui.ctx(), |ui| {
-                let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationIndicesComputed>()
-                        .get(CalculationIndicesKey {
-                            data_frame: Hashed {
-                                value: &self.target,
-                                hash: hash(self.settings.index),
-                            },
-                            ddof: self.settings.ddof,
-                        })
-                });
-                if let Err(error) = IndicesWidget::new(&data_frame)
-                    .hover(true)
-                    .precision(Some(self.settings.precision))
-                    .show(ui)
-                    .inner
-                {
-                    error!(%error);
-                }
-            });
+            .show(ui.ctx(), |ui| self.indices_content(ui));
         self.state.open_indices_window = open_indices_window;
     }
 
-    fn settings(&mut self, ui: &mut Ui) {
+    #[instrument(skip_all, err)]
+    fn indices_content(&mut self, ui: &mut Ui) -> PolarsResult<()> {
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<CalculationIndicesComputed>()
+                .get(CalculationIndicesKey {
+                    data_frame: Hashed {
+                        value: &self.target,
+                        hash: hash(self.settings.index),
+                    },
+                    ddof: self.settings.ddof,
+                })
+        });
+        IndicesWidget::new(&data_frame)
+            .hover(true)
+            .precision(Some(self.settings.precision))
+            .show(ui)
+            .inner
+    }
+
+    fn settings_window(&mut self, ui: &mut Ui) {
         let mut open_settings_window = self.state.open_settings_window;
         Window::new(format!("{GEAR} Calculation settings"))
             .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
             .open(&mut open_settings_window)
-            .show(ui.ctx(), |ui| {
-                self.settings.show(ui, &mut self.state);
-            });
+            .show(ui.ctx(), |ui| self.settings.show(ui, &mut self.state));
         self.state.open_settings_window = open_settings_window;
     }
 }

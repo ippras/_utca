@@ -194,11 +194,18 @@ fn means(lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> 
 }
 
 fn mean(names: &[&str], ddof: u8) -> PolarsResult<Expr> {
-    let list = || concat_list([all().exclude_cols(["Label", "FattyAcid"]).as_expr().destruct(names)]);
+    let array = || {
+        concat_arr(vec![
+            all()
+                .exclude_cols(["Label", "FattyAcid"])
+                .as_expr()
+                .destruct(names),
+        ])
+    };
     Ok(as_struct(vec![
-        list()?.list().mean().alias("Mean"),
-        list()?.list().std(ddof).alias("StandardDeviation"),
-        list()?.alias("Values"),
+        array()?.arr().mean().alias("Mean"),
+        array()?.arr().std(ddof).alias("StandardDeviation"),
+        array()?.alias("Values"),
     ])
     .alias(names[names.len() - 1]))
 }

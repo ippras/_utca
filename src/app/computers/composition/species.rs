@@ -149,17 +149,21 @@ fn cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
 }
 
 fn mean_and_standard_deviation(key: Key) -> PolarsResult<[Expr; 3]> {
-    let values = || concat_list(vec![all().exclude_cols(["Label", "Triacylglycerol"])]);
+    let array = || {
+        concat_arr(vec![
+            all().exclude_cols(["Label", "Triacylglycerol"]).as_expr(),
+        ])
+    };
     Ok([
         col("Label"),
         col("Triacylglycerol"),
         as_struct(vec![
-            values()?.list().mean().alias("Mean"),
-            values()?
-                .list()
+            array()?.arr().mean().alias("Mean"),
+            array()?
+                .arr()
                 .std(key.settings.special.ddof)
                 .alias("StandardDeviation"),
-            values()?.alias("Repetitions"),
+            array()?.alias("Repetitions"),
         ])
         .alias("Value"),
     ])
