@@ -63,6 +63,12 @@ impl Pane {
         }
     }
 
+    fn hash(&self) -> u64 {
+        hash(&self.source)
+    }
+}
+
+impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("calculation"));
@@ -174,20 +180,16 @@ impl Pane {
         });
         TableView::new(&self.target, &self.settings, &mut self.state).show(ui);
     }
-
-    fn hash(&self) -> u64 {
-        hash(&self.source)
-    }
 }
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
-        self.christie_window(ui);
-        self.indices_window(ui);
-        self.settings_window(ui);
+        self.christie(ui);
+        self.indices(ui);
+        self.settings(ui);
     }
 
-    fn christie_window(&mut self, ui: &mut Ui) {
+    fn christie(&mut self, ui: &mut Ui) {
         let mut open_christie_window = self.state.open_christie_window;
         Window::new(format!("{MATH_OPERATIONS} Christie"))
             .default_pos(ui.next_widget_position())
@@ -214,7 +216,7 @@ impl Pane {
         self.state.open_christie_window = open_christie_window;
     }
 
-    fn indices_window(&mut self, ui: &mut Ui) {
+    fn indices(&mut self, ui: &mut Ui) {
         let mut open_indices_window = self.state.open_indices_window;
         Window::new(format!("{SIGMA} Calculation indices"))
             .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
@@ -244,7 +246,7 @@ impl Pane {
             .inner
     }
 
-    fn settings_window(&mut self, ui: &mut Ui) {
+    fn settings(&mut self, ui: &mut Ui) {
         let mut open_settings_window = self.state.open_settings_window;
         Window::new(format!("{GEAR} Calculation settings"))
             .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
@@ -253,6 +255,7 @@ impl Pane {
         self.state.open_settings_window = open_settings_window;
     }
 }
+
 impl PaneDelegate for Pane {
     fn header(&mut self, ui: &mut Ui) -> Response {
         self.header_content(ui)
