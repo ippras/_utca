@@ -1,3 +1,4 @@
+use super::cartesian_product;
 use crate::utils::Hashed;
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -16,7 +17,7 @@ pub(crate) struct Computer;
 
 impl Computer {
     #[instrument(skip(self), err)]
-    fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
+    pub(super) fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let lazy_frame = match key.index {
             Some(index) => {
                 let frame = &key.frames[index];
@@ -92,56 +93,56 @@ fn vander_wal(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
     Ok(lazy_frame)
 }
 
-fn cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
-    lazy_frame = lazy_frame
-        .clone()
-        .select([as_struct(vec![
-            col(LABEL),
-            col(FATTY_ACID),
-            col(STEREOSPECIFIC_NUMBER13).alias("Value"),
-        ])
-        .alias(STEREOSPECIFIC_NUMBER1)])
-        .cross_join(
-            lazy_frame.clone().select([as_struct(vec![
-                col(LABEL),
-                col(FATTY_ACID),
-                col(STEREOSPECIFIC_NUMBER2).alias("Value"),
-            ])
-            .alias(STEREOSPECIFIC_NUMBER2)]),
-            None,
-        )
-        .cross_join(
-            lazy_frame.clone().select([as_struct(vec![
-                col(LABEL),
-                col(FATTY_ACID),
-                col(STEREOSPECIFIC_NUMBER13).alias("Value"),
-            ])
-            .alias(STEREOSPECIFIC_NUMBER3)]),
-            None,
-        );
-    // Restruct
-    let label = |name| col(name).struct_().field_by_name(LABEL).alias(name);
-    let fatty_acid = |name| col(name).struct_().field_by_name(FATTY_ACID).alias(name);
-    let value = |name| col(name).struct_().field_by_name("Value");
-    lazy_frame = lazy_frame.select([
-        as_struct(vec![
-            label(STEREOSPECIFIC_NUMBER1),
-            label(STEREOSPECIFIC_NUMBER2),
-            label(STEREOSPECIFIC_NUMBER3),
-        ])
-        .alias(LABEL),
-        as_struct(vec![
-            fatty_acid(STEREOSPECIFIC_NUMBER1),
-            fatty_acid(STEREOSPECIFIC_NUMBER2),
-            fatty_acid(STEREOSPECIFIC_NUMBER3),
-        ])
-        .alias(TRIACYLGLYCEROL),
-        value(STEREOSPECIFIC_NUMBER1)
-            * value(STEREOSPECIFIC_NUMBER2)
-            * value(STEREOSPECIFIC_NUMBER3),
-    ]);
-    Ok(lazy_frame)
-}
+// pub(super) fn cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
+//     lazy_frame = lazy_frame
+//         .clone()
+//         .select([as_struct(vec![
+//             col(LABEL),
+//             col(FATTY_ACID),
+//             col(STEREOSPECIFIC_NUMBER13).alias("Value"),
+//         ])
+//         .alias(STEREOSPECIFIC_NUMBER1)])
+//         .cross_join(
+//             lazy_frame.clone().select([as_struct(vec![
+//                 col(LABEL),
+//                 col(FATTY_ACID),
+//                 col(STEREOSPECIFIC_NUMBER2).alias("Value"),
+//             ])
+//             .alias(STEREOSPECIFIC_NUMBER2)]),
+//             None,
+//         )
+//         .cross_join(
+//             lazy_frame.clone().select([as_struct(vec![
+//                 col(LABEL),
+//                 col(FATTY_ACID),
+//                 col(STEREOSPECIFIC_NUMBER13).alias("Value"),
+//             ])
+//             .alias(STEREOSPECIFIC_NUMBER3)]),
+//             None,
+//         );
+//     // Restruct
+//     let label = |name| col(name).struct_().field_by_name(LABEL).alias(name);
+//     let fatty_acid = |name| col(name).struct_().field_by_name(FATTY_ACID).alias(name);
+//     let value = |name| col(name).struct_().field_by_name("Value");
+//     lazy_frame = lazy_frame.select([
+//         as_struct(vec![
+//             label(STEREOSPECIFIC_NUMBER1),
+//             label(STEREOSPECIFIC_NUMBER2),
+//             label(STEREOSPECIFIC_NUMBER3),
+//         ])
+//         .alias(LABEL),
+//         as_struct(vec![
+//             fatty_acid(STEREOSPECIFIC_NUMBER1),
+//             fatty_acid(STEREOSPECIFIC_NUMBER2),
+//             fatty_acid(STEREOSPECIFIC_NUMBER3),
+//         ])
+//         .alias(TRIACYLGLYCEROL),
+//         value(STEREOSPECIFIC_NUMBER1)
+//             * value(STEREOSPECIFIC_NUMBER2)
+//             * value(STEREOSPECIFIC_NUMBER3),
+//     ]);
+//     Ok(lazy_frame)
+// }
 
 fn mean_and_standard_deviation(ddof: u8) -> PolarsResult<[Expr; 3]> {
     let array = || concat_arr(vec![all().exclude_cols([LABEL, TRIACYLGLYCEROL]).as_expr()]);

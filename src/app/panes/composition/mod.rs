@@ -215,19 +215,6 @@ impl Pane {
     }
 
     fn body_content(&mut self, ui: &mut Ui) {
-        // Species
-        let data_frame = ui.memory_mut(|memory| {
-            memory
-                .caches
-                .cache::<CompositionSpeciesComputed>()
-                .get(CompositionSpeciesKey {
-                    frames: &self.source,
-                    index: self.settings.index,
-                    ddof: self.settings.special.ddof,
-                })
-        });
-        println!("Species in comp: {data_frame:?}");
-        //
         self.target = ui.memory_mut(|memory| {
             let key = CompositionKey {
                 frames: &self.source,

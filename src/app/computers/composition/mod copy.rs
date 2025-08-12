@@ -1,4 +1,3 @@
-use self::species::{Computer as SpeciesComputer, Key as SpeciesKey};
 use crate::{
     app::panes::composition::settings::{Filter, Method, Order, Selection, Settings, Sort},
     special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
@@ -28,12 +27,6 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        // let data_frame = SpeciesComputer.try_compute(SpeciesKey {
-        //     frames: key.frames,
-        //     index: key.settings.index,
-        //     ddof: key.settings.special.ddof,
-        // })?;
-        // println!("data_frame !!@#$: {:?}", data_frame);
         // warn!("index: {:?}", key.settings.index);
         let mut settings = key.settings.clone();
         if settings.special.selections.is_empty() {
@@ -435,7 +428,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                 SSC => col(LABEL).alias("SSC"),
                 TMC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().is_saturated())
+                    .map_expr(|expr| expr.fatty_acid().is_unsaturated(None))
                     .triacylglycerol()
                     .sum()
                     // .non_stereospecific(
