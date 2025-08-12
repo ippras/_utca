@@ -330,14 +330,6 @@ fn gunstone_cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFra
 // `2*[a_{13}]` - потому что зеркальные ([abc]=[cba], [aab]=[baa]).
 // SSC: [abc] = [a_{13}]*[b_2]*[c_{13}]
 fn vander_wal(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
-    lazy_frame = lazy_frame.select([
-        // col("Index"),
-        col("Label"),
-        col("FattyAcid"),
-        col("Calculated")
-            .struct_()
-            .field_by_names(["Diacylglycerol13", "Monoacylglycerol2"]),
-    ]);
     // Cartesian product (TAG from FA)
     lazy_frame = cartesian_product(lazy_frame)?;
     // Compose
@@ -349,49 +341,49 @@ fn cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
     lazy_frame = lazy_frame
         .clone()
         .select([as_struct(vec![
-            col("Label"),
-            col("FattyAcid"),
-            col("Diacylglycerol13").alias("Value"),
+            col(LABEL),
+            col(FATTY_ACID),
+            col(STEREOSPECIFIC_NUMBER13).alias("Value"),
         ])
-        .alias("StereospecificNumber1")])
+        .alias(STEREOSPECIFIC_NUMBER1)])
         .cross_join(
             lazy_frame.clone().select([as_struct(vec![
-                col("Label"),
-                col("FattyAcid"),
-                col("Monoacylglycerol2").alias("Value"),
+                col(LABEL),
+                col(FATTY_ACID),
+                col(STEREOSPECIFIC_NUMBER2).alias("Value"),
             ])
-            .alias("StereospecificNumber2")]),
+            .alias(STEREOSPECIFIC_NUMBER2)]),
             None,
         )
         .cross_join(
             lazy_frame.clone().select([as_struct(vec![
-                col("Label"),
-                col("FattyAcid"),
-                col("Diacylglycerol13").alias("Value"),
+                col(LABEL),
+                col(FATTY_ACID),
+                col(STEREOSPECIFIC_NUMBER13).alias("Value"),
             ])
-            .alias("StereospecificNumber3")]),
+            .alias(STEREOSPECIFIC_NUMBER3)]),
             None,
         );
     // Restruct
-    let label = |name| col(name).struct_().field_by_name("Label").alias(name);
-    let fatty_acid = |name| col(name).struct_().field_by_name("FattyAcid").alias(name);
+    let label = |name| col(name).struct_().field_by_name(LABEL).alias(name);
+    let fatty_acid = |name| col(name).struct_().field_by_name(FATTY_ACID).alias(name);
     let value = |name| col(name).struct_().field_by_name("Value");
     lazy_frame = lazy_frame.select([
         as_struct(vec![
-            label("StereospecificNumber1"),
-            label("StereospecificNumber2"),
-            label("StereospecificNumber3"),
+            label(STEREOSPECIFIC_NUMBER1),
+            label(STEREOSPECIFIC_NUMBER2),
+            label(STEREOSPECIFIC_NUMBER3),
         ])
-        .alias("Label"),
+        .alias(LABEL),
         as_struct(vec![
-            fatty_acid("StereospecificNumber1"),
-            fatty_acid("StereospecificNumber2"),
-            fatty_acid("StereospecificNumber3"),
+            fatty_acid(STEREOSPECIFIC_NUMBER1),
+            fatty_acid(STEREOSPECIFIC_NUMBER2),
+            fatty_acid(STEREOSPECIFIC_NUMBER3),
         ])
-        .alias("FattyAcid"),
-        value("StereospecificNumber1")
-            * value("StereospecificNumber2")
-            * value("StereospecificNumber3"),
+        .alias(TRIACYLGLYCEROL),
+        value(STEREOSPECIFIC_NUMBER1)
+            * value(STEREOSPECIFIC_NUMBER2)
+            * value(STEREOSPECIFIC_NUMBER3),
     ]);
     Ok(lazy_frame)
 }
@@ -401,7 +393,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
     for (index, selection) in settings.special.selections.iter().enumerate() {
         lazy_frame = lazy_frame.with_column(
             match selection.composition {
-                MMC => col("FattyAcid")
+                MMC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .mass(Some(lit(settings.special.adduct)))
                     .map(
@@ -409,7 +401,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                         GetOutput::same_type(),
                     )
                     .alias("MMC"),
-                MSC => col("FattyAcid")
+                MSC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| {
                         expr.fatty_acid()
@@ -417,24 +409,24 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                             .round(settings.special.round_mass, RoundMode::HalfToEven)
                     })
                     .alias("MSC"),
-                NMC => col("FattyAcid")
+                NMC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .equivalent_carbon_number()
                     .alias("NMC"),
-                NSC => col("FattyAcid")
+                NSC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().equivalent_carbon_number())
                     .alias("NSC"),
-                SMC => col("Label")
+                SMC => col(LABEL)
                     .triacylglycerol()
                     .non_stereospecific(identity)?
                     .alias("SMC"),
-                SPC => col("Label")
+                SPC => col(LABEL)
                     .triacylglycerol()
                     .positional(identity)
                     .alias("SPC"),
-                SSC => col("Label").alias("SSC"),
-                TMC => col("FattyAcid")
+                SSC => col(LABEL).alias("SSC"),
+                TMC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().is_unsaturated(None))
                     .triacylglycerol()
@@ -444,19 +436,19 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                     //     PermutationOptions::default().map(true),
                     // )?
                     .alias("TMC"),
-                TPC => col("FattyAcid")
+                TPC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .positional(|expr| expr.fatty_acid().is_saturated())
                     .alias("TPC"),
-                TSC => col("FattyAcid")
+                TSC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().is_saturated())
                     .alias("TSC"),
-                UMC => col("FattyAcid")
+                UMC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .unsaturation()
                     .alias("UMC"),
-                USC => col("FattyAcid")
+                USC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().unsaturation().sum())
                     .alias("USC"),
@@ -473,7 +465,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
     // Group
     lazy_frame = lazy_frame
         .group_by([col(r#"^Key\d$"#), col(r#"^Value\d$"#)])
-        .agg([as_struct(vec![col("Label"), col("FattyAcid"), col("Value")]).alias("Species")]);
+        .agg([as_struct(vec![col("Label"), col(TRIACYLGLYCEROL), col("Value")]).alias("Species")]);
     lazy_frame = lazy_frame.select([
         as_struct(vec![col(r#"^Key\d$"#)]).alias("Keys"),
         concat_arr(vec![col(r#"^Value\d$"#)])?.alias("Values"),
@@ -484,7 +476,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
 
 fn meta(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
     // TODO [array_get?](https://docs.rs/polars/latest/polars/prelude/array/trait.ArrayNameSpace.html)
-    let values = |index| {
+    let list = |index| {
         // TODO: .arr().to_list().list() for compute mean std with None
         concat_list([all()
             .exclude_cols(["Keys", r#"^Value\d$"#])
@@ -495,8 +487,8 @@ fn meta(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFram
     for index in 0..settings.special.selections.len() {
         lazy_frame = lazy_frame.with_column(
             as_struct(vec![
-                values(index)?.list().mean().alias("Mean"),
-                values(index)?
+                list(index)?.list().mean().alias("Mean"),
+                list(index)?
                     .list()
                     .std(settings.special.ddof)
                     .alias("StandardDeviation"),
