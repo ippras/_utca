@@ -6,7 +6,7 @@ use self::{
     windows::{About, GithubWindow},
 };
 use crate::localization::ContextExt as _;
-use anyhow::{Error, Result};
+use anyhow::Result;
 use chrono::Local;
 use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
@@ -29,14 +29,8 @@ use metadata::{DATE, MetaDataFrame, Metadata, NAME};
 use panes::configuration::SCHEMA;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{
-    borrow::BorrowMut,
-    fmt::Write,
-    io::Cursor,
-    str,
-    sync::mpsc::{Receiver, Sender, channel},
-};
-use tracing::{error, info, instrument, trace};
+use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str};
+use tracing::{info, instrument, trace};
 use windows::SettingsWindow;
 
 /// IEEE 754-2008

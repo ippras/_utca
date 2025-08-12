@@ -48,14 +48,6 @@ impl Pane {
         CALCULATOR
     }
 
-    pub(crate) fn len(&self) -> usize {
-        if self.settings.index.is_some() {
-            1
-        } else {
-            self.source.len()
-        }
-    }
-
     pub(crate) fn title(&self) -> String {
         match self.settings.index {
             Some(index) => self.source[index].meta.format(" ").to_string(),

@@ -177,37 +177,6 @@ impl Pane {
                 );
                 let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
             }
-            // if ui
-            //     .button("IPC")
-            //     .on_hover_ui(|ui| {
-            //         ui.label(ui.localize("save"));
-            //     })
-            //     .on_hover_ui(|ui| {
-            //         ui.label(&format!("{title}.utca.ipc"));
-            //     })
-            //     .clicked()
-            // {
-            //     let mut data_frame = ui.memory_mut(|memory| {
-            //         memory.caches.cache::<FilteredCompositionComputed>().get(
-            //             FilteredCompositionKey {
-            //                 data_frame: &self.target,
-            //                 settings: &self.settings,
-            //             },
-            //         )
-            //     });
-            //     data_frame = data_frame
-            //         .lazy()
-            //         .select([col("Species").explode()])
-            //         .unnest([col("Species")])
-            //         .sort(
-            //             ["Value"],
-            //             SortMultipleOptions::default().with_order_descending(true),
-            //         )
-            //         .collect()
-            //         .unwrap();
-            //     println!("data_frame: {data_frame}");
-            //     let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.ipc"));
-            // };
             if ui
                 .button("XLSX")
                 .on_hover_ui(|ui| {
@@ -228,9 +197,6 @@ impl Pane {
                 });
                 data_frame = data_frame.unnest(["Keys"]).unwrap();
                 let _ = xlsx::save(&data_frame, &format!("{title}.utca.xlsx"));
-                // if let Err(error) = self.save() {
-                //     ui.ctx().error(error);
-                // }
             }
         });
         ui.separator();
