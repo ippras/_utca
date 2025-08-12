@@ -3,7 +3,7 @@ use crate::{
     presets::*,
 };
 use egui::{
-    PopupCloseBehavior, Response, RichText, ScrollArea, Separator, Ui, Widget,
+    PopupCloseBehavior, Response, RichText, ScrollArea, Ui, Widget,
     containers::menu::{MenuConfig, SubMenuButton},
 };
 use egui_ext::LabeledSeparator;
@@ -17,10 +17,7 @@ pub(crate) struct Presets;
 impl Presets {
     fn presets(&mut self, ui: &mut Ui) {
         // IPPRAS
-        ui.horizontal(|ui| {
-            ui.hyperlink_to(RichText::new("IPPRAS").heading(), "https://ippras.ru");
-            ui.add(Separator::default().horizontal());
-        });
+        ui.hyperlink_to(RichText::new("IPPRAS").heading(), "https://ippras.ru");
         SubMenuButton::new("Acer")
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
             .ui(ui, |ui| {
@@ -84,6 +81,21 @@ impl Presets {
                 preset(ui, &LOBOSPHERA_2025_04_24_1);
                 preset(ui, &LOBOSPHERA_2025_04_24_2);
                 preset(ui, &LOBOSPHERA_2025_04_24_3);
+            });
+        ui.separator();
+        // Third party
+        ui.heading("Third party");
+        SubMenuButton::new("Reske 1997")
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+            .ui(ui, |ui| {
+                ui.hyperlink_to(
+                    RichText::new("10.1007/s11746-997-0016-1").heading(),
+                    "https://doi.org/10.1007/s11746-997-0016-1",
+                );
+                ui.labeled_separator(RichText::new("Soybean").heading());
+                preset(ui, &SOYBEAN_SEED_COMMODITY);
+                ui.labeled_separator(RichText::new("Sunflower").heading());
+                preset(ui, &SUNFLOWER_SEED_COMMODITY);
             });
     }
 }
