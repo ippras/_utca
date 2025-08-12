@@ -13,13 +13,9 @@ use egui::{Frame, Grid, Id, InnerResponse, Margin, Popup, PopupCloseBehavior, Te
 use egui_l20n::{ResponseExt as _, UiExt as _};
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
-use lipid::expr::ExprExt;
 use polars::prelude::*;
 use polars_ext::series::round;
-use std::{
-    num::NonZeroI8,
-    ops::{Add, Range},
-};
+use std::ops::{Add, Range};
 use tracing::instrument;
 
 const INDEX: Range<usize> = 0..1;
