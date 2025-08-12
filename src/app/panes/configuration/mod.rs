@@ -1,6 +1,6 @@
 use self::{settings::Settings, state::State, table::TableView};
 use super::PaneDelegate;
-use crate::export::parquet::save;
+use crate::{app::identifiers::CALCULATE, export::parquet::save};
 use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -187,7 +187,7 @@ impl Pane {
         {
             ui.data_mut(|data| {
                 data.insert_temp(
-                    Id::new("Calculate"),
+                    Id::new(CALCULATE),
                     (self.frames.clone(), self.settings.index),
                 );
             });

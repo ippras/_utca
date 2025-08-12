@@ -5,6 +5,7 @@ use crate::{
         computers::{
             CalculationComputed, CalculationIndicesComputed, CalculationIndicesKey, CalculationKey,
         },
+        identifiers::COMPOSE,
         presets::CHRISTIE,
         widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
     },
@@ -155,7 +156,7 @@ impl Pane {
                 });
                 target.push(MetaDataFrame::new(meta, data));
             }
-            ui.data_mut(|data| data.insert_temp(Id::new("Compose"), (target, self.settings.index)));
+            ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (target, self.settings.index)));
         }
         ui.separator();
         response

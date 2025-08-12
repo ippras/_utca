@@ -1,4 +1,4 @@
-use crate::app::panes::configuration::Pane as ConfigurationPane;
+use crate::app::{identifiers::CONFIGURE, panes::configuration::Pane as ConfigurationPane};
 use egui::{Color32, Frame, Grid, Id, Label, MenuBar, RichText, Sense, Stroke, Ui};
 use egui_extras::{Column, TableBuilder};
 use egui_l20n::{ResponseExt, UiExt as _};
@@ -65,7 +65,7 @@ impl Data {
                     .on_hover_localized("configuration")
                     .clicked()
                 {
-                    ui.data_mut(|data| data.insert_temp(Id::new("Configure"), frames));
+                    ui.data_mut(|data| data.insert_temp(Id::new(CONFIGURE), frames));
                 }
             });
             ui.separator();
