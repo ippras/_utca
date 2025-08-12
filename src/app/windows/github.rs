@@ -1,5 +1,5 @@
 use crate::{
-    app::identifiers::{DATA, GITHUB_TOKEN as ID},
+    app::identifiers::{DATA, GITHUB_TOKEN as ID_SOURCE},
     utils::spawn,
 };
 use anyhow::{Error, Result};
@@ -57,7 +57,8 @@ impl GithubWindow {
     pub fn toggle(&mut self, ui: &Ui) {
         self.open ^= true;
         self.promise = if self.open {
-            let mut github_token = ui.data_mut(|data| data.get_persisted::<String>(*ID));
+            let mut github_token =
+                ui.data_mut(|data| data.get_persisted::<String>(Id::new(ID_SOURCE)));
             github_token = github_token.or(ENVIRONMENT.map(ToOwned::to_owned));
             let Some(github_token) = github_token else {
                 warn!("GITHUB_TOKEN not found");
@@ -195,7 +196,7 @@ fn load_blob(ctx: &Context, url: impl ToString) {
     let _ = spawn(async move {
         match try_load_blob(url).await {
             Ok(blob) => ctx.data_mut(|data| {
-                if let Some(sender) = data.get_temp::<Sender<Vec<u8>>>(*DATA) {
+                if let Some(sender) = data.get_temp::<Sender<Vec<u8>>>(Id::new(DATA)) {
                     sender.send(blob).ok();
                 }
             }),

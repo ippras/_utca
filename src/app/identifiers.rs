@@ -1,6 +1,6 @@
-use egui::Id;
-use std::sync::LazyLock;
+pub(crate) static CALCULATE: &str = "Calculate";
+pub(crate) static COMPOSE: &str = "Compose";
+pub(crate) static CONFIGURE: &str = "Configure";
+pub(crate) static DATA: &str = "Data";
 
-pub(crate) static DATA: LazyLock<Id> = LazyLock::new(|| Id::new("Data"));
-// pub(crate) static ERROR: LazyLock<Id> = LazyLock::new(|| Id::new("Error"));
-pub(crate) static GITHUB_TOKEN: LazyLock<Id> = LazyLock::new(|| Id::new("GithubToken"));
+pub(crate) static GITHUB_TOKEN: &str = "GithubToken";

@@ -38,12 +38,10 @@ impl Default for SettingsWindow {
 fn ui(ui: &mut Ui) -> Response {
     let id_salt = Id::new(ID_SOURCE);
     let id = ui.make_persistent_id(id_salt);
+    let token_id = Id::new(GITHUB_TOKEN);
     // Load
     let mut state = SettingsState::load(ui.ctx(), id).unwrap_or_default();
-    let mut token = ui.data_mut(|data| {
-        data.get_persisted::<String>(*GITHUB_TOKEN)
-            .unwrap_or_default()
-    });
+    let mut token = ui.data_mut(|data| data.get_persisted::<String>(token_id).unwrap_or_default());
     let response = ui
         .horizontal(|ui| {
             ui.label("Token");
@@ -58,7 +56,7 @@ fn ui(ui: &mut Ui) -> Response {
         })
         .inner;
     // Store
-    ui.data_mut(|data| data.insert_persisted(*GITHUB_TOKEN, token));
+    ui.data_mut(|data| data.insert_persisted(token_id, token));
     state.store(ui.ctx(), id);
     response
 }

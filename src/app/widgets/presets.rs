@@ -3,7 +3,7 @@ use crate::{
     presets::*,
 };
 use egui::{
-    PopupCloseBehavior, Response, RichText, ScrollArea, Ui, Widget,
+    Id, PopupCloseBehavior, Response, RichText, ScrollArea, Ui, Widget,
     containers::menu::{MenuConfig, SubMenuButton},
 };
 use egui_ext::LabeledSeparator;
@@ -112,6 +112,6 @@ impl Widget for Presets {
 fn preset(ui: &mut Ui, frame: &MetaDataFrame) {
     let title = frame.meta.format(" ");
     if ui.button(format!("{DATABASE} {title}")).clicked() {
-        ui.data_mut(|data| data.insert_temp(*DATA, frame.clone()));
+        ui.data_mut(|data| data.insert_temp(Id::new(DATA), frame.clone()));
     }
 }

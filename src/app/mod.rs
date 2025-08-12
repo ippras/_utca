@@ -1,6 +1,6 @@
 use self::{
     data::Data,
-    identifiers::{DATA, GITHUB_TOKEN},
+    identifiers::{CALCULATE, COMPOSE, CONFIGURE, DATA, GITHUB_TOKEN},
     panes::{Pane, behavior::Behavior},
     widgets::Presets,
     windows::{About, GithubWindow},
@@ -196,10 +196,9 @@ impl App {
                         let data = ui.memory_mut(|memory| {
                             let mut data = IdTypeMap::default();
                             // Github token
-                            if let Some(github_token) =
-                                memory.data.get_persisted::<String>(*GITHUB_TOKEN)
-                            {
-                                data.insert_persisted(*GITHUB_TOKEN, github_token)
+                            let id = Id::new(GITHUB_TOKEN);
+                            if let Some(github_token) = memory.data.get_persisted::<String>(id) {
+                                data.insert_persisted(id, github_token)
                             }
                             data
                         });
@@ -377,14 +376,14 @@ impl App {
 // Copy/Paste, Drag&Drop
 impl App {
     fn data(&mut self, ctx: &Context) {
-        if let Some(frame) = ctx.data_mut(|data| data.remove_temp::<MetaDataFrame>(*DATA)) {
+        if let Some(frame) = ctx.data_mut(|data| data.remove_temp::<MetaDataFrame>(Id::new(DATA))) {
             self.data.add(frame);
         }
     }
 
     fn configure(&mut self, ctx: &Context) {
         if let Some(frames) =
-            ctx.data_mut(|data| data.remove_temp::<Vec<MetaDataFrame>>(Id::new("Configure")))
+            ctx.data_mut(|data| data.remove_temp::<Vec<MetaDataFrame>>(Id::new(CONFIGURE)))
         {
             self.tree
                 .insert_pane::<VERTICAL>(Pane::configuration(frames));
@@ -392,8 +391,8 @@ impl App {
     }
 
     fn calculate(&mut self, ctx: &Context) {
-        if let Some((frames, index)) = ctx
-            .data_mut(|data| data.remove_temp::<(Vec<MetaDataFrame>, usize)>(Id::new("Calculate")))
+        if let Some((frames, index)) =
+            ctx.data_mut(|data| data.remove_temp::<(Vec<MetaDataFrame>, usize)>(Id::new(CALCULATE)))
         {
             self.tree
                 .insert_pane::<VERTICAL>(Pane::calculation(frames, index));
@@ -402,7 +401,7 @@ impl App {
 
     fn compose(&mut self, ctx: &Context) {
         if let Some((frames, index)) = ctx.data_mut(|data| {
-            data.remove_temp::<(Vec<MetaDataFrame>, Option<usize>)>(Id::new("Compose"))
+            data.remove_temp::<(Vec<MetaDataFrame>, Option<usize>)>(Id::new(COMPOSE))
         }) {
             self.tree
                 .insert_pane::<HORIZONTAL>(Pane::composition(frames, index));
