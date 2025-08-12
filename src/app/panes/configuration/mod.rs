@@ -59,6 +59,12 @@ impl Pane {
             .to_string()
     }
 
+    fn hash(&self) -> u64 {
+        hash(&self.frames)
+    }
+}
+
+impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
         let mut response = ui
             .heading(Self::icon())
@@ -210,23 +216,25 @@ impl Pane {
         TableView::new(data_frame, &self.settings, &mut self.state).show(ui);
     }
 
-    pub(crate) fn windows(&mut self, ui: &mut Ui) {
-        Window::new(format!("{GEAR} Configuration settings"))
-            .id(ui.auto_id_with(ID_SOURCE))
-            .default_pos(ui.next_widget_position())
-            .open(&mut self.state.open_settings_window)
-            .show(ui.ctx(), |ui| self.settings.show(ui));
-    }
-
-    fn hash(&self) -> u64 {
-        hash(&self.frames)
-    }
-
     #[instrument(skip(self), err)]
     fn save(&mut self) -> Result<()> {
         let name = format!("{}.utca.parquet", self.title_with_separator("."));
         save(&mut self.frames[self.settings.index], &name)?;
         Ok(())
+    }
+}
+
+impl Pane {
+    fn windows(&mut self, ui: &mut Ui) {
+        self.settings(ui);
+    }
+
+    fn settings(&mut self, ui: &mut Ui) {
+        Window::new(format!("{GEAR} Configuration settings"))
+            .id(ui.auto_id_with(ID_SOURCE))
+            .default_pos(ui.next_widget_position())
+            .open(&mut self.state.open_settings_window)
+            .show(ui.ctx(), |ui| self.settings.show(ui));
     }
 }
 

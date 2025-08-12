@@ -18,7 +18,7 @@ use crate::{
     export::{parquet, xlsx},
     utils::Hashed,
 };
-use egui::{CursorIcon, InnerResponse, Response, RichText, Ui, Window, util::hash};
+use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, SIGMA,
@@ -27,7 +27,7 @@ use metadata::MetaDataFrame;
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
-use tracing::{error, instrument};
+use tracing::instrument;
 
 const ID_SOURCE: &str = "Composition";
 
@@ -256,40 +256,40 @@ impl Pane {
         Window::new(format!("{SIGMA} Composition indices"))
             .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
             .open(&mut open_indices_window)
-            .show(ui.ctx(), |ui| {
-                // Species
-                let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CompositionSpeciesComputed>()
-                        .get(CompositionSpeciesKey {
-                            frames: &self.source,
-                            settings: &self.settings,
-                        })
-                });
-                // Indices
-                let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CompositionIndicesComputed>()
-                        .get(CompositionIndicesKey {
-                            data_frame: Hashed {
-                                value: &data_frame,
-                                hash: hash(self.settings.index),
-                            },
-                            ddof: self.settings.special.ddof,
-                        })
-                });
-                if let Err(error) = IndicesWidget::new(&data_frame)
-                    .hover(true)
-                    .precision(Some(self.settings.precision))
-                    .show(ui)
-                    .inner
-                {
-                    error!(%error);
-                }
-            });
+            .show(ui.ctx(), |ui| self.indices_content(ui));
         self.state.open_indices_window = open_indices_window;
+    }
+
+    #[instrument(skip_all, err)]
+    fn indices_content(&mut self, ui: &mut Ui) -> PolarsResult<()> {
+        // Species
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<CompositionSpeciesComputed>()
+                .get(CompositionSpeciesKey {
+                    frames: &self.source,
+                    settings: &self.settings,
+                })
+        });
+        // Indices
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<CompositionIndicesComputed>()
+                .get(CompositionIndicesKey {
+                    data_frame: Hashed {
+                        value: &data_frame,
+                        hash: hash(self.settings.index),
+                    },
+                    ddof: self.settings.special.ddof,
+                })
+        });
+        IndicesWidget::new(&data_frame)
+            .hover(true)
+            .precision(Some(self.settings.precision))
+            .show(ui)
+            .inner
     }
 
     fn settings(&mut self, ui: &mut Ui) {

@@ -31,7 +31,7 @@ use panes::configuration::SCHEMA;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str, sync::LazyLock};
-use tracing::{error, info, instrument, trace};
+use tracing::{info, instrument, trace};
 use windows::SettingsWindow;
 
 /// IEEE 754-2008
