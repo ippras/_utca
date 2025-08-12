@@ -25,12 +25,13 @@ use egui_phosphor::{
 };
 use egui_tiles::{ContainerKind, Tile, Tree};
 use egui_tiles_ext::{HORIZONTAL, TreeExt as _, VERTICAL};
+use lipid::prelude::*;
 use metadata::{DATE, MetaDataFrame, Metadata, NAME};
 use panes::configuration::SCHEMA;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str};
-use tracing::{info, instrument, trace};
+use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str, sync::LazyLock};
+use tracing::{error, info, instrument, trace};
 use windows::SettingsWindow;
 
 /// IEEE 754-2008
@@ -444,10 +445,50 @@ impl App {
 
     #[instrument(skip_all, err)]
     fn parse(&mut self, dropped_file: DroppedFile) -> Result<()> {
+        const CONFIGURATION: LazyLock<SchemaRef> = LazyLock::new(|| {
+            Arc::new(Schema::from_iter([
+                Field::new(PlSmallStr::from_static("Label"), DataType::String),
+                field!(FATTY_ACID),
+                Field::new(
+                    PlSmallStr::from_static("Triacylglycerol"),
+                    DataType::Float64,
+                ),
+                Field::new(
+                    PlSmallStr::from_static("Diacylglycerol1223"),
+                    DataType::Float64,
+                ),
+                Field::new(
+                    PlSmallStr::from_static("Monoacylglycerol2"),
+                    DataType::Float64,
+                ),
+            ]))
+        });
+
+        const COMPOSITION: LazyLock<SchemaRef> = LazyLock::new(|| {
+            Arc::new(Schema::from_iter([
+                Field::new(PlSmallStr::from_static("Label"), DataType::String),
+                // field!(TRIACYLGLYCEROL),
+                Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
+            ]))
+        });
+
         let bytes = dropped_file.bytes()?;
         trace!(?bytes);
         let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
-        self.data.add(frame);
+        let schema = frame.data.schema();
+        if *schema == *CONFIGURATION {
+            self.data.add(frame);
+        } else if *schema == *COMPOSITION {
+            error!("COMPOSITION!!!!!!!!!!!!!!!!!!!!");
+        } else {
+            return Err(
+                polars_err!(SchemaMismatch: r#"Invalid dropped file schema: expected [`CONFIGURATION`, `COMPOSITION`], got = `{schema:?}`"#),
+            )?;
+        }
+        // println!(
+        //     "frame.data.schema: {:?}",
+        //     *frame.data.schema() == *CONFIGURATION
+        // );
         Ok(())
     }
 
