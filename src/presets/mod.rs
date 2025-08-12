@@ -1,4 +1,4 @@
-pub(crate) use self::r#const::*;
+pub(crate) use self::{ippras::*, reske1997::*};
 
 use metadata::MetaDataFrame;
 use std::{io::Cursor, sync::LazyLock};
@@ -12,8 +12,9 @@ macro_rules! preset {
     };
 }
 
+/// IPPRAS
 #[rustfmt::skip]
-mod r#const {
+mod ippras {
     use super::*;
 
     pub(crate) static ACER_GINNALA_2025_07_08_1: LazyLock<MetaDataFrame> = preset!("Acer/Acer Ginnala.2025-07-08.0.0.1.utca.parquet");
@@ -55,4 +56,15 @@ mod r#const {
     pub(crate) static LOBOSPHERA_2025_04_24_1: LazyLock<MetaDataFrame> = preset!("Microalgae/Lobosphera-N.2025-04-24.0.0.1.utca.parquet");
     pub(crate) static LOBOSPHERA_2025_04_24_2: LazyLock<MetaDataFrame> = preset!("Microalgae/Lobosphera-N.2025-04-24.0.0.2.utca.parquet");
     pub(crate) static LOBOSPHERA_2025_04_24_3: LazyLock<MetaDataFrame> = preset!("Microalgae/Lobosphera-N.2025-04-24.0.0.3.utca.parquet");
+}
+
+// Third party
+
+// [Reske1997](https://doi.org/10.1007/s11746-997-0016-1)
+#[rustfmt::skip]
+mod reske1997 {
+    use super::*;
+
+    pub(crate) static SOYBEAN_SEED_COMMODITY: LazyLock<MetaDataFrame> = preset!("ThirdParty/Reske1997/Soybean Seed Commodity.2025-08-11.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_COMMODITY: LazyLock<MetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed Commodity.2025-08-11.utca.parquet");
 }
