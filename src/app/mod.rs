@@ -25,12 +25,13 @@ use egui_phosphor::{
 };
 use egui_tiles::{ContainerKind, Tile, Tree};
 use egui_tiles_ext::{HORIZONTAL, TreeExt as _, VERTICAL};
+use lipid::prelude::*;
 use metadata::{DATE, MetaDataFrame, Metadata, NAME};
 use panes::configuration::SCHEMA;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str};
-use tracing::{info, instrument, trace};
+use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str, sync::LazyLock};
+use tracing::{error, info, instrument, trace};
 use windows::SettingsWindow;
 
 /// IEEE 754-2008
@@ -437,17 +438,88 @@ impl App {
         }) {
             info!(?dropped_files);
             for dropped_file in dropped_files {
-                let _ = self.parse(dropped_file);
+                let _ = self.parse(ctx, dropped_file);
             }
         }
     }
 
     #[instrument(skip_all, err)]
-    fn parse(&mut self, dropped_file: DroppedFile) -> Result<()> {
+    fn parse(&mut self, ctx: &Context, dropped_file: DroppedFile) -> Result<()> {
+        const CONFIGURATION: LazyLock<SchemaRef> = LazyLock::new(|| {
+            Arc::new(Schema::from_iter([
+                Field::new(PlSmallStr::from_static("Label"), DataType::String),
+                field!(FATTY_ACID),
+                Field::new(
+                    PlSmallStr::from_static("Triacylglycerol"),
+                    DataType::Float64,
+                ),
+                Field::new(
+                    PlSmallStr::from_static("Diacylglycerol1223"),
+                    DataType::Float64,
+                ),
+                Field::new(
+                    PlSmallStr::from_static("Monoacylglycerol2"),
+                    DataType::Float64,
+                ),
+            ]))
+        });
+
+        const COMPOSITION: LazyLock<SchemaRef> = LazyLock::new(|| {
+            Arc::new(Schema::from_iter([
+                Field::new(
+                    PlSmallStr::from_static("Label"),
+                    DataType::Struct(vec![
+                        Field::new(
+                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER1),
+                            DataType::String,
+                        ),
+                        Field::new(
+                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER2),
+                            DataType::String,
+                        ),
+                        Field::new(
+                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER3),
+                            DataType::String,
+                        ),
+                    ]),
+                ),
+                Field::new(
+                    PlSmallStr::from_static(FATTY_ACID),
+                    DataType::Struct(vec![
+                        Field::new(
+                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER1),
+                            data_type!(FATTY_ACID),
+                        ),
+                        Field::new(
+                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER2),
+                            data_type!(FATTY_ACID),
+                        ),
+                        Field::new(
+                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER3),
+                            data_type!(FATTY_ACID),
+                        ),
+                    ]),
+                ),
+                // field!(TRIACYLGLYCEROL),
+                Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
+            ]))
+        });
+
         let bytes = dropped_file.bytes()?;
         trace!(?bytes);
         let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
-        self.data.add(frame);
+        let schema = frame.data.schema();
+        if *schema == *CONFIGURATION {
+            info!("CONFIGURATION");
+            self.data.add(frame);
+        } else if *schema == *COMPOSITION {
+            info!("COMPOSITION");
+            ctx.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (vec![frame], Some(0usize))));
+        } else {
+            return Err(
+                polars_err!(SchemaMismatch: r#"Invalid dropped file schema: expected [`CONFIGURATION`, `COMPOSITION`], got = `{schema:?}`"#),
+            )?;
+        }
         Ok(())
     }
 
