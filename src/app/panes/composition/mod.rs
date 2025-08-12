@@ -12,10 +12,10 @@ use crate::{
             CompositionSpeciesComputed, CompositionSpeciesKey, FilteredCompositionComputed,
             FilteredCompositionKey, UniqueCompositionComputed, UniqueCompositionKey,
         },
-        text::Text,
         widgets::IndicesWidget,
     },
     export::{parquet, xlsx},
+    text::Text,
     utils::Hashed,
 };
 use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
@@ -215,9 +215,21 @@ impl Pane {
     }
 
     fn body_content(&mut self, ui: &mut Ui) {
+        // Species
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<CompositionSpeciesComputed>()
+                .get(CompositionSpeciesKey {
+                    frames: &self.source,
+                    index: self.settings.index,
+                    ddof: self.settings.special.ddof,
+                    method: self.settings.special.method,
+                })
+        });
         self.target = ui.memory_mut(|memory| {
             let key = CompositionKey {
-                frames: &self.source,
+                data_frame: &data_frame,
                 settings: &self.settings,
             };
             Hashed {
@@ -269,7 +281,9 @@ impl Pane {
                 .cache::<CompositionSpeciesComputed>()
                 .get(CompositionSpeciesKey {
                     frames: &self.source,
-                    settings: &self.settings,
+                    index: self.settings.index,
+                    ddof: self.settings.special.ddof,
+                    method: self.settings.special.method,
                 })
         });
         // Indices

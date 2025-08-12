@@ -1,4 +1,4 @@
-use crate::app::text::Text;
+use crate::text::Text;
 use constcat::concat;
 use egui::Vec2b;
 use egui_phosphor::regular::{CHART_BAR, TABLE};

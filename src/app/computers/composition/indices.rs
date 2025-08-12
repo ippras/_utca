@@ -80,7 +80,7 @@ mod one {
 
     pub(super) fn compute(key: Key) -> PolarsResult<Value> {
         let mut lazy_frame = key.data_frame.value.clone().lazy();
-        let triacylglycerol = col("Triacylglycerol");
+        let triacylglycerol = col(TRIACYLGLYCEROL);
         let value = col("Value");
         #[rustfmt::skip]
         let exprs = [
@@ -109,9 +109,9 @@ mod one {
 
     fn stereospecific_numbers(index: impl Fn(&str) -> Expr) -> PolarsResult<Expr> {
         concat_arr(vec![
-            index("StereospecificNumber1"),
-            index("StereospecificNumber2"),
-            index("StereospecificNumber3"),
+            index(STEREOSPECIFIC_NUMBER1),
+            index(STEREOSPECIFIC_NUMBER2),
+            index(STEREOSPECIFIC_NUMBER3),
         ])
     }
 }
@@ -129,7 +129,7 @@ mod many {
 
     pub(super) fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         let mut lazy_frame = key.data_frame.value.clone().lazy();
-        let triacylglycerol = col("Triacylglycerol");
+        let triacylglycerol = col(TRIACYLGLYCEROL);
         let value = |index| {
             col("Value")
                 .struct_()
@@ -177,9 +177,9 @@ mod many {
             ]))
         };
         concat_arr(vec![
-            index("StereospecificNumber1")?,
-            index("StereospecificNumber2")?,
-            index("StereospecificNumber3")?,
+            index(STEREOSPECIFIC_NUMBER1)?,
+            index(STEREOSPECIFIC_NUMBER2)?,
+            index(STEREOSPECIFIC_NUMBER3)?,
         ])
     }
 }

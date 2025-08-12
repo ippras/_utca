@@ -17,7 +17,7 @@ use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS,
     SIGMA,
 };
-use lipid::prelude::DataFrameExt as _;
+use lipid::prelude::*;
 use metadata::MetaDataFrame;
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
@@ -145,27 +145,53 @@ impl Pane {
             })
             .clicked()
         {
-            let mut target = Vec::with_capacity(self.source.len());
-            for index in 0..self.source.len() {
-                let meta = self.source[index].meta.clone();
-                let data = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationComputed>()
-                        .get(CalculationKey {
-                            frames: &self.source,
-                            settings: &Settings {
-                                index: Some(index),
-                                ..self.settings
-                            },
-                        })
-                });
-                target.push(MetaDataFrame::new(meta, data));
-            }
-            ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (target, self.settings.index)));
+            let _ = self.composition(ui);
         }
         ui.separator();
         response
+    }
+
+    #[instrument(skip_all, err)]
+    fn composition(&mut self, ui: &mut Ui) -> PolarsResult<()> {
+        let mut frames = Vec::with_capacity(self.source.len());
+        for index in 0..self.source.len() {
+            let meta = self.source[index].meta.clone();
+            let mut data = ui.memory_mut(|memory| {
+                memory
+                    .caches
+                    .cache::<CalculationComputed>()
+                    .get(CalculationKey {
+                        frames: &self.source,
+                        settings: &Settings {
+                            index: Some(index),
+                            ..self.settings
+                        },
+                    })
+            });
+            data = data
+                .lazy()
+                .select([
+                    col(LABEL),
+                    col(FATTY_ACID),
+                    col("Calculated")
+                        .struct_()
+                        .field_by_name("Triacylglycerol")
+                        .alias(STEREOSPECIFIC_NUMBER123),
+                    col("Calculated")
+                        .struct_()
+                        .field_by_name("Diacylglycerol13")
+                        .alias(STEREOSPECIFIC_NUMBER13),
+                    col("Calculated")
+                        .struct_()
+                        .field_by_name("Monoacylglycerol2")
+                        .alias(STEREOSPECIFIC_NUMBER2),
+                ])
+                .collect()?;
+            frames.push(MetaDataFrame::new(meta, data));
+        }
+        // println!("target: {target:?}");
+        ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (frames, self.settings.index)));
+        Ok(())
     }
 
     fn body_content(&mut self, ui: &mut Ui) {

@@ -1,12 +1,20 @@
 use crate::{
-    app::panes::composition::settings::Method,
-    utils::{Hashed, hash},
+    app::panes::composition::settings::{Filter, Method, Order, Selection, Settings, Sort},
+    special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
+    utils::Hashed,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use metadata::MetaDataFrame;
 use polars::prelude::*;
-use polars_ext::expr::ExprExt as _;
+use polars_ext::{
+    prelude::ExprExt as _,
+    series::{column, round},
+};
+use std::{
+    convert::identity,
+    hash::{Hash, Hasher},
+};
 use tracing::instrument;
 
 /// Composition computed
@@ -18,43 +26,50 @@ pub(crate) struct Computer;
 
 impl Computer {
     #[instrument(skip(self), err)]
-    pub(super) fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let lazy_frame = match key.index {
+    fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
+        // warn!("index: {:?}", key.settings.index);
+        let mut settings = key.settings.clone();
+        if settings.special.selections.is_empty() {
+            settings.special.selections.push_back(Selection {
+                composition: SSC,
+                filter: Filter::new(),
+            });
+        }
+        let settings = &settings;
+        let mut lazy_frame = match settings.index {
             Some(index) => {
                 let frame = &key.frames[index];
                 let mut lazy_frame = frame.data.clone().lazy();
-                lazy_frame = compute(lazy_frame, key.method)?;
+                lazy_frame = compute(lazy_frame, settings)?;
                 lazy_frame
             }
             None => {
                 let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
-                    Ok(compute(frame.data.clone().lazy(), key.method)?.select([
-                        hash(as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL)])),
-                        col(LABEL),
-                        col(TRIACYLGLYCEROL),
-                        col("Value").alias(frame.meta.format(".").to_string()),
+                    Ok(compute(frame.data.clone().lazy(), settings)?.select([
+                        col("Keys").hash(),
+                        col("Keys"),
+                        col("Values").alias(frame.meta.format(".").to_string()),
                     ]))
                 };
                 let mut lazy_frame = compute(&key.frames[0])?;
                 for frame in &key.frames[1..] {
                     lazy_frame = lazy_frame.join(
                         compute(frame)?,
-                        [col("Hash"), col(LABEL), col(TRIACYLGLYCEROL)],
-                        [col("Hash"), col(LABEL), col(TRIACYLGLYCEROL)],
+                        [col("Hash"), col("Keys")],
+                        [col("Hash"), col("Keys")],
                         JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
                     );
                 }
                 lazy_frame = lazy_frame.drop(by_name(["Hash"], true));
-                lazy_frame = lazy_frame.select(mean_and_standard_deviation(key.ddof)?);
+                lazy_frame = meta(lazy_frame, settings)?;
                 lazy_frame
             }
         };
-        let mut data_frame = lazy_frame.collect()?;
-        let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
-        Ok(Hashed {
-            value: data_frame,
-            hash,
-        })
+        // // Filter
+        // lazy_frame = filter(lazy_frame, settings);
+        // Sort
+        lazy_frame = sort(lazy_frame, settings);
+        lazy_frame.collect()
     }
 }
 
@@ -65,22 +80,27 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 }
 
 /// Composition key
-#[derive(Clone, Copy, Debug, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Key<'a> {
     pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
-    pub(crate) index: Option<usize>,
-    pub(crate) ddof: u8,
-    pub(crate) method: Method,
+    pub(crate) settings: &'a Settings,
+}
+
+impl Hash for Key<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.frames.hash(state);
+        self.settings.index.hash(state);
+        self.settings.special.hash(state);
+    }
 }
 
 /// Composition value
-type Value = Hashed<DataFrame>;
+type Value = DataFrame;
 
-fn compute(lazy_frame: LazyFrame, method: Method) -> PolarsResult<LazyFrame> {
-    match method {
-        // Method::Gunstone => gunstone(lazy_frame, settings),
-        Method::Gunstone => unimplemented!(),
-        Method::VanderWal => vander_wal(lazy_frame),
+fn compute(lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
+    match &settings.special.method {
+        Method::Gunstone => gunstone(lazy_frame, settings),
+        Method::VanderWal => vander_wal(lazy_frame, settings),
     }
 }
 
@@ -113,75 +133,79 @@ fn compute(lazy_frame: LazyFrame, method: Method) -> PolarsResult<LazyFrame> {
 //         U3 => self.u3 / self.u.powi(3),                    // [UUU]
 //     }
 // }
+fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
+    println!("lazy_frame g0: {}", lazy_frame.clone().collect().unwrap());
+    lazy_frame = lazy_frame.select([
+        // col("Index"),
+        col("Label"),
+        col("FattyAcid"),
+        col("Calculated")
+            .struct_()
+            .field_by_names(["Triacylglycerol"])
+            .alias("Value"),
+    ]);
+    println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
 
-// fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
-//     println!("lazy_frame g0: {}", lazy_frame.clone().collect().unwrap());
-//     lazy_frame = lazy_frame.select([
-//         // col("Index"),
-//         col("Label"),
-//         col("FattyAcid"),
-//         col("Calculated")
-//             .struct_()
-//             .field_by_names(["Triacylglycerol"])
-//             .alias("Value"),
-//     ]);
-//     println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
-//     let factor = gunstone_factor(lazy_frame.clone())?;
-//     println!("factor: {factor}");
-//     //
-//     println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
-//     let discriminants = &settings.special.discriminants.0;
-//     let discriminants = df! {
-//         "Label" => Series::from_iter(discriminants.keys().cloned()),
-//         "Factor1" => Series::from_iter(discriminants.values().map(|values| values[0])),
-//         "Factor2" => Series::from_iter(discriminants.values().map(|values| values[1])),
-//         "Factor3" => Series::from_iter(discriminants.values().map(|values| values[2])),
-//     }?;
-//     println!("Discriminants: {discriminants}");
-//     lazy_frame = lazy_frame
-//         .join(
-//             discriminants.lazy(),
-//             [col("Label")],
-//             [col("Label")],
-//             JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
-//         )
-//         .select([
-//             col("Label"),
-//             col("FattyAcid"),
-//             (col("Value") * col("Factor1")).alias("Value1"),
-//             (col("Value") * col("Factor2")).alias("Value2"),
-//             (col("Value") * col("Factor3")).alias("Value3"),
-//             // col("Value") * col("Factor"),
-//             // col("Value") * col("Factor").arr().get(lit(0), false),
-//             // col("Value") * col("Factor").arr().get(lit(1), false),
-//             // col("Value") * col("Factor").arr().get(lit(2), false),
-//         ]);
-//     println!("lazy_frame g25: {}", lazy_frame.clone().collect().unwrap());
-//     lazy_frame = gunstone_cartesian_product(lazy_frame)?;
-//     println!("lazy_frame g3: {}", lazy_frame.clone().collect().unwrap());
-//     lazy_frame = lazy_frame
-//         .with_column(
-//             col("FattyAcid")
-//                 .triacylglycerol()
-//                 .map_expr(|expr| expr.fatty_acid().is_unsaturated(None))
-//                 .triacylglycerol()
-//                 .sum()
-//                 .alias("TMC"),
-//         )
-//         .join(
-//             factor.lazy(),
-//             [col("TMC")],
-//             [col("TMC")],
-//             JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
-//         )
-//         .select([
-//             col("Label"),
-//             col("FattyAcid"),
-//             (col("Value") * col("Factor")).normalize(),
-//         ]);
-//     println!("lazy_frame g4: {}", lazy_frame.clone().collect().unwrap());
-//     Ok(lazy_frame)
-// }
+    let factor = gunstone_factor(lazy_frame.clone())?;
+    println!("factor: {factor}");
+    //
+    println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
+    let discriminants = &settings.special.discriminants.0;
+    let discriminants = df! {
+        "Label" => Series::from_iter(discriminants.keys().cloned()),
+        "Factor1" => Series::from_iter(discriminants.values().map(|values| values[0])),
+        "Factor2" => Series::from_iter(discriminants.values().map(|values| values[1])),
+        "Factor3" => Series::from_iter(discriminants.values().map(|values| values[2])),
+    }?;
+    println!("Discriminants: {discriminants}");
+    lazy_frame = lazy_frame
+        .join(
+            discriminants.lazy(),
+            [col("Label")],
+            [col("Label")],
+            JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+        )
+        .select([
+            col("Label"),
+            col("FattyAcid"),
+            (col("Value") * col("Factor1")).alias("Value1"),
+            (col("Value") * col("Factor2")).alias("Value2"),
+            (col("Value") * col("Factor3")).alias("Value3"),
+            // col("Value") * col("Factor"),
+            // col("Value") * col("Factor").arr().get(lit(0), false),
+            // col("Value") * col("Factor").arr().get(lit(1), false),
+            // col("Value") * col("Factor").arr().get(lit(2), false),
+        ]);
+    println!("lazy_frame g25: {}", lazy_frame.clone().collect().unwrap());
+
+    lazy_frame = gunstone_cartesian_product(lazy_frame)?;
+    println!("lazy_frame g3: {}", lazy_frame.clone().collect().unwrap());
+    lazy_frame = lazy_frame
+        .with_column(
+            col("FattyAcid")
+                .triacylglycerol()
+                .map_expr(|expr| expr.fatty_acid().is_unsaturated(None))
+                .triacylglycerol()
+                .sum()
+                .alias("TMC"),
+        )
+        .join(
+            factor.lazy(),
+            [col("TMC")],
+            [col("TMC")],
+            JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+        )
+        .select([
+            col("Label"),
+            col("FattyAcid"),
+            (col("Value") * col("Factor")).normalize(),
+        ]);
+    println!("lazy_frame g4: {}", lazy_frame.clone().collect().unwrap());
+
+    // Compose
+    lazy_frame = compose(lazy_frame, settings)?;
+    Ok(lazy_frame)
+}
 
 fn gunstone_factor(lazy_frame: LazyFrame) -> PolarsResult<DataFrame> {
     let data_frame = lazy_frame
@@ -305,8 +329,15 @@ fn gunstone_cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFra
 // [aba] = [a13]^2*[b2]
 // `2*[a_{13}]` - потому что зеркальные ([abc]=[cba], [aab]=[baa]).
 // SSC: [abc] = [a_{13}]*[b_2]*[c_{13}]
-fn vander_wal(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
+fn vander_wal(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
     // Cartesian product (TAG from FA)
+    lazy_frame = cartesian_product(lazy_frame)?;
+    // Compose
+    lazy_frame = compose(lazy_frame, settings)?;
+    Ok(lazy_frame)
+}
+
+fn cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
     lazy_frame = lazy_frame
         .clone()
         .select([as_struct(vec![
@@ -357,18 +388,152 @@ fn vander_wal(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
     Ok(lazy_frame)
 }
 
-fn mean_and_standard_deviation(ddof: u8) -> PolarsResult<[Expr; 3]> {
-    let array = || concat_arr(vec![all().exclude_cols([LABEL, TRIACYLGLYCEROL]).as_expr()]);
-    Ok([
-        col(LABEL),
-        col(TRIACYLGLYCEROL),
-        as_struct(vec![
-            array()?.arr().mean().alias("Mean"),
-            array()?.arr().std(ddof).alias("StandardDeviation"),
-            array()?.alias("Repetitions"),
-        ])
-        .alias("Value"),
-    ])
+fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
+    // Composition
+    for (index, selection) in settings.special.selections.iter().enumerate() {
+        lazy_frame = lazy_frame.with_column(
+            match selection.composition {
+                MMC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .mass(Some(lit(settings.special.adduct)))
+                    .map(
+                        column(round(settings.special.round_mass)),
+                        GetOutput::same_type(),
+                    )
+                    .alias("MMC"),
+                MSC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .map_expr(|expr| {
+                        expr.fatty_acid()
+                            .mass(None)
+                            .round(settings.special.round_mass, RoundMode::HalfToEven)
+                    })
+                    .alias("MSC"),
+                NMC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .equivalent_carbon_number()
+                    .alias("NMC"),
+                NSC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .map_expr(|expr| expr.fatty_acid().equivalent_carbon_number())
+                    .alias("NSC"),
+                SMC => col(LABEL)
+                    .triacylglycerol()
+                    .non_stereospecific(identity)?
+                    .alias("SMC"),
+                SPC => col(LABEL)
+                    .triacylglycerol()
+                    .positional(identity)
+                    .alias("SPC"),
+                SSC => col(LABEL).alias("SSC"),
+                TMC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .map_expr(|expr| expr.fatty_acid().is_unsaturated(None))
+                    .triacylglycerol()
+                    .sum()
+                    // .non_stereospecific(
+                    //     |expr| expr.fa().is_saturated(),
+                    //     PermutationOptions::default().map(true),
+                    // )?
+                    .alias("TMC"),
+                TPC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .positional(|expr| expr.fatty_acid().is_saturated())
+                    .alias("TPC"),
+                TSC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .map_expr(|expr| expr.fatty_acid().is_saturated())
+                    .alias("TSC"),
+                UMC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .unsaturation()
+                    .alias("UMC"),
+                USC => col(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+                    .map_expr(|expr| expr.fatty_acid().unsaturation().sum())
+                    .alias("USC"),
+            }
+            .alias(format!("Key{index}")),
+        );
+        // Value
+        lazy_frame = lazy_frame.with_column(
+            sum("Value")
+                .over([as_struct(vec![col(format!("^Key[0-{index}]$"))])])
+                .alias(format!("Value{index}")),
+        );
+    }
+    // Group
+    lazy_frame = lazy_frame
+        .group_by([col(r#"^Key\d$"#), col(r#"^Value\d$"#)])
+        .agg([as_struct(vec![col("Label"), col(TRIACYLGLYCEROL), col("Value")]).alias("Species")]);
+    lazy_frame = lazy_frame.select([
+        as_struct(vec![col(r#"^Key\d$"#)]).alias("Keys"),
+        concat_arr(vec![col(r#"^Value\d$"#)])?.alias("Values"),
+        col("Species"),
+    ]);
+    Ok(lazy_frame)
+}
+
+fn meta(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
+    // TODO [array_get?](https://docs.rs/polars/latest/polars/prelude/array/trait.ArrayNameSpace.html)
+    let list = |index| {
+        // TODO: .arr().to_list().list() for compute mean std with None
+        concat_list([all()
+            .exclude_cols(["Keys", r#"^Value\d$"#])
+            .as_expr()
+            .arr()
+            .get(lit(index as u32), true)])
+    };
+    for index in 0..settings.special.selections.len() {
+        lazy_frame = lazy_frame.with_column(
+            as_struct(vec![
+                list(index)?.list().mean().alias("Mean"),
+                list(index)?
+                    .list()
+                    .std(settings.special.ddof)
+                    .alias("StandardDeviation"),
+            ])
+            .alias(format!("Value{index}")),
+        );
+    }
+    // Group
+    lazy_frame = lazy_frame.select([
+        col("Keys"),
+        concat_arr(vec![col(r#"^Value\d$"#)])?.alias("Values"),
+    ]);
+    Ok(lazy_frame)
+}
+
+fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
+    let mut sort_options = SortMultipleOptions::default();
+    if let Order::Descending = settings.special.order {
+        sort_options = sort_options
+            .with_order_descending(true)
+            .with_nulls_last(true);
+    }
+    lazy_frame = match settings.special.sort {
+        Sort::Key => lazy_frame.sort_by_exprs([col("Keys")], sort_options),
+        Sort::Value => {
+            let mut expr = col("Values");
+            if settings.index.is_none() {
+                expr = expr
+                    .arr()
+                    .to_list()
+                    .list()
+                    .eval(col("").struct_().field_by_name("Mean"));
+            }
+            lazy_frame.sort_by_exprs([expr], sort_options)
+        }
+    };
+    // TODO sort species
+    // lazy_frame = lazy_frame.with_columns([col("Species").list().eval(
+    //     col("").sort_by(
+    //         [col("").struct_().field_by_name("FA").fa().ecn()],
+    //         Default::default(),
+    //     ),
+    //     true,
+    // )]);
+    lazy_frame
 }
 
 // s3: 0.0,
@@ -557,3 +722,8 @@ impl Gunstone {
 //         })
 //         .normalized()
 // }
+
+pub(super) mod filtered;
+pub(super) mod indices;
+pub(super) mod species;
+pub(super) mod unique;

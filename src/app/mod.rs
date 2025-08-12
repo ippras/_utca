@@ -94,8 +94,7 @@ impl App {
         // return Default::default();
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        let app = Self::load(cc).unwrap_or_default();
-        app
+        Self::load(cc).unwrap_or_default()
     }
 
     fn load(cc: &CreationContext) -> Option<Self> {
@@ -628,6 +627,5 @@ mod data;
 mod identifiers;
 mod panes;
 mod presets;
-mod text;
 mod widgets;
 mod windows;

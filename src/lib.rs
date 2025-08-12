@@ -1,6 +1,7 @@
 // #![feature(hash_set_entry)]
 // #![feature(debug_closure_helpers)]
 #![feature(box_patterns)]
+#![feature(debug_closure_helpers)]
 #![feature(result_option_map_or_default)]
 
 pub use app::App;
@@ -11,6 +12,7 @@ mod export;
 mod localization;
 mod presets;
 mod special;
+mod text;
 
 // mod properties;
 // mod widgets;
