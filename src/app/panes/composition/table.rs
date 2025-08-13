@@ -8,7 +8,7 @@ use crate::{
     special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
     text::Text,
 };
-use egui::{Frame, Grid, Id, InnerResponse, Margin, Popup, PopupCloseBehavior, TextStyle, Ui};
+use egui::{Frame, Id, Margin, TextStyle, Ui};
 use egui_l20n::{ResponseExt as _, UiExt as _};
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
