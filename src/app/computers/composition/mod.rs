@@ -403,10 +403,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                 MMC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .mass(Some(lit(settings.special.adduct)))
-                    .map(
-                        column(round(settings.special.round_mass)),
-                        GetOutput::same_type(),
-                    )
+                    .round(settings.special.round_mass, RoundMode::HalfToEven)
                     .alias("MMC"),
                 MSC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
@@ -426,7 +423,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                     .alias("NSC"),
                 SMC => col(LABEL)
                     .triacylglycerol()
-                    .non_stereospecific(identity)?
+                    .non_stereospecific(identity)
                     .alias("SMC"),
                 SPC => col(LABEL)
                     .triacylglycerol()
@@ -435,21 +432,19 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                 SSC => col(LABEL).alias("SSC"),
                 TMC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().is_saturated())
+                    .non_stereospecific(|expr| expr.fatty_acid().is_saturated().not())
                     .triacylglycerol()
-                    .sum()
-                    // .non_stereospecific(
-                    //     |expr| expr.fa().is_saturated(),
-                    //     PermutationOptions::default().map(true),
-                    // )?
+                    .map_expr(|expr| expr.fatty_acid().r#type())
                     .alias("TMC"),
                 TPC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .positional(|expr| expr.fatty_acid().is_saturated())
+                    .positional(|expr| expr.fatty_acid().is_saturated().not())
+                    .triacylglycerol()
+                    .map_expr(|expr| expr.fatty_acid().r#type())
                     .alias("TPC"),
                 TSC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().is_saturated())
+                    .map_expr(|expr| expr.fatty_acid().r#type())
                     .alias("TSC"),
                 UMC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
@@ -457,7 +452,7 @@ fn compose(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
                     .alias("UMC"),
                 USC => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().unsaturation().sum())
+                    .map_expr(|expr| expr.fatty_acid().unsaturation())
                     .alias("USC"),
             }
             .alias(format!("Key{index}")),

@@ -4,10 +4,10 @@ use crate::{
     app::{
         MAX_PRECISION,
         computers::{UniqueCompositionComputed, UniqueCompositionKey},
-        text::Text,
     },
     r#const::relative_atomic_mass::{H, LI, NA, NH4},
     special::composition::{COMPOSITIONS, Composition},
+    text::Text,
     utils::Hashed,
 };
 use egui::{

@@ -11,6 +11,7 @@ mod export;
 mod localization;
 mod presets;
 mod special;
+mod text;
 
 // mod properties;
 // mod widgets;

@@ -627,6 +627,5 @@ mod data;
 mod identifiers;
 mod panes;
 mod presets;
-mod text;
 mod widgets;
 mod windows;

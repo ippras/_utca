@@ -12,10 +12,10 @@ use crate::{
             CompositionSpeciesComputed, CompositionSpeciesKey, FilteredCompositionComputed,
             FilteredCompositionKey, UniqueCompositionComputed, UniqueCompositionKey,
         },
-        text::Text,
         widgets::IndicesWidget,
     },
     export::{parquet, xlsx},
+    text::Text,
     utils::Hashed,
 };
 use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};

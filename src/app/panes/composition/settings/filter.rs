@@ -1,9 +1,9 @@
 use super::Selection;
 use crate::{
-    app::text::Text,
     special::composition::{
         Composition, MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC,
     },
+    text::Text,
 };
 use ahash::RandomState;
 use egui::{

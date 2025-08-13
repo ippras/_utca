@@ -3,18 +3,17 @@ use crate::{
     app::{
         computers::{CompositionIndicesComputed, CompositionIndicesKey},
         panes::MARGIN,
-        text::Text,
         widgets::FloatWidget,
     },
     special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
-    utils::polars::{tag_map, r#type},
+    text::Text,
 };
 use egui::{Frame, Grid, Id, InnerResponse, Margin, Popup, PopupCloseBehavior, TextStyle, Ui};
 use egui_l20n::{ResponseExt as _, UiExt as _};
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
+use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::series::round;
 use std::ops::{Add, Range};
 use tracing::instrument;
 
@@ -143,67 +142,53 @@ impl TableView<'_> {
                     let keys = self.data_frame["Keys"].struct_()?;
                     let key = &keys.fields_as_series()[index];
                     match self.settings.special.selections[index].composition {
-                        MMC => {
-                            FloatWidget::new(key.f64()?.get(row))
-                                .precision(Some(self.settings.precision))
-                                .hover(true)
-                                .show(ui);
+                        MMC | NMC | UMC => {
+                            let text = Mono(key.str_value(row)?).to_string();
+                            ui.label(text);
                         }
-                        MSC => {
-                            let key = tag_map(round(self.settings.precision as _))(key)?;
-                            ui.label(key.str_value(row)?);
+                        MSC | NSC | USC => {
+                            let text = key
+                                .try_triacylglycerol()?
+                                .get_any_value(row)?
+                                .stereo()
+                                .to_string();
+                            ui.label(text);
                         }
-                        NMC | NSC => {
-                            ui.label(key.str_value(row)?);
+                        // TMC => {
+                        //     match key.u32()?.get(row) {
+                        //         Some(0) => ui.label("S3"),
+                        //         Some(1) => ui.label("S2U"),
+                        //         Some(2) => ui.label("SU2"),
+                        //         Some(3) => ui.label("U3"),
+                        //         _ => ui.label("None"),
+                        //     };
+                        // }
+                        SMC | TMC => {
+                            let text = key
+                                .try_triacylglycerol()?
+                                .get_any_value(row)?
+                                .map(|any_value| any_value.str_value())
+                                .mono()
+                                .to_string();
+                            ui.label(text);
                         }
-                        SMC | SPC | SSC => {
-                            let sn1 = key
-                                .struct_()?
-                                .field_by_name("StereospecificNumber1")?
-                                .str_value(row)?
+                        SPC | TPC => {
+                            let text = key
+                                .try_triacylglycerol()?
+                                .get_any_value(row)?
+                                .map(|any_value| any_value.str_value())
+                                .positional()
                                 .to_string();
-                            let sn2 = key
-                                .struct_()?
-                                .field_by_name("StereospecificNumber2")?
-                                .str_value(row)?
-                                .to_string();
-                            let sn3 = key
-                                .struct_()?
-                                .field_by_name("StereospecificNumber3")?
-                                .str_value(row)?
-                                .to_string();
-                            ui.label(format!("{{{sn1},{sn2},{sn3}}}"));
+                            ui.label(text);
                         }
-                        TMC => {
-                            match key.u32()?.get(row) {
-                                Some(0) => ui.label("S3"),
-                                Some(1) => ui.label("S2U"),
-                                Some(2) => ui.label("SU2"),
-                                Some(3) => ui.label("U3"),
-                                _ => ui.label("None"),
-                            };
-                        }
-                        TPC | TSC => {
-                            let r#type = tag_map(r#type)(key)?;
-                            let sn1 = r#type
-                                .struct_()?
-                                .field_by_name("StereospecificNumber1")?
-                                .str_value(row)?
+                        SSC | TSC => {
+                            let text = key
+                                .try_triacylglycerol()?
+                                .get_any_value(row)?
+                                .map(|any_value| any_value.str_value())
+                                .stereo()
                                 .to_string();
-                            let sn2 = r#type
-                                .struct_()?
-                                .field_by_name("StereospecificNumber2")?
-                                .str_value(row)?
-                                .to_string();
-                            let sn3 = r#type
-                                .struct_()?
-                                .field_by_name("StereospecificNumber3")?
-                                .str_value(row)?
-                                .to_string();
-                            ui.label(format!("{{{sn1},{sn2},{sn3}}}"));
-                        }
-                        UMC | USC => {
-                            ui.label(key.str_value(row)?);
+                            ui.label(text);
                         }
                     }
                 } else {
