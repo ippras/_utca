@@ -29,6 +29,7 @@ indexmap = "2.10.0"
 itertools = "0.14.0"
 log = "0.4.27"
 polars = { version = "0.50.0", default-features = false, features = [
+    "bitwise",
     "cross_join",
     "cum_agg",
     "diagonal_concat",
@@ -44,6 +45,7 @@ polars = { version = "0.50.0", default-features = false, features = [
     "list_eval",
     "regex",
     "round_series",
+    "row_hash",
     "serde",
     "serde-lazy",
     "sign",

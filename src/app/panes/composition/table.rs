@@ -1,10 +1,6 @@
 use super::{ID_SOURCE, Settings, State};
 use crate::{
-    app::{
-        computers::{CompositionIndicesComputed, CompositionIndicesKey},
-        panes::MARGIN,
-        widgets::FloatWidget,
-    },
+    app::{panes::MARGIN, widgets::FloatWidget},
     special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
     text::Text,
 };

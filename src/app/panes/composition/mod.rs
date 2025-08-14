@@ -224,11 +224,12 @@ impl Pane {
                     frames: &self.source,
                     index: self.settings.index,
                     ddof: self.settings.special.ddof,
+                    method: self.settings.special.method,
                 })
         });
         self.target = ui.memory_mut(|memory| {
             let key = CompositionKey {
-                frames: &self.source,
+                data_frame: &data_frame,
                 settings: &self.settings,
             };
             Hashed {
@@ -282,6 +283,7 @@ impl Pane {
                     frames: &self.source,
                     index: self.settings.index,
                     ddof: self.settings.special.ddof,
+                    method: self.settings.special.method,
                 })
         });
         // Indices

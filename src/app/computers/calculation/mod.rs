@@ -3,7 +3,7 @@ use crate::{
         panes::calculation::settings::{Fraction, From, Settings},
         presets::CHRISTIE,
     },
-    utils::Hashed,
+    utils::{Hashed, hash},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -31,7 +31,7 @@ impl Computer {
             None => {
                 let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
                     Ok(compute(frame.data.clone().lazy(), key.settings)?.select([
-                        as_struct(vec![col("Label"), col("FattyAcid")]).hash(),
+                        hash(as_struct(vec![col("Label"), col("FattyAcid")])),
                         col("Label"),
                         col("FattyAcid"),
                         as_struct(vec![
@@ -143,10 +143,10 @@ fn compute(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyF
 
 fn christie(lazy_frame: LazyFrame) -> LazyFrame {
     lazy_frame
-        .with_column(col("FattyAcid").hash())
+        .with_column(hash(col("FattyAcid")))
         .join(
             CHRISTIE.data.clone().lazy().select([
-                col("FattyAcid").hash(),
+                hash(col("FattyAcid")),
                 col("FattyAcid"),
                 col("Christie"),
             ]),
