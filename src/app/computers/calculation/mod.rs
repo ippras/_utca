@@ -233,7 +233,7 @@ impl ExperimentalExpr {
         // // col(name) / (col(name) * col("FA").fa().mass() / lit(10)).sum()
         let experimental = |mut expr: Expr| {
             // S / ∑(S * M)
-            if let Fraction::Fraction = settings.fraction {
+            if let Fraction::WeightedSum = settings.fraction {
                 expr = expr.clone() / (expr * fatty_acid.clone().fatty_acid().mass(None)).sum()
             };
             expr.normalize_if(settings.normalize.experimental)
