@@ -1,3 +1,4 @@
+use super::Mode;
 use crate::utils::Hashed;
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -15,9 +16,9 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        match length(&key.data_frame)? {
-            1 => one::compute(key),
-            length => many::compute(key, length),
+        match mode(&key.data_frame)? {
+            Mode::One => one::compute(key),
+            Mode::Many(length) => many::compute(key, length),
         }
     }
 }
@@ -38,33 +39,55 @@ pub(crate) struct Key<'a> {
 /// Composition indices value
 type Value = DataFrame;
 
-fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
+fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
+    const ONE: DataType = DataType::Float64;
+    // const MANY: DataType = DataType::Struct(vec![
+    //     Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
+    //     Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
+    //     Field::new(
+    //         PlSmallStr::from_static("Repetitions"),
+    //         DataType::Array(Box::new(DataType::Float64), length),
+    //     ),
+    // ]);
+
+    // const ONE: LazyLock<Schema> = LazyLock::new(|| {
+    //     Schema::from_iter([
+    //         field!(LABEL[DataType::String]),
+    //         field!(TRIACYLGLYCEROL),
+    //         Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
+    //     ])
+    // });
+    // let schema = data_frame.schema();
+    // if expected.matches_schema(schema).is_ok() {
+    //     Ok(1)
+    // } else if schema.matches_schema(&MANY).is_ok() {
+    //     schema.get("Value");
+    //     Ok(2)
+    // } else {
+    //     Err(
+    //         polars_err!(SchemaMismatch: "Invalid composition schema: expected [`{ONE:?}`, `{MANY:?}`], got = `{schema:?}`"),
+    //     )
+    // }
+
+    let schema = data_frame.schema();
+    println!("schema: {schema:?}");
     // Triacylglycerol
-    let Some(data_type) = data_frame.schema().get(TRIACYLGLYCEROL) else {
-        polars_bail!(SchemaMismatch: "The `TRIACYLGLYCEROL` field was not found in the scheme");
-    };
-    polars_ensure!(*data_type == data_type!(TRIACYLGLYCEROL), SchemaMismatch: "Invalid `TRIACYLGLYCEROL` data type: expected `TRIACYLGLYCEROL`, got = `{data_type}`");
+    let triacylglycerol = schema.try_get_field(TRIACYLGLYCEROL)?;
+    data_type!(TRIACYLGLYCEROL).matches_schema_type(triacylglycerol.dtype())?;
     // Value
-    let Some(data_type) = data_frame.schema().get("Value") else {
-        polars_bail!(SchemaMismatch: r#"The "Value" field was not found in the scheme"#);
-    };
-    match data_type {
-        DataType::Float64 => {
-            return Ok(1);
+    let value = schema.try_get_field("Value")?;
+    let data_type = value.dtype();
+    match value.dtype() {
+        DataType::Float64 => Ok(Mode::One),
+        DataType::Struct(fields)
+            if let [.., ref last] = **fields
+                && last.name() == "Repetitions"
+                && let DataType::Array(box DataType::Float64, length) = last.dtype() =>
+        {
+            Ok(Mode::Many(*length as _))
         }
-        DataType::Struct(fields) => {
-            let Some(repetitions) = fields.iter().find(|field| field.name() == "Repetitions")
-            else {
-                polars_bail!(SchemaMismatch: r#"The "Value.Repetitions" field was not found in the scheme"#);
-            };
-            let data_type = repetitions.dtype();
-            let &DataType::Array(box DataType::Float64, length) = data_type else {
-                polars_bail!(SchemaMismatch: r#"Invalid "Value.Repetitions" data type: expected `Array(Float64)`, got = `{data_type}`"#);
-            };
-            return Ok(length as _);
-        }
-        data_type => {
-            polars_bail!(SchemaMismatch: r#"Invalid "Value" data type: expected [`Float64`, `Struct`], got = `{data_type}`"#);
+        _ => {
+            polars_bail!(SchemaMismatch: "Invalid composition indices value data type: expected [`{ONE:?}`], got = `{data_type:?}`");
         }
     }
 }

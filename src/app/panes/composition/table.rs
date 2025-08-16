@@ -4,14 +4,13 @@ use crate::{
     special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
     text::Text,
 };
-use egui::{Frame, Id, Margin, TextStyle, Ui};
+use egui::{Frame, Grid, Id, Margin, ScrollArea, TextStyle, Ui};
 use egui_l20n::{ResponseExt as _, UiExt as _};
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
-use itertools::Itertools;
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_utils::{format_list, format_list_truncated};
+use polars_utils::format_list;
 use std::{
     fmt::from_fn,
     ops::{Add, Range},
@@ -272,18 +271,51 @@ impl TableView<'_> {
         let Some(species) = series.list()?.get_as_series(row) else {
             polars_bail!(NoData: r#"no "Species" list in row: {row}"#);
         };
-        let label = species
-            .struct_()?
-            .field_by_name(LABEL)?
-            .try_triacylglycerol()?
-            .get_any_value(row)?
-            .stereo();
-        let text = format_list!(label.str()?.iter().map(|label| match label {
-            Some(label) => label,
-            None => "None",
-        }));
-        ui.label(text);
-        Ok(())
+        ui.heading("Species")
+            .on_hover_text(species.len().to_string());
+        ui.separator();
+        ScrollArea::vertical()
+            .auto_shrink(false)
+            .show(ui, |ui| {
+                Grid::new(ui.next_auto_id())
+                    .show(ui, |ui| -> PolarsResult<()> {
+                        for (index, stereospecific_numbers) in species
+                            .struct_()?
+                            .field_by_name(LABEL)?
+                            .try_triacylglycerol()?
+                            .fields(|series| Ok(series.str()?.clone()))?
+                            .iter()
+                            .zip(species.struct_()?.field_by_name("Value")?.f64()?)
+                            .enumerate()
+                        {
+                            ui.label(index.to_string());
+                            let text = Triacylglycerol([
+                                stereospecific_numbers.0.0,
+                                stereospecific_numbers.0.1,
+                                stereospecific_numbers.0.2,
+                            ])
+                            .map(|label| match label {
+                                Some(label) => label,
+                                None => "None",
+                            })
+                            .stereo()
+                            .to_string();
+                            ui.label(text);
+                            let text = from_fn(|f| match stereospecific_numbers.1 {
+                                Some(value) => {
+                                    f.write_fmt(format_args!("{}", AnyValue::Float64(value)))
+                                }
+                                None => f.write_str("None"),
+                            })
+                            .to_string();
+                            ui.label(text);
+                            ui.end_row();
+                        }
+                        Ok(())
+                    })
+                    .inner
+            })
+            .inner
     }
 
     #[instrument(skip(self, series, ui), err)]
@@ -345,7 +377,7 @@ impl TableView<'_> {
                     if self.settings.percent {
                         item *= 100.0;
                     }
-                    write!(f, "{item}")
+                    write!(f, "{}", AnyValue::Float64(item))
                 }
                 None => f.write_str("None"),
             })
