@@ -79,10 +79,10 @@ impl FattyAcidWidget<'_> {
                     //             changed = true;
                     //         }
                     //     });
-                    // if response.should_close() {
-                    //     error!("should_close!!!!!!!!!!!!!!!!");
-                    //     Popup::toggle_id(ui.ctx(), popup_id);
-                    // }
+                    // // if response.should_close() {
+                    // //     error!("should_close!!!!!!!!!!!!!!!!");
+                    // //     Popup::toggle_id(ui.ctx(), popup_id);
+                    // // }
 
                     Popup::context_menu(&response)
                         .id(ui.auto_id_with("ContextMenu"))

@@ -35,10 +35,10 @@ impl Settings {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         Grid::new("Configuration").show(ui, |ui| {
             // Precision
-            let mut response = ui.label(ui.localize("settings-precision"));
+            let mut response = ui.label(ui.localize("Precision"));
             response |= ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
             response.on_hover_ui(|ui| {
-                ui.label(ui.localize("settings-precision.description"));
+                ui.label(ui.localize("Precision.hover"));
             });
             ui.end_row();
 
@@ -47,18 +47,18 @@ impl Settings {
             ui.end_row();
 
             // Properties
-            let mut response = ui.label(ui.localize("settings-properties"));
+            let mut response = ui.label(ui.localize("Properties"));
             response |= ui.checkbox(&mut self.properties, "");
             response.on_hover_ui(|ui| {
-                ui.label(ui.localize("settings-properties.description"));
+                ui.label(ui.localize("Properties.hover"));
             });
             ui.end_row();
 
             // Names
-            let mut response = ui.label(ui.localize("settings-names"));
+            let mut response = ui.label(ui.localize("Names"));
             response |= ui.checkbox(&mut self.names, "");
             response.on_hover_ui(|ui| {
-                ui.label(ui.localize("settings-names.description"));
+                ui.label(ui.localize("Names.hover"));
             });
         });
     }

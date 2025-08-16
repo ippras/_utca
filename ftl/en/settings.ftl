@@ -1,51 +1,54 @@
 ## Settings
 
-settings-percent = Percent
+Percent = Percent
     .hover = Display of values in percent
-settings-precision = Precision
+Precision = Precision
     .hover = Number of decimal pieces
-settings-sticky_columns = Sticky
+StickyColumns = Sticky
     .hover = Number of sticky columns
-settings-truncate_headers = Truncate
+TruncateHeaders = Truncate
     .hover = Truncate header text
 
 ## Configuration
 
-settings-names = Names
+Names = Names
     .hover = Show names for fatty acids
-settings-properties = Properties
+Properties = Properties
     .hover = Show properties for fatty acids
 
 ## Calculation
 
-settings-as_is = As is
-settings-fraction = Fraction
-    .hover = Method of calculation of component fraction
-settings-from = Calculate
-    .hover = Calculate 1,3-DAGs
-settings-from_dag = from 1,2/2,3-DAGs
-    .hover = Calculate 1,3-DAGs from 1,2/2,3-DAGs
-settings-from_mag = from 2-{ monoacylglycerol.abbreviation }s
-    .hover = Calculate 1,3-DAGs from 2-MAGs
-settings-sign = Sign
-settings-signed = Signed
-    .hover = theoretically calculated negative values are as is
-settings-to_mass_fraction = To mass fraction
-settings-to_mole_fraction = To mole fraction
-settings-unsigned = Unsigned
-    .hover = Theoretically calculated negative values are replaced with zeros
-settings-normalize = Normalize
-    .hover_experimental = Experimental
-    .hover_theoretical = Theoretical
-settings-christie = Christie
+Christie = Christie
     .hover = Christy coefficients
-settings-show = Show
-settings-ddof = DDOF
-    .hover = Means Delta Degrees of Freedom. The divisor used in calculations is
-    N - DDOF, where N represents the number of elements. By default DDOF is
-    zero.
-    .info = Different values of the argument ddof are useful in
-    different contexts. 
+
+CalculateFrom = Calculate
+    .hover = Calculate stereospecific numbers 1 or 3.
+CalculateFrom-Sn12Sn23 = From SN-1&2|2&3
+    .hover = Calculate stereospecific numbers 1 or 3 from stereospecific numbers 1 and 2 or 2 and 3.
+CalculateFrom-Sn2 = From SN-2
+    .hover = Calculate stereospecific numbers 1 or 3 from stereospecific number 2.
+
+Normalize = Normalize
+    .hover = Data normalization is the process of transforming numerical data to a common scale ranging from 0 to 1.
+Normalize-Experimental = Experimental
+    .hover = Normalize experimental values
+Normalize-Theoretical = Theoretical
+    .hover = Normalize theoretical values
+Show = Show
+Show-Factors = Factors
+    .hover = Show factors columns
+Show-Theoretical = Theoretical
+    .hover = Show theoretical columns
+Statistics = Statistics
+Unsigned = Unsigned
+    .hover = Theoretically calculated negative values are replaced with zeros.
+Weighted = Weighted
+    .hover = Use weighted sum for normalization.
+
+DeltaDegreesOfFreedom = Delta Degrees of Freedom
+    .abbreviation = DDOF
+    .hover = The divisor used in calculations is N - DDOF, where N represents the number of elements. By default DDOF is zero.
+    .info = Different values of the argument ddof are useful in different contexts.
 
 ## Composition
 

@@ -1,6 +1,6 @@
 use crate::{
     app::{
-        panes::calculation::settings::{Fraction, From, Settings},
+        panes::calculation::settings::{From, Settings},
         presets::CHRISTIE,
     },
     utils::{Hashed, hash},
@@ -84,7 +84,7 @@ impl Hash for Key<'_> {
         // self.settings.resizable.hash(state);
         // self.settings.sticky_columns.hash(state);
         // self.settings.truncate.hash(state);
-        self.settings.fraction.hash(state);
+        self.settings.weighted.hash(state);
         self.settings.from.hash(state);
         self.settings.normalize.hash(state);
         self.settings.unsigned.hash(state);
@@ -233,7 +233,7 @@ impl ExperimentalExpr {
         // // col(name) / (col(name) * col("FA").fa().mass() / lit(10)).sum()
         let experimental = |mut expr: Expr| {
             // S / ∑(S * M)
-            if let Fraction::Fraction = settings.fraction {
+            if settings.weighted {
                 expr = expr.clone() / (expr * fatty_acid.clone().fatty_acid().mass(None)).sum()
             };
             expr.normalize_if(settings.normalize.experimental)
