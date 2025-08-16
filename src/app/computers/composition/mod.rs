@@ -1,11 +1,11 @@
+use super::Mode;
 use crate::{
     app::panes::composition::settings::{Filter, Order, Selection, Settings, Sort},
     special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
-    utils::{Hashed, hash},
+    utils::Hashed,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
-use metadata::MetaDataFrame;
 use polars::prelude::*;
 use std::{
     convert::identity,
@@ -21,11 +21,46 @@ pub(crate) type Computed = FrameCache<Value, Computer>;
 #[derive(Default)]
 pub(crate) struct Computer;
 
-#[derive(Clone, Copy, Debug)]
-enum Mode {
-    One,
-    Many(u64),
+impl Computer {
+    #[instrument(skip(self), err)]
+    fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
+        let data_frame = key.data_frame;
+        let mode = mode(data_frame)?;
+        let mut settings = key.settings.clone();
+        if settings.special.selections.is_empty() {
+            settings.special.selections.push_back(Selection {
+                composition: SSC,
+                filter: Filter::new(),
+            });
+        }
+        let mut lazy_frame = key.data_frame.value.clone().lazy();
+        lazy_frame = compute(lazy_frame, mode, settings.special.ddof, &settings)?;
+        lazy_frame.collect()
+    }
 }
+
+impl ComputerMut<Key<'_>, Value> for Computer {
+    fn compute(&mut self, key: Key) -> Value {
+        self.try_compute(key).unwrap()
+    }
+}
+
+/// Composition key
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct Key<'a> {
+    pub(crate) data_frame: &'a Hashed<DataFrame>,
+    pub(crate) settings: &'a Settings,
+}
+
+impl Hash for Key<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.data_frame.hash(state);
+        self.settings.special.hash(state);
+    }
+}
+
+/// Composition value
+type Value = DataFrame;
 
 fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
     const ONE: LazyLock<Schema> = LazyLock::new(|| {
@@ -91,90 +126,14 @@ fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
     polars_bail!(SchemaMismatch: "Invalid composition schema: expected [`{ONE:?}`, `{MANY:?}`], got = `{schema:?}`");
 }
 
-impl Computer {
-    #[instrument(skip(self), err)]
-    fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let data_frame = key.data_frame;
-        println!("data_frame0: {data_frame:?}");
-        let mode = mode(data_frame)?;
-        println!("mode: {mode:?}",);
-
-        let mut settings = key.settings.clone();
-        if settings.special.selections.is_empty() {
-            settings.special.selections.push_back(Selection {
-                composition: SSC,
-                filter: Filter::new(),
-            });
-        }
-        let mut lazy_frame = key.data_frame.value.clone().lazy();
-        lazy_frame = compute(lazy_frame, mode, settings.special.ddof, &settings)?;
-        // let mut lazy_frame = match settings.index {
-        //     Some(index) => {
-        //         let frame = &key.frames[index];
-        //         let mut lazy_frame = frame.data.clone().lazy();
-        //         lazy_frame = compute(lazy_frame, settings)?;
-        //         lazy_frame
-        //     }
-        //     None => {
-        //         let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
-        //             Ok(compute(frame.data.clone().lazy(), settings)?.select([
-        //                 hash(col("Keys")),
-        //                 col("Keys"),
-        //                 col("Values").alias(frame.meta.format(".").to_string()),
-        //             ]))
-        //         };
-        //         let mut lazy_frame = compute(&key.frames[0])?;
-        //         for frame in &key.frames[1..] {
-        //             lazy_frame = lazy_frame.join(
-        //                 compute(frame)?,
-        //                 [col("Hash"), col("Keys")],
-        //                 [col("Hash"), col("Keys")],
-        //                 JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
-        //             );
-        //         }
-        //         lazy_frame = lazy_frame.drop(by_name(["Hash"], true));
-        //         lazy_frame = mean_and_standard_deviation(lazy_frame, settings)?;
-        //         lazy_frame
-        //     }
-        // };
-        lazy_frame.collect()
-    }
-}
-
-impl ComputerMut<Key<'_>, Value> for Computer {
-    fn compute(&mut self, key: Key) -> Value {
-        self.try_compute(key).unwrap()
-    }
-}
-
-/// Composition key
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Key<'a> {
-    // pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
-    pub(crate) data_frame: &'a Hashed<DataFrame>,
-    pub(crate) settings: &'a Settings,
-}
-
-impl Hash for Key<'_> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.data_frame.hash(state);
-        self.settings.special.hash(state);
-    }
-}
-
-/// Composition value
-type Value = DataFrame;
-
 fn compute(
     mut lazy_frame: LazyFrame,
     mode: Mode,
     ddof: u8,
     settings: &Settings,
 ) -> PolarsResult<LazyFrame> {
-    println!("lazy_frame0: {:?}", lazy_frame.clone().collect().unwrap());
     // Compose
     lazy_frame = compose(lazy_frame, mode, ddof, settings)?;
-    println!("lazy_frame1: {:?}", lazy_frame.clone().collect().unwrap());
     // // Filter
     // lazy_frame = filter(lazy_frame, settings);
     // Sort
