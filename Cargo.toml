@@ -1,26 +1,26 @@
 [package]
 name = "utca"
-version = "0.50.0"
+version = "0.50.1"
 authors = ["Giorgi Vladimirovich Kazakov", "Roman Alexandrovich Sidorov"]
 edition = "2024"
 
 [dependencies]
 ahash = "0.8.12"
-anyhow = "1.0.98"
+anyhow = "1.0.99"
 base64 = "0.22.1"
 chrono = "0.4.41"
 constcat = "0.6.1"
-eframe = { version = "0.32.0", features = [
+eframe = { version = "0.32.1", features = [
     "accesskit",
     "default_fonts",
     "glow",
     "persistence",
     "wayland",
 ] }
-egui = "0.32.0"
+egui = "0.32.1"
 egui-phosphor = "0.10.0"
 egui_dnd = "0.13.0"
-egui_extras = { version = "0.32.0", features = ["datepicker", "serde"] }
+egui_extras = { version = "0.32.1", features = ["datepicker", "serde"] }
 egui_plot = "0.33.0"
 egui_table = "0.4.0"
 egui_tiles = "0.13.0"
@@ -59,9 +59,9 @@ polars = { version = "0.50.0", default-features = false, features = [
 ] }
 polars-utils = { version = "0.50.0", features = ["nightly"] }
 radix_trie = "0.2.1"
-rust_xlsxwriter = { version = "0.89.1", features = ["chrono", "wasm"] }
+rust_xlsxwriter = { version = "0.90.0", features = ["chrono", "wasm"] }
 serde = { version = "1.0.219", features = ["derive", "std"] }
-thiserror = "2.0.12"
+thiserror = "2.0.14"
 toml = "0.9.5"
 tracing = "0.1.41"
 unic-langid = { version = "0.9.6", features = ["macros"] }
