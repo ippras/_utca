@@ -123,6 +123,7 @@ mod one {
             stereospecific_numbers(index!(index_of_atherogenicity, triacylglycerol, value))?.alias("IndexOfAtherogenicity"),
             stereospecific_numbers(index!(index_of_thrombogenicity, triacylglycerol, value))?.alias("IndexOfThrombogenicity"),
             stereospecific_numbers(index!(linoleic_to_alpha_linolenic, triacylglycerol, value))?.alias("LinoleicToAlphaLinolenic"),
+            stereospecific_numbers(index!(polyunsaturated_6_to_polyunsaturated_3, triacylglycerol, value))?.alias("Polyunsaturated-6ToPolyunsaturated-3"),
             stereospecific_numbers(index!(polyunsaturated_to_saturated, triacylglycerol, value))?.alias("PolyunsaturatedToSaturated"),
             stereospecific_numbers(index!(unsaturation_index, triacylglycerol, value))?.alias("UnsaturationIndex"),
         ];
@@ -178,6 +179,7 @@ mod many {
             stereospecific_numbers(repetitions!(index_of_atherogenicity, triacylglycerol, value, length), key.ddof)?.alias("IndexOfAtherogenicity"),
             stereospecific_numbers(repetitions!(index_of_thrombogenicity, triacylglycerol, value, length), key.ddof)?.alias("IndexOfThrombogenicity"),
             stereospecific_numbers(repetitions!(linoleic_to_alpha_linolenic, triacylglycerol, value, length), key.ddof)?.alias("LinoleicToAlphaLinolenic"),
+            stereospecific_numbers(repetitions!(polyunsaturated_6_to_polyunsaturated_3, triacylglycerol, value, length), key.ddof)?.alias("Polyunsaturated-6ToPolyunsaturated-3"),
             stereospecific_numbers(repetitions!(polyunsaturated_to_saturated, triacylglycerol, value, length), key.ddof)?.alias("PolyunsaturatedToSaturated"),
             stereospecific_numbers(repetitions!(unsaturation_index, triacylglycerol, value, length), key.ddof)?.alias("UnsaturationIndex"),
         ];

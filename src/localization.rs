@@ -39,6 +39,7 @@ mod sources {
         source!("/ftl/en/fatty_acids/ippras.ftl"),
         source!("/ftl/en/compositions.ftl"),
         source!("/ftl/en/headers.ftl"),
+        source!("/ftl/en/indices.ftl"),
         source!("/ftl/en/menu.ftl"),
         source!("/ftl/en/names.ftl"),
         source!("/ftl/en/properties.ftl"),
