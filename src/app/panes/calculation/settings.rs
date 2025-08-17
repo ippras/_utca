@@ -17,7 +17,7 @@ pub(crate) struct Settings {
     pub(crate) sticky_columns: usize,
     pub(crate) truncate_headers: bool,
 
-    pub(crate) fraction: Fraction,
+    pub(crate) weighted: bool,
     pub(crate) from: From,
     pub(crate) normalize: Normalize,
     pub(crate) unsigned: bool,
@@ -37,7 +37,7 @@ impl Settings {
             resizable: false,
             sticky_columns: 0,
             truncate_headers: false,
-            fraction: Fraction::Sum,
+            weighted: false,
             from: From::Mag2,
             normalize: Normalize::new(),
             unsigned: true,
@@ -138,24 +138,10 @@ impl Settings {
             });
             ui.end_row();
 
-            // Normalization
-            ui.label(ui.localize("Normalization"))
-                .on_hover_localized("Normalization.hover");
-            let fraction = &mut self.fraction;
-            ComboBox::from_id_salt("Normalization")
-                .selected_text(ui.localize(fraction.text()))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(fraction, Fraction::Sum, ui.localize("Normalization-Sum"))
-                        .on_hover_localized("Normalization-Sum.hover");
-                    ui.selectable_value(
-                        fraction,
-                        Fraction::WeightedSum,
-                        ui.localize("Normalization-WeightedSum"),
-                    )
-                    .on_hover_localized("Normalization-WeightedSum.hover");
-                })
-                .response
-                .on_hover_text(fraction.hover_text());
+            // Weighted
+            ui.label(ui.localize("Weighted"))
+                .on_hover_localized("Weighted.hover");
+            ui.checkbox(&mut self.weighted, "");
             ui.end_row();
 
             // Christie

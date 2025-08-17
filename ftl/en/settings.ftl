@@ -18,13 +18,6 @@ Properties = Properties
 
 ## Calculation
 
-Normalization = Normalization
-    .hover = Method of calculation of component fraction.
-Normalization-Sum = Sum
-    .hover = Use sum for normalization
-Normalization-WeightedSum = Weighted sum
-    .hover = Use weighted sum for normalization
-
 Christie = Christie
     .hover = Christy coefficients
 
@@ -49,6 +42,8 @@ Show-Theoretical = Theoretical
 Statistics = Statistics
 Unsigned = Unsigned
     .hover = Theoretically calculated negative values are replaced with zeros.
+Weighted = Weighted
+    .hover = Use weighted sum for normalization.
 
 DeltaDegreesOfFreedom = Delta Degrees of Freedom
     .abbreviation = DDOF
