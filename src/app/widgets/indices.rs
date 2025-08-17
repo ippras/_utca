@@ -1,5 +1,7 @@
 use crate::app::widgets::FloatWidget;
 use egui::{Grid, InnerResponse, Ui, Widget};
+use egui_ext::Markdown;
+use egui_l20n::UiExt;
 use polars::prelude::{array::ArrayNameSpace, *};
 
 /// Indices widget
@@ -88,59 +90,85 @@ impl<'a> IndicesWidget<'a> {
         };
         Grid::new(ui.auto_id_with("Indices")).show(ui, |ui| -> PolarsResult<()> {
             // Simple
-            ui.label("Saturated");
+            ui.label(ui.localize("Saturated"));
             index(ui, "Saturated")?;
             ui.end_row();
-            ui.label("Monounsaturated");
+            ui.label(ui.localize("Monounsaturated"));
             index(ui, "Monounsaturated")?;
             ui.end_row();
-            ui.label("Polyunsaturated");
+            ui.label(ui.localize("Polyunsaturated"));
             index(ui, "Polyunsaturated")?;
             ui.end_row();
-            ui.label("Unsaturated");
+            ui.label(ui.localize("Unsaturated"));
             index(ui, "Unsaturated")?;
             ui.end_row();
-            ui.label("Omega -9");
+            ui.label(ui.localize("Omega?index=-9"));
             index(ui, "Unsaturated-9")?;
             ui.end_row();
-            ui.label("Omega -6");
+            ui.label(ui.localize("Omega?index=-6"));
             index(ui, "Unsaturated-6")?;
             ui.end_row();
-            ui.label("Omega -3");
+            ui.label(ui.localize("Omega?index=-3"));
             index(ui, "Unsaturated-3")?;
             ui.end_row();
-            ui.label("Delta 9");
+            ui.label(ui.localize("Delta?index=9"));
             index(ui, "Unsaturated9")?;
             ui.end_row();
-            ui.label("Trans");
+            ui.label(ui.localize("Trans"));
             index(ui, "Trans")?;
             ui.end_row();
+            ui.separator();
+            ui.separator();
+            ui.end_row();
             // Complex
-            ui.label("Eicosapentaenoic and Docosahexaenoic");
+            ui.label(ui.localize("EicosapentaenoicAndDocosahexaenoic")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$C22:6(n - 3) + C20:5(n - 3)$$"#);
+            });
             index(ui, "EicosapentaenoicAndDocosahexaenoic")?;
             ui.end_row();
-            ui.label("Fish Lipid Quality");
+            ui.label(ui.localize("FishLipidQuality")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$\frac{C22:6(n - 3) + C20:5(n - 3)}{\sum FA} \cdot 100$$"#);
+            });
             index(ui, "FishLipidQuality")?;
             ui.end_row();
-            ui.label("Health Promoting Index");
+            ui.label(ui.localize("HealthPromotingIndex")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$\frac{\sum UFA}{C12:0 + 4 \cdot C14:0 + C16:0}$$"#);
+            });
             index(ui, "HealthPromotingIndex")?;
             ui.end_row();
-            ui.label("Hypocholesterolemic to Hypercholesterolemic");
+            ui.label(ui.localize("HypocholesterolemicToHypercholesterolemic")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$\frac{C18:1(n - 9) + \sum PUFA}{C12:0 + C14:0 + C16:0}$$"#);
+            });
             index(ui, "HypocholesterolemicToHypercholesterolemic")?;
             ui.end_row();
-            ui.label("Index of Atherogenicity");
+            ui.label(ui.localize("IndexOfAtherogenicity")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$\frac{C12:0 + 4 \cdot C14:0 + C16:0}{\sum UFA}$$"#);
+            });
             index(ui, "IndexOfAtherogenicity")?;
             ui.end_row();
-            ui.label("Index of Thrombogenicity");
+            ui.label(ui.localize("IndexOfThrombogenicity")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$\frac{C14:0 + C16:0 + C18:0}{0.5 \cdot \sum MUFA + 0.5 \cdot \sum PUFA(n - 6) + 3 \cdot \sum PUFA(n - 3) + \frac{\sum PUFA(n - 3)}{\sum PUFA(n - 6)}}$$"#);
+            });
             index(ui, "IndexOfThrombogenicity")?;
             ui.end_row();
-            ui.label("Linoleic to αLinolenic");
+            ui.label(ui.localize("LinoleicToAlphaLinolenic")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$\frac{C18:2(n - 6)}{C18:3(n - 3)}$$"#);
+            });
             index(ui, "LinoleicToAlphaLinolenic")?;
             ui.end_row();
-            ui.label("Polyunsaturated to Saturated");
+            ui.label(ui.localize("Polyunsaturated-6ToPolyunsaturated-3")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$\frac{\sum PUFA(n - 6)}{\sum PUFA(n - 3)}$$"#);
+            });
+            index(ui, "Polyunsaturated-6ToPolyunsaturated-3")?;
+            ui.end_row();
+            ui.label(ui.localize("PolyunsaturatedToSaturated")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$\frac{\sum PUFA}{\sum SFA}$$"#);
+            });
             index(ui, "PolyunsaturatedToSaturated")?;
             ui.end_row();
-            ui.label("Unsaturation Index");
+            ui.label(ui.localize("UnsaturationIndex")).on_hover_ui(|ui| {
+                ui.markdown(r#"$$1 \cdot monoenoics + 2 \cdot dienoics + 3 \cdot trienoics + 4 \cdot tetraenoics + 5 \cdot pentaenoics + 6 \cdot hexaenoics ...$$"#);
+            });
             index(ui, "UnsaturationIndex")?;
             Ok(())
         })

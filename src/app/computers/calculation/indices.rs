@@ -106,6 +106,7 @@ mod one {
             fatty_acid.clone().index_of_atherogenicity(value.clone()),
             fatty_acid.clone().index_of_thrombogenicity(value.clone()),
             fatty_acid.clone().linoleic_to_alpha_linolenic(value.clone()),
+            fatty_acid.clone().polyunsaturated_6_to_polyunsaturated_3(value.clone()),
             fatty_acid.clone().polyunsaturated_to_saturated(value.clone()),
             fatty_acid.clone().unsaturation_index(value.clone()),
         ];
@@ -158,6 +159,7 @@ mod many {
             index!(index_of_atherogenicity, fatty_acid, values)?,
             index!(index_of_thrombogenicity, fatty_acid, values)?,
             index!(linoleic_to_alpha_linolenic, fatty_acid, values)?,
+            index!(polyunsaturated_6_to_polyunsaturated_3, fatty_acid, values)?,
             index!(polyunsaturated_to_saturated, fatty_acid, values)?,
             index!(unsaturation_index, fatty_acid, values)?,
         ];
