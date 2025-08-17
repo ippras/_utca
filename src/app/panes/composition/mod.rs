@@ -76,9 +76,9 @@ impl Pane {
     }
 
     fn header_content(&mut self, ui: &mut Ui) -> Response {
-        let mut response = ui
-            .heading(Self::icon())
-            .on_hover_text(ui.localize("composition"));
+        let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
+            ui.label(ui.localize("Composition"));
+        });
         response |= ui.heading(self.title());
         response = response
             .on_hover_text(format!("{:x}/{:x}", self.source.hash, self.target.hash))
@@ -104,11 +104,16 @@ impl Pane {
             }
         })
         .response
-        .on_hover_text(ui.localize("list"));
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("List"));
+        });
         ui.separator();
         // Reset
         if ui
             .button(RichText::new(ARROWS_CLOCKWISE).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("ResetTable"));
+            })
             .clicked()
         {
             self.state.reset_table_state = true;
@@ -118,13 +123,18 @@ impl Pane {
             &mut self.settings.resizable,
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
-        .on_hover_text(ui.localize("resize"));
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("ResizeTable"));
+        });
         ui.separator();
         // Settings
         ui.toggle_value(
             &mut self.state.open_settings_window,
             RichText::new(GEAR).heading(),
-        );
+        )
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("Settings"));
+        });
         ui.separator();
         // Indices
         ui.toggle_value(
@@ -132,7 +142,7 @@ impl Pane {
             RichText::new(SIGMA).heading(),
         )
         .on_hover_ui(|ui| {
-            ui.label(ui.localize("indices"));
+            ui.label(ui.localize("Indices"));
         });
         ui.separator();
         // Save
@@ -141,7 +151,7 @@ impl Pane {
             if ui
                 .button("PARQUET")
                 .on_hover_ui(|ui| {
-                    ui.label(ui.localize("save"));
+                    ui.label(ui.localize("Save"));
                 })
                 .on_hover_ui(|ui| {
                     ui.label(&format!("{title}.utca.parquet"));
@@ -180,7 +190,7 @@ impl Pane {
             if ui
                 .button("XLSX")
                 .on_hover_ui(|ui| {
-                    ui.label(ui.localize("save"));
+                    ui.label(ui.localize("Save"));
                 })
                 .on_hover_ui(|ui| {
                     ui.label(&format!("{title}.utca.xlsx"));

@@ -71,7 +71,7 @@ impl Pane {
 impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
-            ui.label(ui.localize("calculation"));
+            ui.label(ui.localize("Calculation"));
         });
         response |= ui.heading(self.title());
         response = response
@@ -97,14 +97,14 @@ impl Pane {
         })
         .response
         .on_hover_ui(|ui| {
-            ui.label(ui.localize("list"));
+            ui.label(ui.localize("List"));
         });
         ui.separator();
         // Reset
         if ui
             .button(RichText::new(ARROWS_CLOCKWISE).heading())
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("reset_table"));
+                ui.label(ui.localize("ResetTable"));
             })
             .clicked()
         {
@@ -116,7 +116,7 @@ impl Pane {
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
         .on_hover_ui(|ui| {
-            ui.label(ui.localize("resize_table"));
+            ui.label(ui.localize("ResizeTable"));
         });
         ui.separator();
         // Settings
@@ -125,7 +125,7 @@ impl Pane {
             RichText::new(GEAR).heading(),
         )
         .on_hover_ui(|ui| {
-            ui.label(ui.localize("settings"));
+            ui.label(ui.localize("Settings"));
         });
         ui.separator();
         // Indices
@@ -134,14 +134,14 @@ impl Pane {
             RichText::new(SIGMA).heading(),
         )
         .on_hover_ui(|ui| {
-            ui.label(ui.localize("indices"));
+            ui.label(ui.localize("Indices"));
         });
         ui.separator();
         // Composition
         if ui
             .button(RichText::new(INTERSECT_THREE).heading())
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("composition"));
+                ui.label(ui.localize("Composition"));
             })
             .clicked()
         {

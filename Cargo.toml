@@ -80,7 +80,10 @@ url = { version = "2.5.4", features = ["serde"] }
 # re_ui = "0.22.0"
 # semver = { version = "1.0.26", features = ["serde"] }
 
-egui_ext = { git = "https://github.com/kgv/egui_ext", features = ["tracing"] }
+egui_ext = { git = "https://github.com/kgv/egui_ext", features = [
+    "markdown",
+    "tracing",
+] }
 egui_l20n = { git = "https://github.com/kgv/egui_l20n", features = ["macros"] }
 egui_tiles_ext = { git = "https://github.com/kgv/egui_tiles_ext" }
 lipid = { git = "https://github.com/ippras/lipid" }

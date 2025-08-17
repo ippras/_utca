@@ -55,17 +55,17 @@ impl Settings {
         ScrollArea::vertical().show(ui, |ui| {
             Grid::new("Composition").show(ui, |ui| {
                 // Percent
-                ui.label(ui.localize("settings-percent"));
+                ui.label(ui.localize("Percent"));
                 ui.checkbox(&mut self.percent, "");
                 ui.end_row();
 
                 // Precision
-                ui.label(ui.localize("settings-precision"));
+                ui.label(ui.localize("Precision"));
                 ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
                 ui.end_row();
 
                 // Sticky
-                ui.label(ui.localize("settings-sticky_columns"));
+                ui.label(ui.localize("StickyColumns"));
                 ui.add(Slider::new(
                     &mut self.sticky_columns,
                     0..=self.special.selections.len() * 2 + 1,
@@ -77,7 +77,7 @@ impl Settings {
                 ui.end_row();
 
                 // Compose
-                ui.label(ui.localize("settings-compose"));
+                ui.label(ui.localize("Compose"));
                 ui.menu_button(PLUS, |ui| {
                     let id_salt = "Composition";
                     let id = ui.auto_id_with(Id::new(id_salt));
@@ -95,7 +95,9 @@ impl Settings {
                                         Some(selected_value),
                                         ui.localize(selected_value.text()),
                                     )
-                                    .on_hover_text(ui.localize(selected_value.hover_text()));
+                                    .on_hover_ui(|ui| {
+                                        ui.localize(selected_value.hover_text());
+                                    });
                                 if response.clicked() {
                                     self.special.selections.push_front(Selection {
                                         composition: selected_value,
@@ -126,7 +128,9 @@ impl Settings {
                                             composition,
                                             ui.localize(composition.text()),
                                         )
-                                        .on_hover_text(ui.localize(composition.hover_text()))
+                                        .on_hover_ui(|ui| {
+                                            ui.localize(composition.hover_text());
+                                        })
                                         .changed()
                                     {
                                         selection.filter = Default::default();
@@ -134,7 +138,9 @@ impl Settings {
                                 }
                             })
                             .response
-                            .on_hover_text(ui.localize(selection.composition.hover_text()));
+                            .on_hover_ui(|ui| {
+                                ui.localize(selection.composition.hover_text());
+                            });
                         // Filter
                         // let data_frame = ui.memory_mut(|memory| {
                         //     memory
@@ -169,7 +175,7 @@ impl Settings {
                 });
 
                 // // Filter
-                // ui.label(ui.localize("settings-filter?case=title"));
+                // ui.label(ui.localize("Filter?case=title"));
                 // for (index, selection) in &mut self.unconfirmed.selections.iter_mut().enumerate() {
                 //     let series = &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
                 //     ui.add(FilterWidget::new(selection, series).percent(self.percent));
@@ -194,7 +200,7 @@ impl Settings {
                 // }
 
                 // Method
-                ui.label(ui.localize("settings-method"));
+                ui.label(ui.localize("Method"));
                 if ui.input_mut(|input| {
                     input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::G))
                 }) {
@@ -205,32 +211,44 @@ impl Settings {
                 }) {
                     self.special.method = Method::VanderWal;
                 }
-                ComboBox::from_id_salt("method")
-                    .selected_text(self.special.method.text())
+                ComboBox::from_id_salt("Method")
+                    .selected_text(ui.localize(match self.special.method {
+                        Method::Gunstone => "Method-Gunstone",
+                        Method::VanderWal => "Method-VanderWal",
+                    }))
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.special.method,
                             Method::Gunstone,
-                            Method::Gunstone.text(),
+                            ui.localize("Method-Gunstone"),
                         )
-                        .on_hover_text(Method::Gunstone.hover_text());
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("Method-Gunstone.hover"));
+                        });
                         ui.selectable_value(
                             &mut self.special.method,
                             Method::VanderWal,
-                            Method::VanderWal.text(),
+                            ui.localize("Method-VanderWal"),
                         )
-                        .on_hover_text(Method::VanderWal.hover_text());
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("Method-VanderWal.hover"));
+                        });
                     })
                     .response
-                    .on_hover_text(self.special.method.hover_text());
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(match self.special.method {
+                            Method::Gunstone => "Method-Gunstone.hover",
+                            Method::VanderWal => "Method-VanderWal.hover",
+                        }));
+                    });
                 ui.end_row();
 
-                ui.label(ui.localize("discriminants"));
+                ui.label(ui.localize("Discriminants"));
                 self.special.discriminants.show(ui);
                 ui.end_row();
 
                 // Adduct
-                ui.label(ui.localize("settings-adduct"));
+                ui.label(ui.localize("Adduct"));
                 ui.horizontal(|ui| {
                     let adduct = &mut self.special.adduct;
                     ui.add(
@@ -261,7 +279,7 @@ impl Settings {
                 ui.end_row();
 
                 // Round mass
-                ui.label(ui.localize("settings-round_mass"));
+                ui.label(ui.localize("RoundMass"));
                 ui.add(Slider::new(
                     &mut self.special.round_mass,
                     0..=MAX_PRECISION as _,
@@ -270,91 +288,116 @@ impl Settings {
 
                 // View
                 ui.separator();
-                ui.labeled_separator(RichText::new(ui.localize("settings-view")).heading());
+                ui.labeled_separator(RichText::new(ui.localize("View")).heading());
                 ui.end_row();
 
-                ui.label(ui.localize("settings-show_filtered"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("settings-show_filtered.hover"));
-                    });
+                ui.label(ui.localize("ShowFiltered")).on_hover_ui(|ui| {
+                    ui.label(ui.localize("ShowFiltered.hover"));
+                });
                 ui.checkbox(&mut self.special.show_filtered, "");
                 ui.end_row();
 
                 // // Join
-                // ui.label(ui.localize("settings-join"));
+                // ui.label(ui.localize("Join"));
                 // ComboBox::from_id_salt("join")
                 //     .selected_text(self.join.text())
                 //     .show_ui(ui, |ui| {
                 //         ui.selectable_value(&mut self.join, Join::Left, Join::Left.text())
-                //             .on_hover_text(Join::Left.hover_text());
+                //             .on_hover_ui(|ui| {Join::Left.hover_text();});
                 //         ui.selectable_value(&mut self.join, Join::And, Join::And.text())
-                //             .on_hover_text(Join::And.hover_text());
+                //             .on_hover_ui(|ui| {Join::And.hover_text();});
                 //         ui.selectable_value(&mut self.join, Join::Or, Join::Or.text())
-                //             .on_hover_text(Join::Or.hover_text());
+                //             .on_hover_ui(|ui| {Join::Or.hover_text();});
                 //     })
                 //     .response
-                //     .on_hover_text(self.join.hover_text());
+                //     .on_hover_ui(|ui| {self.join.hover_text();});
                 // ui.end_row();
 
                 ui.separator();
-                ui.labeled_separator(RichText::new(ui.localize("settings-sort")).heading());
+                ui.labeled_separator(RichText::new(ui.localize("Sort")).heading());
                 ui.end_row();
 
                 // Sort
-                ui.label(ui.localize("settings-sort"));
-                ComboBox::from_id_salt("sort")
-                    .selected_text(self.special.sort.text())
+                ui.label(ui.localize("Sort"));
+                ComboBox::from_id_salt("Sort")
+                    .selected_text(ui.localize(match self.special.sort {
+                        Sort::Key => "Sort-ByKey",
+                        Sort::Value => "Sort-ByValue",
+                    }))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.special.sort, Sort::Key, Sort::Key.text())
-                            .on_hover_text(Sort::Key.hover_text());
+                        ui.selectable_value(
+                            &mut self.special.sort,
+                            Sort::Key,
+                            ui.localize("Sort-ByKey"),
+                        )
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("Sort-ByKey.hover"));
+                        });
                         ui.selectable_value(
                             &mut self.special.sort,
                             Sort::Value,
-                            Sort::Value.text(),
+                            ui.localize("Sort-ByValue"),
                         )
-                        .on_hover_text(Sort::Value.hover_text());
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("Sort-ByValue.hover"));
+                        });
                     })
                     .response
-                    .on_hover_text(self.special.sort.hover_text());
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(match self.special.sort {
+                            Sort::Key => "Sort-ByKey.hover",
+                            Sort::Value => "Sort-ByValue.hover",
+                        }));
+                    });
                 ui.end_row();
                 // Order
-                ui.label(ui.localize("settings-order"));
-                ComboBox::from_id_salt("order")
-                    .selected_text(self.special.order.text())
+                ui.label(ui.localize("Order"));
+                ComboBox::from_id_salt("Order")
+                    .selected_text(ui.localize(match self.special.order {
+                        Order::Ascending => "Order-Ascending",
+                        Order::Descending => "Order-Descending",
+                    }))
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.special.order,
                             Order::Ascending,
-                            Order::Ascending.text(),
+                            ui.localize("Order-Ascending"),
                         )
-                        .on_hover_text(Order::Ascending.hover_text());
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("Order-Ascending.hover"));
+                        });
                         ui.selectable_value(
                             &mut self.special.order,
                             Order::Descending,
-                            Order::Descending.text(),
+                            ui.localize("Order-Descending"),
                         )
-                        .on_hover_text(Order::Descending.hover_text());
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("Order-Descending.hover"));
+                        });
                     })
                     .response
-                    .on_hover_text(self.special.order.hover_text());
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(match self.special.order {
+                            Order::Ascending => "Order-Ascending.hover",
+                            Order::Descending => "Order-Descending.hover",
+                        }));
+                    });
                 ui.end_row();
 
                 if self.index.is_none() {
                     // Statistic
                     ui.separator();
-                    ui.labeled_separator(
-                        RichText::new(ui.localize("settings-statistic")).heading(),
-                    );
+                    ui.labeled_separator(RichText::new(ui.localize("Statistic")).heading());
                     ui.end_row();
 
                     // https://numpy.org/devdocs/reference/generated/numpy.std.html
-                    ui.label(ui.localize("settings-ddof"));
+                    ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("DeltaDegreesOfFreedom"));
+                        });
                     ui.add(Slider::new(&mut self.special.ddof, 0..=2));
                     ui.end_row();
                 }
-
-                ui.separator();
-                ui.separator();
             });
         });
     }
@@ -366,7 +409,6 @@ pub(crate) struct Special {
     pub(crate) adduct: f64,
     pub(crate) ddof: u8,
     pub(crate) selections: VecDeque<Selection>,
-    pub(crate) join: Join,
     pub(crate) method: Method,
     pub(crate) order: Order,
     pub(crate) round_mass: u32,
@@ -382,7 +424,6 @@ impl Special {
             adduct: 0.0,
             ddof: 1,
             selections: VecDeque::new(),
-            join: Join::Left,
             method: Method::VanderWal,
             order: Order::Descending,
             round_mass: 2,
@@ -405,7 +446,6 @@ impl Hash for Special {
         self.adduct.ord().hash(state);
         self.ddof.hash(state);
         self.selections.hash(state);
-        self.join.hash(state);
         self.method.hash(state);
         self.order.hash(state);
         self.round_mass.hash(state);
@@ -482,63 +522,44 @@ impl Hash for Discriminants {
     }
 }
 
-/// Join
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-pub(crate) enum Join {
-    Left,
-    And,
-    Or,
-}
-
-impl Join {
-    pub(crate) fn text(self) -> &'static str {
-        match self {
-            Self::Left => "left",
-            Self::And => "and",
-            Self::Or => "or",
-        }
-    }
-
-    pub(crate) fn hover_text(self) -> &'static str {
-        match self {
-            Self::Left => "left.description",
-            Self::And => "and.description",
-            Self::Or => "or.description",
-        }
-    }
-}
-
-impl From<Join> for JoinType {
-    fn from(value: Join) -> Self {
-        match value {
-            Join::Left => JoinType::Left,
-            Join::And => JoinType::Inner,
-            Join::Or => JoinType::Full,
-        }
-    }
-}
+// /// Join
+// #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+// pub(crate) enum Join {
+//     Left,
+//     And,
+//     Or,
+// }
+// impl Join {
+//     pub(crate) fn text(self) -> &'static str {
+//         match self {
+//             Self::Left => "left",
+//             Self::And => "and",
+//             Self::Or => "or",
+//         }
+//     }
+//     pub(crate) fn hover_text(self) -> &'static str {
+//         match self {
+//             Self::Left => "left.description",
+//             Self::And => "and.description",
+//             Self::Or => "or.description",
+//         }
+//     }
+// }
+// impl From<Join> for JoinType {
+//     fn from(value: Join) -> Self {
+//         match value {
+//             Join::Left => JoinType::Left,
+//             Join::And => JoinType::Inner,
+//             Join::Or => JoinType::Full,
+//         }
+//     }
+// }
 
 /// Method
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub(crate) enum Method {
     Gunstone,
     VanderWal,
-}
-
-impl Method {
-    pub(crate) fn text(&self) -> &'static str {
-        match self {
-            Self::Gunstone => "gunstone",
-            Self::VanderWal => "vander_wal",
-        }
-    }
-
-    pub(crate) fn hover_text(&self) -> &'static str {
-        match self {
-            Self::Gunstone => "gunstone.description",
-            Self::VanderWal => "vander_wal.description",
-        }
-    }
 }
 
 /// Sort
@@ -548,43 +569,11 @@ pub(crate) enum Sort {
     Value,
 }
 
-impl Sort {
-    pub(crate) fn text(self) -> &'static str {
-        match self {
-            Self::Key => "key",
-            Self::Value => "value",
-        }
-    }
-
-    pub(crate) fn hover_text(self) -> &'static str {
-        match self {
-            Self::Key => "key.description",
-            Self::Value => "value.description",
-        }
-    }
-}
-
 /// Order
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub(crate) enum Order {
     Ascending,
     Descending,
-}
-
-impl Order {
-    pub(crate) fn text(self) -> &'static str {
-        match self {
-            Self::Ascending => "ascending",
-            Self::Descending => "descending",
-        }
-    }
-
-    pub(crate) fn hover_text(self) -> &'static str {
-        match self {
-            Self::Ascending => "ascending.description",
-            Self::Descending => "descending.description",
-        }
-    }
 }
 
 /// Selection
