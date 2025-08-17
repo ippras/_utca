@@ -1,20 +1,6 @@
-experimental = Experimental
-factors = Factors 
-identifier = Identifier
-    .abbreviation = ID
-index = Index
-label = Label
-theoretical = Theoretical
-
-fatty_acid = Fatty acid
-    .abbreviation = FA
-triacylglycerol = Triacylglycerol
+Triacylglycerol = Triacylglycerol
     .abbreviation = TAG
-diacylglycerol = Diacylglycerol
+Diacylglycerol = Diacylglycerol
     .abbreviation = DAG
-monoacylglycerol = Monoacylglycerol
+Monoacylglycerol = Monoacylglycerol
     .abbreviation = MAG
-enrichment_factor = Enrichment factor
-    .abbreviation = EF
-selectivity_factor = Selectivity factor
-    .abbreviation = SF

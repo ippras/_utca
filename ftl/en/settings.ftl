@@ -1,25 +1,91 @@
-## Settings
+## Menus
+
+About = About
+Calculation = Calculation
+Composition = Composition
+Configuration = Configuration
+Create = Create
+Edit = Edit
+Grid = Grid
+Horizontal = Horizontal
+Indices = Indices
+Language = Language
+LeftPanel = Left panel
+List = List
+Load = Load
+ResetApplication = Reset application
+ResetGui = Reset GUI
+ResetTable = Reset table state
+ResizeTable = Resize table columns
+Save = Save
+Settings = Settings
+Tabs = Tabs
+Vertical = Vertical
+
+## Headers
+
+FattyAcid = Fatty acid
+    .abbreviation = FA
+Index = Index
+Label = Label
+StereospecificNumber = { $number ->
+    [1] Stereospecific number 1
+    [2] Stereospecific number 2
+    [3] Stereospecific number 3
+    *[one] Stereospecific number
+    [123] Stereospecific numbers 1, 2, 3
+    [1223] Stereospecific numbers 1, 2 or 2, 3
+    [13] Stereospecific numbers 1 or 3
+    [many] Stereospecific numbers
+}
+    .abbreviation = { $number ->
+        [1] SN-1
+        [2] SN-2
+        [3] SN-3
+        [123] SN-1,2,3
+        [1223] SN-1,2(2,3)
+        [13] SN-1(3)
+        *[other] SN
+    }
+
+### Configuration
+
+### Calculation
+
+Experimental = Experimental
+Factors = Factors
+Identifier = Identifier
+    .abbreviation = ID
+Theoretical = Theoretical
+EnrichmentFactor = Enrichment factor
+    .abbreviation = EF
+SelectivityFactor = Selectivity factor
+    .abbreviation = SF
+
+### Settings
 
 Percent = Percent
-    .hover = Display of values in percent
+    .hover = Display of values in percent.
 Precision = Precision
-    .hover = Number of decimal pieces
+    .hover = Number of decimal pieces.
 StickyColumns = Sticky
-    .hover = Number of sticky columns
+    .hover = Number of sticky columns.
 TruncateHeaders = Truncate
-    .hover = Truncate header text
+    .hover = Truncate header text.
+DeltaDegreesOfFreedom = Delta Degrees of Freedom
+    .abbreviation = DDOF
+    .hover = The divisor used in calculations is N - DDOF, where N represents the number of elements. By default DDOF is zero.
+    .info = Different values of the argument ddof are useful in different contexts.
+Statistics = Statistics
 
-## Configuration
+### Configuration
 
 Names = Names
     .hover = Show names for fatty acids
 Properties = Properties
     .hover = Show properties for fatty acids
 
-## Calculation
-
-Christie = Christie
-    .hover = Christy coefficients
+### Calculation
 
 CalculateFrom = Calculate
     .hover = Calculate stereospecific numbers 1 or 3.
@@ -27,59 +93,54 @@ CalculateFrom-Sn12Sn23 = From SN-1&2|2&3
     .hover = Calculate stereospecific numbers 1 or 3 from stereospecific numbers 1 and 2 or 2 and 3.
 CalculateFrom-Sn2 = From SN-2
     .hover = Calculate stereospecific numbers 1 or 3 from stereospecific number 2.
-
 Normalize = Normalize
     .hover = Data normalization is the process of transforming numerical data to a common scale ranging from 0 to 1.
 Normalize-Experimental = Experimental
     .hover = Normalize experimental values
 Normalize-Theoretical = Theoretical
     .hover = Normalize theoretical values
+Normalize-Weighted = Weighted
+    .hover = Use weighted sum for normalization.
+Normalize-Christie = Christie
+    .hover = Use Christy coefficients for normalization.
 Show = Show
 Show-Factors = Factors
     .hover = Show factors columns
 Show-Theoretical = Theoretical
     .hover = Show theoretical columns
-Statistics = Statistics
 Unsigned = Unsigned
     .hover = Theoretically calculated negative values are replaced with zeros.
-Weighted = Weighted
-    .hover = Use weighted sum for normalization.
-
-DeltaDegreesOfFreedom = Delta Degrees of Freedom
-    .abbreviation = DDOF
-    .hover = The divisor used in calculations is N - DDOF, where N represents the number of elements. By default DDOF is zero.
-    .info = Different values of the argument ddof are useful in different contexts.
 
 ## Composition
 
-settings-adduct = Adduct
-settings-method = Method
-settings-gunstone = Gunstone
+Adduct = Adduct
+Method = Method
+Method-Gunstone = Gunstone
     .hover = Calculate by Gunstone's theory
-settings-vander_wal = Vander Wal
+Method-VanderWal = Vander Wal
     .hover = Calculate by Vander Wal's theory
-settings-group = Group
-settings-sort = Sort
-settings-by_key = Key
+Group = Group
+Sort = Sort
+Sort-ByKey = Key
     .hover = Sort by key
-settings-by_value = Value
+Sort-ByValue = Value
     .hover = Sort by value
-settings-order = Order
-settings-ascending = Ascending
+Order = Order
+Order-Ascending = Ascending
     .hover = Direct order (from min to max)
-settings-descending = Descending
+Order-Descending = Descending
     .hover = Reverse order (from max to min)
-settings-compose = Compose
+Compose = Compose
     .hover = 
-settings-round_mass = Round mass
+RoundMass = Round mass
     .hover = 
-settings-view = View
-settings-show_filtered = Show filtered
+View = View
+ShowFiltered = Show filtered
     .hover = Show filtered values
-settings-filter = { $case ->
+Filter = { $case ->
     *[title] Filter
     [lower] filter
 }
 
-discriminants = Discriminants
+Discriminants = Discriminants
     .hover = Discriminants for Gunstone's theory

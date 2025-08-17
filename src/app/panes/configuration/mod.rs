@@ -66,9 +66,9 @@ impl Pane {
 
 impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
-        let mut response = ui
-            .heading(Self::icon())
-            .on_hover_text(ui.localize("configuration"));
+        let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
+            ui.label(ui.localize("Configuration"));
+        });
         response |= ui.heading(self.title());
         response = response
             .on_hover_text(format!("{:x}", self.hash()))
@@ -92,14 +92,14 @@ impl Pane {
         })
         .response
         .on_hover_ui(|ui| {
-            ui.label(ui.localize("list"));
+            ui.label(ui.localize("List"));
         });
         ui.separator();
         // Reset
         if ui
             .button(RichText::new(ARROWS_CLOCKWISE).heading())
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("reset_table"));
+                ui.label(ui.localize("ResetTable"));
             })
             .clicked()
         {
@@ -111,12 +111,12 @@ impl Pane {
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
         .on_hover_ui(|ui| {
-            ui.label(ui.localize("resize_table"));
+            ui.label(ui.localize("ResizeTable"));
         });
         // Edit
         ui.toggle_value(&mut self.settings.editable, RichText::new(PENCIL).heading())
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("edit"));
+                ui.label(ui.localize("Edit"));
             });
         // Clear
         ui.add_enabled_ui(
@@ -125,7 +125,7 @@ impl Pane {
                 if ui
                     .button(RichText::new(ERASER).heading())
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize("clear_table"));
+                        ui.label(ui.localize("ClearTable"));
                     })
                     .clicked()
                 {
@@ -139,7 +139,7 @@ impl Pane {
             if ui
                 .button(RichText::new(TRASH).heading())
                 .on_hover_ui(|ui| {
-                    ui.label(ui.localize("delete_table"));
+                    ui.label(ui.localize("DeleteTable"));
                 })
                 .clicked()
             {
@@ -154,14 +154,14 @@ impl Pane {
             RichText::new(GEAR).heading(),
         )
         .on_hover_ui(|ui| {
-            ui.label(ui.localize("settings"));
+            ui.label(ui.localize("Settings"));
         });
         ui.separator();
         // Save
         if ui
             .button(RichText::new(FLOPPY_DISK).heading())
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("save"));
+                ui.label(ui.localize("Save"));
             })
             .on_hover_text(format!("{}.utca.parquet", self.title_with_separator(".")))
             .clicked()
@@ -171,7 +171,7 @@ impl Pane {
         // if ui
         //     .button(RichText::new("JSON").heading())
         //     .on_hover_ui(|ui| {
-        //         ui.label(ui.localize("save"));
+        //         ui.label(ui.localize("Save"));
         //     })
         //     .on_hover_text(format!("{}.utca.json", self.title()))
         //     .clicked()
@@ -187,7 +187,7 @@ impl Pane {
         if ui
             .button(RichText::new(CALCULATOR).heading())
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("calculation"));
+                ui.label(ui.localize("Calculation"));
             })
             .clicked()
         {

@@ -113,7 +113,7 @@ impl Widget for FilterWidget<'_> {
                         "{}.abbreviation",
                         self.selection.composition.text(),
                     )),
-                    ui.localize("settings-filter?case=lower"),
+                    ui.localize("Filter?case=lower"),
                 ));
                 // Key
                 ui.labeled_separator("Key");
@@ -201,7 +201,7 @@ impl Widget for FilterWidget<'_> {
         //             "{}.abbreviation",
         //             self.selection.composition.text(),
         //         )),
-        //         ui.localize("settings-filter?case=lower"),
+        //         ui.localize("Filter?case=lower"),
         //     ));
         //     // Key
         //     Grid::new(ui.next_auto_id()).show(ui, |ui| -> PolarsResult<()> {

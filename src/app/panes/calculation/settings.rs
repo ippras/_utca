@@ -1,7 +1,7 @@
 use super::State;
 use crate::app::MAX_PRECISION;
 use egui::{ComboBox, Grid, Key, KeyboardShortcut, Modifiers, RichText, Slider, Ui};
-use egui_ext::LabeledSeparator;
+use egui_ext::{LabeledSeparator, Markdown as _};
 use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::BROWSERS;
 use serde::{Deserialize, Serialize};
@@ -124,35 +124,43 @@ impl Settings {
             // Normalize
             ui.label(ui.localize("Normalize"))
                 .on_hover_localized("Normalize.hover");
-            ui.horizontal(|ui| {
-                ui.checkbox(
-                    &mut self.normalize.experimental,
-                    ui.localize("Normalize-Experimental"),
-                )
-                .on_hover_localized("Normalize-Experimental.hover");
-                ui.checkbox(
-                    &mut self.normalize.theoretical,
-                    ui.localize("Normalize-Theoretical"),
-                )
-                .on_hover_localized("Normalize-Theoretical.hover");
-            });
+            ui.checkbox(
+                &mut self.normalize.experimental,
+                ui.localize("Normalize-Experimental"),
+            )
+            .on_hover_localized("Normalize-Experimental.hover");
             ui.end_row();
-
-            // Weighted
-            ui.label(ui.localize("Weighted"))
-                .on_hover_localized("Weighted.hover");
-            ui.checkbox(&mut self.weighted, "");
+            ui.label("");
+            ui.checkbox(
+                &mut self.normalize.theoretical,
+                ui.localize("Normalize-Theoretical"),
+            )
+            .on_hover_localized("Normalize-Theoretical.hover");
+            ui.end_row();
+            ui.label("");
+            let response = ui
+                .checkbox(&mut self.weighted, ui.localize("Normalize-Weighted"))
+                .on_hover_localized("Normalize-Weighted.hover");
+            if self.weighted {
+                response.on_hover_ui(|ui| {
+                    ui.markdown(r#"$$\frac{S}{\sum{(S \cdot M)}}$$"#);
+                });
+            } else {
+                response.on_hover_ui(|ui| {
+                    ui.markdown(r#"$$\frac{S}{\sum{S}}$$"#);
+                });
+            }
             ui.end_row();
 
             // Christie
-            let mut response = ui.label(ui.localize("Christie"));
+            let mut response = ui.label(ui.localize("Normalize-Christie"));
             ui.horizontal(|ui| {
                 response |= ui.checkbox(&mut self.christie, "");
                 ui.toggle_value(
                     &mut state.open_christie_window,
                     RichText::new(BROWSERS).heading(),
                 );
-                response.on_hover_localized("Christie.hover");
+                response.on_hover_localized("Normalize-Christie.hover");
             });
             ui.end_row();
 
@@ -199,32 +207,6 @@ impl Settings {
                 ui.end_row();
             }
         });
-    }
-}
-
-/// Fraction
-///
-/// [wikipedia.org](https://en.wikipedia.org/wiki/Mole_fraction)
-#[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) enum Fraction {
-    Sum,
-    WeightedSum,
-}
-
-impl Fraction {
-    pub(crate) fn text(self) -> &'static str {
-        match self {
-            Self::Sum => "Sum",
-            Self::WeightedSum => "WeightedSum",
-        }
-    }
-
-    // col(name) / (col(name) * col("FA").fa().mass() / lit(10)).sum()
-    pub(crate) fn hover_text(self) -> &'static str {
-        match self {
-            Self::Sum => "S / ∑ S",
-            Self::WeightedSum => "S / ∑(S * M)",
-        }
     }
 }
 

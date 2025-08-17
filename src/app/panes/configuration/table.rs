@@ -4,7 +4,7 @@ use crate::app::{
     widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
 };
 use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
-use egui_l20n::UiExt;
+use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{HASH, MINUS, PLUS};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use lipid::prelude::*;
@@ -80,37 +80,34 @@ impl TableView<'_> {
         match (row, column) {
             (0, INDEX) => {
                 ui.heading(HASH).on_hover_ui(|ui| {
-                    ui.label(ui.localize("index"));
+                    ui.label(ui.localize("Index"));
                 });
             }
             (0, LABEL) => {
-                ui.heading(ui.localize("label"));
+                ui.heading(ui.localize("Label"));
             }
             (0, FA) => {
-                ui.heading(ui.localize("fatty_acid.abbreviation"))
+                ui.heading(ui.localize("FattyAcid.abbreviation"))
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize("fatty_acid"));
+                        ui.label(ui.localize("FattyAcid"));
                     });
             }
             (0, TAG) => {
-                ui.heading(ui.localize("triacylglycerol.abbreviation"))
+                ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize("triacylglycerol"));
+                        ui.label(ui.localize("StereospecificNumber?number=123"));
                     });
             }
             (0, DAG1223) => {
-                ui.heading(format!(
-                    "{}1223",
-                    ui.localize("diacylglycerol.abbreviation"),
-                ))
-                .on_hover_ui(|ui| {
-                    ui.label(format!("sn-1,2/2,3 {}", ui.localize("diacylglycerol"),));
-                });
+                ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("StereospecificNumber?number=1223"));
+                    });
             }
             (0, MAG2) => {
-                ui.heading(format!("{}2", ui.localize("monoacylglycerol.abbreviation")))
+                ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
                     .on_hover_ui(|ui| {
-                        ui.label(format!("sn-2 {}", ui.localize("monoacylglycerol"),));
+                        ui.label(ui.localize("StereospecificNumber?number=2"));
                     });
             }
             _ => {}
