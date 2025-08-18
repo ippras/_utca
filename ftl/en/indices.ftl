@@ -13,6 +13,6 @@ HypocholesterolemicToHypercholesterolemic = Hypocholesterolemic to Hypercholeste
 IndexOfAtherogenicity = Index of Atherogenicity
 IndexOfThrombogenicity = Index of Thrombogenicity
 LinoleicToAlphaLinolenic = Linoleic to αLinolenic
-Polyunsaturated-6ToPolyunsaturated-3 = Polyunsaturated -6 to polyunsaturated -3
+Polyunsaturated-6ToPolyunsaturated-3 = Polyunsaturated -6 to Polyunsaturated -3
 PolyunsaturatedToSaturated = Polyunsaturated to Saturated
 UnsaturationIndex = Unsaturation Index
