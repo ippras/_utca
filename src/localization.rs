@@ -28,31 +28,27 @@ mod locales {
 }
 
 mod sources {
-    macro_rules! source {
-        ($path:literal) => {
-            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), $path))
-        };
-    }
+    use crate::asset;
 
     pub(super) const EN: &[&str] = &[
-        // source!("/ftl/en/fatty_acids/byrdwell.com.ftl"),
-        source!("/ftl/en/fatty_acids/ippras.ftl"),
-        source!("/ftl/en/compositions.ftl"),
-        source!("/ftl/en/headers.ftl"),
-        source!("/ftl/en/indices.ftl"),
-        source!("/ftl/en/menu.ftl"),
-        source!("/ftl/en/names.ftl"),
-        source!("/ftl/en/properties.ftl"),
-        source!("/ftl/en/settings.ftl"),
+        // asset!("/ftl/en/fatty_acids/byrdwell.com.ftl"),
+        asset!("/ftl/en/fatty_acids/ippras.ftl"),
+        asset!("/ftl/en/compositions.ftl"),
+        asset!("/ftl/en/headers.ftl"),
+        asset!("/ftl/en/indices.ftl"),
+        asset!("/ftl/en/menu.ftl"),
+        asset!("/ftl/en/names.ftl"),
+        asset!("/ftl/en/properties.ftl"),
+        asset!("/ftl/en/settings.ftl"),
     ];
 
     pub(super) const RU: &[&str] = &[
-        // source!("/ftl/en/fatty_acids/byrdwell.com.ftl"),
-        source!("/ftl/en/fatty_acids/ippras.ftl"),
-        source!("/ftl/ru/headers.ftl"),
-        source!("/ftl/ru/menu.ftl"),
-        source!("/ftl/ru/names.ftl"),
-        source!("/ftl/ru/properties.ftl"),
-        source!("/ftl/ru/settings.ftl"),
+        // asset!("/ftl/en/fatty_acids/byrdwell.com.ftl"),
+        asset!("/ftl/en/fatty_acids/ippras.ftl"),
+        asset!("/ftl/ru/headers.ftl"),
+        asset!("/ftl/ru/menu.ftl"),
+        asset!("/ftl/ru/names.ftl"),
+        asset!("/ftl/ru/properties.ftl"),
+        asset!("/ftl/ru/settings.ftl"),
     ];
 }
