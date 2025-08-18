@@ -336,14 +336,15 @@ fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
             lazy_frame.sort_by_exprs([expr], sort_options)
         }
     };
-    // TODO sort species
-    // lazy_frame = lazy_frame.with_columns([col("Species").list().eval(
-    //     col("").sort_by(
-    //         [col("").struct_().field_by_name("FA").fa().ecn()],
-    //         Default::default(),
-    //     ),
-    //     true,
-    // )]);
+    // Sort species by value
+    lazy_frame = lazy_frame.with_columns([col("Species").list().eval(col("").sort_by(
+        [col("").struct_().field_by_name("Value")],
+        SortMultipleOptions {
+            descending: vec![true],
+            nulls_last: vec![true],
+            ..Default::default()
+        },
+    ))]);
     lazy_frame
 }
 

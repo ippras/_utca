@@ -276,6 +276,7 @@ impl TableView<'_> {
         ui.separator();
         ScrollArea::vertical()
             .auto_shrink(false)
+            .max_height(ui.spacing().combo_height)
             .show(ui, |ui| {
                 Grid::new(ui.next_auto_id())
                     .show(ui, |ui| -> PolarsResult<()> {
@@ -302,7 +303,10 @@ impl TableView<'_> {
                             .to_string();
                             ui.label(text);
                             let text = from_fn(|f| match stereospecific_numbers.1 {
-                                Some(value) => {
+                                Some(mut value) => {
+                                    if self.settings.percent {
+                                        value *= 100.0;
+                                    }
                                     f.write_fmt(format_args!("{}", AnyValue::Float64(value)))
                                 }
                                 None => f.write_str("None"),
