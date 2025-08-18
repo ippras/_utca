@@ -1,4 +1,4 @@
-# Polyunsaturated Fatty Acid to Saturated Fatty Acid Ratio
+# Polyunsaturated Fatty Acids to Saturated Fatty Acids Ratio
 
 $$\frac{\sum PUFA}{\sum SFA}$$
 

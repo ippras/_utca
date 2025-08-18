@@ -1,8 +1,10 @@
-# Fish Lipid Quality (Flesh Lipid Quality)
+# Fish Lipid Quality
 
 $$\frac{C22:6(n - 3) + C20:5(n - 3)}{\sum FA}$$
 
 * **Abbreviation**: FLQ
+* **Synonyms**:
+    * Flesh Lipid Quality
 * **Description**: Calculates the sum of EPA and DHA as a percentage of total fatty acids.
 * **First Use**: Originally for assessing the lipid quality in fish (or fish flesh).
 * **Use**: Fish [65], [66], [73], [107], [108].
