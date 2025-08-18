@@ -11,6 +11,8 @@ mod app;
 mod r#const;
 mod export;
 mod localization;
+
+mod macros;
 mod presets;
 mod special;
 mod text;
