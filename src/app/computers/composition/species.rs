@@ -1,5 +1,5 @@
 use crate::{
-    app::panes::composition::settings::Method,
+    app::panes::composition::settings::{Discriminants, Method},
     utils::{Hashed, hash},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -23,12 +23,12 @@ impl Computer {
             Some(index) => {
                 let frame = &key.frames[index];
                 let mut lazy_frame = frame.data.clone().lazy();
-                lazy_frame = compute(lazy_frame, key.method)?;
+                lazy_frame = compute(lazy_frame, key.settings())?;
                 lazy_frame
             }
             None => {
                 let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
-                    Ok(compute(frame.data.clone().lazy(), key.method)?.select([
+                    Ok(compute(frame.data.clone().lazy(), key.settings())?.select([
                         hash(as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL)])),
                         col(LABEL),
                         col(TRIACYLGLYCEROL),
@@ -71,15 +71,32 @@ pub(crate) struct Key<'a> {
     pub(crate) index: Option<usize>,
     pub(crate) ddof: u8,
     pub(crate) method: Method,
+    pub(crate) discriminants: &'a Discriminants,
+}
+
+#[derive(Clone, Copy, Debug, Hash, PartialEq)]
+struct Settings<'a> {
+    pub(crate) ddof: u8,
+    pub(crate) discriminants: &'a Discriminants,
+    pub(crate) method: Method,
+}
+
+impl Key<'_> {
+    fn settings(&self) -> Settings<'_> {
+        Settings {
+            ddof: self.ddof,
+            discriminants: self.discriminants,
+            method: self.method,
+        }
+    }
 }
 
 /// Composition value
 type Value = Hashed<DataFrame>;
 
-fn compute(lazy_frame: LazyFrame, method: Method) -> PolarsResult<LazyFrame> {
-    match method {
-        // Method::Gunstone => gunstone(lazy_frame, settings),
-        Method::Gunstone => unimplemented!(),
+fn compute(lazy_frame: LazyFrame, settings: Settings) -> PolarsResult<LazyFrame> {
+    match settings.method {
+        Method::Gunstone => gunstone(lazy_frame, settings.discriminants),
         Method::VanderWal => vander_wal(lazy_frame),
     }
 }
@@ -114,74 +131,77 @@ fn compute(lazy_frame: LazyFrame, method: Method) -> PolarsResult<LazyFrame> {
 //     }
 // }
 
-// fn gunstone(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
-//     println!("lazy_frame g0: {}", lazy_frame.clone().collect().unwrap());
-//     lazy_frame = lazy_frame.select([
-//         // col("Index"),
-//         col("Label"),
-//         col("FattyAcid"),
-//         col("Calculated")
-//             .struct_()
-//             .field_by_names(["Triacylglycerol"])
-//             .alias("Value"),
-//     ]);
-//     println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
-//     let factor = gunstone_factor(lazy_frame.clone())?;
-//     println!("factor: {factor}");
-//     //
-//     println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
-//     let discriminants = &settings.special.discriminants.0;
-//     let discriminants = df! {
-//         "Label" => Series::from_iter(discriminants.keys().cloned()),
-//         "Factor1" => Series::from_iter(discriminants.values().map(|values| values[0])),
-//         "Factor2" => Series::from_iter(discriminants.values().map(|values| values[1])),
-//         "Factor3" => Series::from_iter(discriminants.values().map(|values| values[2])),
-//     }?;
-//     println!("Discriminants: {discriminants}");
-//     lazy_frame = lazy_frame
-//         .join(
-//             discriminants.lazy(),
-//             [col("Label")],
-//             [col("Label")],
-//             JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
-//         )
-//         .select([
-//             col("Label"),
-//             col("FattyAcid"),
-//             (col("Value") * col("Factor1")).alias("Value1"),
-//             (col("Value") * col("Factor2")).alias("Value2"),
-//             (col("Value") * col("Factor3")).alias("Value3"),
-//             // col("Value") * col("Factor"),
-//             // col("Value") * col("Factor").arr().get(lit(0), false),
-//             // col("Value") * col("Factor").arr().get(lit(1), false),
-//             // col("Value") * col("Factor").arr().get(lit(2), false),
-//         ]);
-//     println!("lazy_frame g25: {}", lazy_frame.clone().collect().unwrap());
-//     lazy_frame = gunstone_cartesian_product(lazy_frame)?;
-//     println!("lazy_frame g3: {}", lazy_frame.clone().collect().unwrap());
-//     lazy_frame = lazy_frame
-//         .with_column(
-//             col("FattyAcid")
-//                 .triacylglycerol()
-//                 .map_expr(|expr| expr.fatty_acid().is_unsaturated(None))
-//                 .triacylglycerol()
-//                 .sum()
-//                 .alias("TMC"),
-//         )
-//         .join(
-//             factor.lazy(),
-//             [col("TMC")],
-//             [col("TMC")],
-//             JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
-//         )
-//         .select([
-//             col("Label"),
-//             col("FattyAcid"),
-//             (col("Value") * col("Factor")).normalize(),
-//         ]);
-//     println!("lazy_frame g4: {}", lazy_frame.clone().collect().unwrap());
-//     Ok(lazy_frame)
-// }
+fn gunstone(mut lazy_frame: LazyFrame, discriminants: &Discriminants) -> PolarsResult<LazyFrame> {
+    println!("lazy_frame g0: {}", lazy_frame.clone().collect().unwrap());
+    // lazy_frame = lazy_frame
+    //     .clone()
+    //     .select([as_struct(vec![
+    //         col(LABEL),
+    //         col(FATTY_ACID),
+    //         col(STEREOSPECIFIC_NUMBER13).alias("Value"),
+    //     ])
+    lazy_frame = lazy_frame.select([
+        col(LABEL),
+        col(FATTY_ACID),
+        col(STEREOSPECIFIC_NUMBER123).alias("Value"),
+    ]);
+    println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
+    let factor = gunstone_factor(lazy_frame.clone())?;
+    println!("factor: {factor}");
+    //
+    println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
+    let discriminants = &discriminants.0;
+    let discriminants = df! {
+        LABEL => Series::from_iter(discriminants.keys().cloned()),
+        "Factor1" => Series::from_iter(discriminants.values().map(|values| values[0])),
+        "Factor2" => Series::from_iter(discriminants.values().map(|values| values[1])),
+        "Factor3" => Series::from_iter(discriminants.values().map(|values| values[2])),
+    }?;
+    println!("Discriminants: {discriminants}");
+    lazy_frame = lazy_frame
+        .join(
+            discriminants.lazy(),
+            [col(LABEL)],
+            [col(LABEL)],
+            JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+        )
+        .select([
+            col(LABEL),
+            col(FATTY_ACID),
+            (col("Value") * col("Factor1")).alias("Value1"),
+            (col("Value") * col("Factor2")).alias("Value2"),
+            (col("Value") * col("Factor3")).alias("Value3"),
+            // col("Value") * col("Factor"),
+            // col("Value") * col("Factor").arr().get(lit(0), false),
+            // col("Value") * col("Factor").arr().get(lit(1), false),
+            // col("Value") * col("Factor").arr().get(lit(2), false),
+        ]);
+    println!("lazy_frame g25: {}", lazy_frame.clone().collect().unwrap());
+    lazy_frame = gunstone_cartesian_product(lazy_frame)?;
+    println!("lazy_frame g3: {}", lazy_frame.clone().collect().unwrap());
+    lazy_frame = lazy_frame
+        .with_column(
+            col(FATTY_ACID)
+                .triacylglycerol()
+                .map_expr(|expr| expr.fatty_acid().is_unsaturated(None))
+                .triacylglycerol()
+                .sum()
+                .alias("TMC"),
+        )
+        .join(
+            factor.lazy(),
+            [col("TMC")],
+            [col("TMC")],
+            JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+        )
+        .select([
+            col(LABEL),
+            col(FATTY_ACID),
+            (col("Value") * col("Factor")).normalize(),
+        ]);
+    println!("lazy_frame g4: {}", lazy_frame.clone().collect().unwrap());
+    Ok(lazy_frame)
+}
 
 fn gunstone_factor(lazy_frame: LazyFrame) -> PolarsResult<DataFrame> {
     let data_frame = lazy_frame

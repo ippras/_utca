@@ -235,6 +235,7 @@ impl Pane {
                     index: self.settings.index,
                     ddof: self.settings.special.ddof,
                     method: self.settings.special.method,
+                    discriminants: &self.settings.special.discriminants,
                 })
         });
         self.target = ui.memory_mut(|memory| {
@@ -294,6 +295,7 @@ impl Pane {
                     index: self.settings.index,
                     ddof: self.settings.special.ddof,
                     method: self.settings.special.method,
+                    discriminants: &self.settings.special.discriminants,
                 })
         });
         // Indices
