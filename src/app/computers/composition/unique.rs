@@ -1,6 +1,7 @@
 use crate::{
-    app::panes::composition::settings::Selection,
-    special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
+    app::panes::composition::settings::{
+        MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC,
+    },
     utils::Hashed,
 };
 use egui::util::cache::{ComputerMut, FrameCache};

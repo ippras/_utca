@@ -1,6 +1,6 @@
-use super::{ID_SOURCE, Settings, State};
-use crate::special::composition::{
-    Composition, MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC,
+use super::{
+    ID_SOURCE, Settings, State,
+    settings::{Composition, MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
 };
 use egui::{Align2, Color32, Id, Ui, Vec2b};
 use egui_plot::{AxisHints, Bar, BarChart, Line, Plot, PlotPoints};

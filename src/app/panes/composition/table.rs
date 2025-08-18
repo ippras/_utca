@@ -1,7 +1,9 @@
-use super::{ID_SOURCE, Settings, State};
+use super::{
+    ID_SOURCE, Settings, State,
+    settings::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
+};
 use crate::{
     app::{panes::MARGIN, widgets::FloatWidget},
-    special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
     text::Text,
 };
 use egui::{Frame, Grid, Id, Margin, ScrollArea, TextStyle, Ui};

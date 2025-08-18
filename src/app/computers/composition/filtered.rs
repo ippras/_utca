@@ -1,4 +1,7 @@
-use crate::{app::panes::composition::settings::Settings, special::composition::*, utils::Hashed};
+use crate::{
+    app::panes::composition::settings::{MMC, NMC, Settings, TMC, UMC},
+    utils::Hashed,
+};
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
