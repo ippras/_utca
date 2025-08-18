@@ -42,11 +42,14 @@ type Value = DataFrame;
 fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
     const ONE: DataType = DataType::Float64;
     // const MANY: DataType = DataType::Struct(vec![
-    //     Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
-    //     Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
+    //     Field::new(PlSmallStr::from_static("Mean"), DataType::Float64),
+    //     Field::new(
+    //         PlSmallStr::from_static("StandardDeviation"),
+    //         DataType::Float64,
+    //     ),
     //     Field::new(
     //         PlSmallStr::from_static("Repetitions"),
-    //         DataType::Array(Box::new(DataType::Float64), length),
+    //         DataType::Array(Box::new(DataType::Float64), 0),
     //     ),
     // ]);
 
@@ -58,9 +61,9 @@ fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
     //     ])
     // });
     // let schema = data_frame.schema();
-    // if expected.matches_schema(schema).is_ok() {
+    // if expected.matches_schema(schema).is_ok_and(|cast| !cast) {
     //     Ok(1)
-    // } else if schema.matches_schema(&MANY).is_ok() {
+    // } else if schema.matches_schema(&MANY).is_ok_and(|cast| !cast) {
     //     schema.get("Value");
     //     Ok(2)
     // } else {
@@ -70,7 +73,6 @@ fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
     // }
 
     let schema = data_frame.schema();
-    println!("schema: {schema:?}");
     // Triacylglycerol
     let triacylglycerol = schema.try_get_field(TRIACYLGLYCEROL)?;
     data_type!(TRIACYLGLYCEROL).matches_schema_type(triacylglycerol.dtype())?;

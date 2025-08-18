@@ -92,9 +92,9 @@ fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
         ])
     });
 
-    // if schema.matches_schema(&ONE).is_ok() {
+    // if schema.matches_schema(&ONE).is_ok_and(|cast| !cast) {
     //     Ok(1)
-    // } else if schema.matches_schema(&MANY).is_ok() {
+    // } else if schema.matches_schema(&MANY).is_ok_and(|cast| !cast) {
     //     schema.get("Value");
     //     Ok(2)
     // } else {
@@ -282,39 +282,6 @@ fn compose(
     Ok(lazy_frame)
 }
 
-fn mean_and_standard_deviation(
-    mut lazy_frame: LazyFrame,
-    settings: &Settings,
-) -> PolarsResult<LazyFrame> {
-    // TODO [array_get?](https://docs.rs/polars/latest/polars/prelude/array/trait.ArrayNameSpace.html)
-    let list = |index| {
-        // TODO: .arr().to_list().list() for compute mean std with None
-        concat_list([all()
-            .exclude_cols(["Keys", r#"^Value\d$"#])
-            .as_expr()
-            .arr()
-            .get(lit(index as u32), true)])
-    };
-    for index in 0..settings.special.selections.len() {
-        lazy_frame = lazy_frame.with_column(
-            as_struct(vec![
-                list(index)?.list().mean().alias("Mean"),
-                list(index)?
-                    .list()
-                    .std(settings.special.ddof)
-                    .alias("StandardDeviation"),
-            ])
-            .alias(format!("Value{index}")),
-        );
-    }
-    // Group
-    lazy_frame = lazy_frame.select([
-        col("Keys"),
-        concat_arr(vec![col(r#"^Value\d$"#)])?.alias("Values"),
-    ]);
-    Ok(lazy_frame)
-}
-
 fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     let mut sort_options = SortMultipleOptions::default();
     if let Order::Descending = settings.special.order {
@@ -347,6 +314,39 @@ fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     ))]);
     lazy_frame
 }
+
+// fn mean_and_standard_deviation(
+//     mut lazy_frame: LazyFrame,
+//     settings: &Settings,
+// ) -> PolarsResult<LazyFrame> {
+//     // TODO [array_get?](https://docs.rs/polars/latest/polars/prelude/array/trait.ArrayNameSpace.html)
+//     let list = |index| {
+//         // TODO: .arr().to_list().list() for compute mean std with None
+//         concat_list([all()
+//             .exclude_cols(["Keys", r#"^Value\d$"#])
+//             .as_expr()
+//             .arr()
+//             .get(lit(index as u32), true)])
+//     };
+//     for index in 0..settings.special.selections.len() {
+//         lazy_frame = lazy_frame.with_column(
+//             as_struct(vec![
+//                 list(index)?.list().mean().alias("Mean"),
+//                 list(index)?
+//                     .list()
+//                     .std(settings.special.ddof)
+//                     .alias("StandardDeviation"),
+//             ])
+//             .alias(format!("Value{index}")),
+//         );
+//     }
+//     // Group
+//     lazy_frame = lazy_frame.select([
+//         col("Keys"),
+//         concat_arr(vec![col(r#"^Value\d$"#)])?.alias("Values"),
+//     ]);
+//     Ok(lazy_frame)
+// }
 
 pub(super) mod filtered;
 pub(super) mod indices;
