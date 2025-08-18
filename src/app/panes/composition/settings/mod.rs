@@ -1,4 +1,9 @@
-pub(crate) use self::filter::{Filter, FilterWidget};
+pub(crate) use self::{
+    composition::{
+        COMPOSITIONS, Composition, MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC,
+    },
+    filter::{Filter, FilterWidget},
+};
 
 use crate::{
     app::{
@@ -6,7 +11,6 @@ use crate::{
         computers::{UniqueCompositionComputed, UniqueCompositionKey},
     },
     r#const::relative_atomic_mass::{H, LI, NA, NH4},
-    special::composition::{COMPOSITIONS, Composition},
     text::Text,
     utils::Hashed,
 };
@@ -593,4 +597,5 @@ impl Selection {
     }
 }
 
+mod composition;
 mod filter;

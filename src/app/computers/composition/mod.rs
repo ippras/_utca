@@ -1,7 +1,9 @@
 use super::Mode;
 use crate::{
-    app::panes::composition::settings::{Filter, Order, Selection, Settings, Sort},
-    special::composition::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
+    app::panes::composition::settings::{
+        Filter, MMC, MSC, NMC, NSC, Order, SMC, SPC, SSC, Selection, Settings, Sort, TMC, TPC, TSC,
+        UMC, USC,
+    },
     utils::Hashed,
 };
 use egui::util::cache::{ComputerMut, FrameCache};

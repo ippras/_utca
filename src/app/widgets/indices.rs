@@ -120,7 +120,6 @@ impl<'a> IndicesWidget<'a> {
             index(ui, "Trans")?;
             ui.end_row();
             ui.separator();
-            ui.separator();
             ui.end_row();
             // Complex
             ui.label(ui.localize("EicosapentaenoicAndDocosahexaenoic"))

@@ -1,10 +1,5 @@
-use super::Selection;
-use crate::{
-    special::composition::{
-        Composition, MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC,
-    },
-    text::Text,
-};
+use super::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, Selection, TMC, TPC, TSC, UMC, USC};
+use crate::text::Text;
 use ahash::RandomState;
 use egui::{
     CentralPanel, DragValue, Grid, Response, ScrollArea, Sense, Slider, SliderClamping, TextStyle,
