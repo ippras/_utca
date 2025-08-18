@@ -1,4 +1,4 @@
-# Trans Fatty Acid
+# Trans Fatty Acids
 
 * **Abbreviation**: TFA
 * **Description**: Assesses the amount of trans fatty acids.
