@@ -129,7 +129,7 @@ impl Settings {
                                             ui.localize(composition.text()),
                                         )
                                         .on_hover_ui(|ui| {
-                                            ui.localize(composition.hover_text());
+                                            ui.label(ui.localize(composition.hover_text()));
                                         })
                                         .changed()
                                     {
@@ -139,7 +139,7 @@ impl Settings {
                             })
                             .response
                             .on_hover_ui(|ui| {
-                                ui.localize(selection.composition.hover_text());
+                                ui.label(ui.localize(selection.composition.hover_text()));
                             });
                         // Filter
                         // let data_frame = ui.memory_mut(|memory| {
