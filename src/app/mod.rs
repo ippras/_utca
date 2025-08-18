@@ -405,6 +405,12 @@ impl App {
         }) {
             self.tree
                 .insert_pane::<HORIZONTAL>(Pane::composition(frames, index));
+        } else if let Some(frame) =
+            ctx.data_mut(|data| data.remove_temp::<MetaDataFrame>(Id::new(COMPOSE)))
+        {
+            tracing::error!("COMPOSE");
+            // self.tree
+            //     .insert_pane::<HORIZONTAL>(Pane::composition(frame));
         }
     }
 
@@ -446,7 +452,7 @@ impl App {
     fn parse(&mut self, ctx: &Context, dropped_file: DroppedFile) -> Result<()> {
         const CONFIGURATION: LazyLock<SchemaRef> = LazyLock::new(|| {
             Arc::new(Schema::from_iter([
-                Field::new(PlSmallStr::from_static("Label"), DataType::String),
+                Field::new(PlSmallStr::from_static(LABEL), DataType::String),
                 field!(FATTY_ACID),
                 Field::new(
                     PlSmallStr::from_static("Triacylglycerol"),
@@ -465,41 +471,8 @@ impl App {
 
         const COMPOSITION: LazyLock<SchemaRef> = LazyLock::new(|| {
             Arc::new(Schema::from_iter([
-                Field::new(
-                    PlSmallStr::from_static("Label"),
-                    DataType::Struct(vec![
-                        Field::new(
-                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER1),
-                            DataType::String,
-                        ),
-                        Field::new(
-                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER2),
-                            DataType::String,
-                        ),
-                        Field::new(
-                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER3),
-                            DataType::String,
-                        ),
-                    ]),
-                ),
-                Field::new(
-                    PlSmallStr::from_static(FATTY_ACID),
-                    DataType::Struct(vec![
-                        Field::new(
-                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER1),
-                            data_type!(FATTY_ACID),
-                        ),
-                        Field::new(
-                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER2),
-                            data_type!(FATTY_ACID),
-                        ),
-                        Field::new(
-                            PlSmallStr::from_static(STEREOSPECIFIC_NUMBER3),
-                            data_type!(FATTY_ACID),
-                        ),
-                    ]),
-                ),
-                // field!(TRIACYLGLYCEROL),
+                field!(LABEL[DataType::String]),
+                field!(TRIACYLGLYCEROL[data_type!(FATTY_ACID)]),
                 Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
             ]))
         });
@@ -508,12 +481,12 @@ impl App {
         trace!(?bytes);
         let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
         let schema = frame.data.schema();
-        if *schema == *CONFIGURATION {
+        if CONFIGURATION.matches_schema(schema).is_ok_and(|cast| !cast) {
             info!("CONFIGURATION");
             self.data.add(frame);
-        } else if *schema == *COMPOSITION {
+        } else if COMPOSITION.matches_schema(schema).is_ok_and(|cast| !cast) {
             info!("COMPOSITION");
-            ctx.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (vec![frame], Some(0usize))));
+            ctx.data_mut(|data| data.insert_temp(Id::new(COMPOSE), frame));
         } else {
             return Err(
                 polars_err!(SchemaMismatch: r#"Invalid dropped file schema: expected [`CONFIGURATION`, `COMPOSITION`], got = `{schema:?}`"#),
