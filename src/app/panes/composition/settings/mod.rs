@@ -322,67 +322,55 @@ impl Settings {
                 // Sort
                 ui.label(ui.localize("Sort"));
                 ComboBox::from_id_salt("Sort")
-                    .selected_text(ui.localize(match self.special.sort {
-                        Sort::Key => "Sort-ByKey",
-                        Sort::Value => "Sort-ByValue",
-                    }))
+                    .selected_text(ui.localize(self.special.sort.text()))
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.special.sort,
                             Sort::Key,
-                            ui.localize("Sort-ByKey"),
+                            ui.localize(Sort::Key.text()),
                         )
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Sort-ByKey.hover"));
+                            ui.label(ui.localize(Sort::Key.hover_text()));
                         });
                         ui.selectable_value(
                             &mut self.special.sort,
                             Sort::Value,
-                            ui.localize("Sort-ByValue"),
+                            ui.localize(Sort::Value.text()),
                         )
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Sort-ByValue.hover"));
+                            ui.label(ui.localize(Sort::Value.hover_text()));
                         });
                     })
                     .response
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize(match self.special.sort {
-                            Sort::Key => "Sort-ByKey.hover",
-                            Sort::Value => "Sort-ByValue.hover",
-                        }));
+                        ui.label(ui.localize(self.special.sort.hover_text()));
                     });
                 ui.end_row();
                 // Order
                 ui.label(ui.localize("Order"));
                 ComboBox::from_id_salt("Order")
-                    .selected_text(ui.localize(match self.special.order {
-                        Order::Ascending => "Order-Ascending",
-                        Order::Descending => "Order-Descending",
-                    }))
+                    .selected_text(ui.localize(self.special.order.text()))
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.special.order,
                             Order::Ascending,
-                            ui.localize("Order-Ascending"),
+                            Order::Ascending.text(),
                         )
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Order-Ascending.hover"));
+                            ui.label(ui.localize(Order::Ascending.hover_text()));
                         });
                         ui.selectable_value(
                             &mut self.special.order,
                             Order::Descending,
-                            ui.localize("Order-Descending"),
+                            ui.localize(Order::Descending.text()),
                         )
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Order-Descending.hover"));
+                            ui.label(ui.localize(Order::Descending.hover_text()));
                         });
                     })
                     .response
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize(match self.special.order {
-                            Order::Ascending => "Order-Ascending.hover",
-                            Order::Descending => "Order-Descending.hover",
-                        }));
+                        ui.label(ui.localize(self.special.order.hover_text()));
                     });
                 ui.end_row();
 
@@ -589,11 +577,41 @@ pub(crate) enum Sort {
     Value,
 }
 
+impl Text for Sort {
+    fn text(&self) -> &'static str {
+        match self {
+            Sort::Key => "Sort-ByKey",
+            Sort::Value => "Sort-ByValue",
+        }
+    }
+    fn hover_text(&self) -> &'static str {
+        match self {
+            Sort::Key => "Sort-ByKey.hover",
+            Sort::Value => "Sort-ByValue.hover",
+        }
+    }
+}
+
 /// Order
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub(crate) enum Order {
     Ascending,
     Descending,
+}
+
+impl Text for Order {
+    fn text(&self) -> &'static str {
+        match self {
+            Order::Ascending => "Order-Ascending",
+            Order::Descending => "Order-Descending",
+        }
+    }
+    fn hover_text(&self) -> &'static str {
+        match self {
+            Order::Ascending => "Order-Ascending.hover",
+            Order::Descending => "Order-Descending.hover",
+        }
+    }
 }
 
 /// Selection
