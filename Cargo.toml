@@ -1,6 +1,6 @@
 [package]
 name = "utca"
-version = "0.50.1"
+version = "0.51.0"
 authors = ["Giorgi Vladimirovich Kazakov", "Roman Alexandrovich Sidorov"]
 edition = "2024"
 
