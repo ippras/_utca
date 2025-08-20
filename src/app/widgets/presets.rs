@@ -97,6 +97,27 @@ impl Presets {
                 ui.labeled_separator(RichText::new("Sunflower").heading());
                 preset(ui, &SUNFLOWER_SEED_COMMODITY);
             });
+        SubMenuButton::new("Martinez-Force 2004")
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+            .ui(ui, |ui| {
+                ui.hyperlink_to(
+                    RichText::new("10.1016/j.ab.2004.07.019").heading(),
+                    "https://doi.org/10.1016/j.ab.2004.07.019",
+                );
+                ui.labeled_separator(RichText::new("Hazelnut").heading());
+                preset(ui, &HAZELNUT);
+                ui.labeled_separator(RichText::new("Olive").heading());
+                preset(ui, &OLIVE);
+                ui.labeled_separator(RichText::new("Rice").heading());
+                preset(ui, &RICE);
+                ui.labeled_separator(RichText::new("Soybean").heading());
+                preset(ui, &SOYBEAN);
+                ui.labeled_separator(RichText::new("Sunflower").heading());
+                preset(ui, &SUNFLOWER_CAS3);
+                preset(ui, &SUNFLOWER_RHA274);
+                ui.labeled_separator(RichText::new("Walnut").heading());
+                preset(ui, &WALNUT);
+            });
     }
 }
 

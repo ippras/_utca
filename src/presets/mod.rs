@@ -1,4 +1,4 @@
-pub(crate) use self::{ippras::*, reske1997::*};
+pub(crate) use self::{ippras::*, martínez_force2004::*, reske1997::*};
 
 use metadata::MetaDataFrame;
 use std::{io::Cursor, sync::LazyLock};
@@ -59,6 +59,20 @@ mod ippras {
 }
 
 // Third party
+
+// [Martínez-Force2004](https://doi.org/10.1016/j.ab.2004.07.019)
+#[rustfmt::skip]
+mod martínez_force2004 {
+    use super::*;
+
+    pub(crate) static HAZELNUT: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Hazelnut.2025-08-19.utca.parquet");
+    pub(crate) static OLIVE: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Olive.2025-08-19.utca.parquet");
+    pub(crate) static RICE: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Rice.2025-08-19.utca.parquet");
+    pub(crate) static SOYBEAN: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Soybean.2025-08-19.utca.parquet");
+    pub(crate) static SUNFLOWER_CAS3: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Sunflower CAS-3.2025-08-19.utca.parquet");
+    pub(crate) static SUNFLOWER_RHA274: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Sunflower RHA-274.2025-08-19.utca.parquet");
+    pub(crate) static WALNUT: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Walnut.2025-08-19.utca.parquet");
+}
 
 // [Reske1997](https://doi.org/10.1007/s11746-997-0016-1)
 #[rustfmt::skip]
