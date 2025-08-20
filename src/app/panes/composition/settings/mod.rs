@@ -6,28 +6,24 @@ pub(crate) use self::{
 };
 
 use crate::{
-    app::{
-        MAX_PRECISION,
-        computers::{UniqueCompositionComputed, UniqueCompositionKey},
-    },
+    app::MAX_PRECISION,
     r#const::relative_atomic_mass::{H, LI, NA, NH4},
     text::Text,
     utils::Hashed,
 };
 use egui::{
-    ComboBox, DragValue, Grid, Id, Key, KeyboardShortcut, Modal, Modifiers, PopupCloseBehavior,
-    Response, RichText, ScrollArea, Sides, Slider, Ui, emath::Float, util::hash,
+    ComboBox, DragValue, Grid, Id, Key, KeyboardShortcut, Modifiers, PopupCloseBehavior, RichText,
+    ScrollArea, Slider, Ui, emath::Float,
 };
 use egui_ext::LabeledSeparator;
 use egui_l20n::UiExt;
-use egui_phosphor::regular::{ARROWS_CLOCKWISE, ERASER, MINUS, PLUS};
+use egui_phosphor::regular::{ERASER, MINUS, PLUS};
 use indexmap::IndexMap;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, VecDeque},
+    collections::VecDeque,
     hash::{Hash, Hasher},
-    ops::Deref,
 };
 
 /// Composition settings
@@ -100,7 +96,7 @@ impl Settings {
                                         ui.localize(selected_value.text()),
                                     )
                                     .on_hover_ui(|ui| {
-                                        ui.localize(selected_value.hover_text());
+                                        ui.label(ui.localize(selected_value.hover_text()));
                                     });
                                 if response.clicked() {
                                     self.special.selections.push_front(Selection {
@@ -216,34 +212,36 @@ impl Settings {
                     self.special.method = Method::VanderWal;
                 }
                 ComboBox::from_id_salt("Method")
-                    .selected_text(ui.localize(match self.special.method {
-                        Method::Gunstone => "Method-Gunstone",
-                        Method::VanderWal => "Method-VanderWal",
-                    }))
+                    .selected_text(ui.localize(self.special.method.text()))
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.special.method,
                             Method::Gunstone,
-                            ui.localize("Method-Gunstone"),
+                            ui.localize(Method::Gunstone.text()),
                         )
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Method-Gunstone.hover"));
+                            ui.label(ui.localize(Method::Gunstone.hover_text()));
+                        });
+                        ui.selectable_value(
+                            &mut self.special.method,
+                            Method::MartinezForce,
+                            ui.localize(Method::MartinezForce.text()),
+                        )
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize(Method::MartinezForce.hover_text()));
                         });
                         ui.selectable_value(
                             &mut self.special.method,
                             Method::VanderWal,
-                            ui.localize("Method-VanderWal"),
+                            ui.localize(Method::VanderWal.text()),
                         )
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Method-VanderWal.hover"));
+                            ui.label(ui.localize(Method::VanderWal.hover_text()));
                         });
                     })
                     .response
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize(match self.special.method {
-                            Method::Gunstone => "Method-Gunstone.hover",
-                            Method::VanderWal => "Method-VanderWal.hover",
-                        }));
+                        ui.label(ui.localize(self.special.method.hover_text()));
                     });
                 ui.end_row();
 
@@ -563,7 +561,25 @@ impl Hash for Discriminants {
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub(crate) enum Method {
     Gunstone,
+    MartinezForce,
     VanderWal,
+}
+
+impl Text for Method {
+    fn text(&self) -> &'static str {
+        match self {
+            Self::Gunstone => "Method-Gunstone",
+            Self::MartinezForce => "Method-MartinezForce",
+            Self::VanderWal => "Method-VanderWal",
+        }
+    }
+    fn hover_text(&self) -> &'static str {
+        match self {
+            Self::Gunstone => "Method-Gunstone.hover",
+            Self::MartinezForce => "Method-MartinezForce.hover",
+            Self::VanderWal => "Method-VanderWal.hover",
+        }
+    }
 }
 
 /// Sort

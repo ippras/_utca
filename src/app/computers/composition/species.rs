@@ -70,8 +70,8 @@ pub(crate) struct Key<'a> {
     pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
     pub(crate) index: Option<usize>,
     pub(crate) ddof: u8,
-    pub(crate) method: Method,
     pub(crate) discriminants: &'a Discriminants,
+    pub(crate) method: Method,
 }
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
@@ -97,6 +97,7 @@ type Value = Hashed<DataFrame>;
 fn compute(lazy_frame: LazyFrame, settings: Settings) -> PolarsResult<LazyFrame> {
     match settings.method {
         Method::Gunstone => gunstone(lazy_frame, settings.discriminants),
+        Method::MartinezForce => martinez_force::compute(lazy_frame),
         Method::VanderWal => vander_wal(lazy_frame),
     }
 }
@@ -577,3 +578,5 @@ impl Gunstone {
 //         })
 //         .normalized()
 // }
+
+mod martinez_force;
