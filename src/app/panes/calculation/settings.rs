@@ -1,5 +1,5 @@
-use super::{ID_SOURCE, State};
-use crate::app::MAX_PRECISION;
+use super::ID_SOURCE;
+use crate::app::{MAX_PRECISION, panes::calculation::state::Windows};
 use egui::{ComboBox, Grid, Key, KeyboardShortcut, Modifiers, RichText, Slider, Ui};
 use egui_ext::{LabeledSeparator, Markdown as _};
 use egui_l20n::{ResponseExt, UiExt as _};
@@ -56,7 +56,7 @@ impl Default for Settings {
 }
 
 impl Settings {
-    pub(crate) fn show(&mut self, ui: &mut Ui, state: &mut State) {
+    pub(crate) fn show(&mut self, ui: &mut Ui) {
         Grid::new(ID_SOURCE).show(ui, |ui| {
             // Precision
             ui.label(ui.localize("Precision"))
@@ -156,10 +156,12 @@ impl Settings {
             let mut response = ui.label(ui.localize("Normalize-Christie"));
             ui.horizontal(|ui| {
                 response |= ui.checkbox(&mut self.christie, "");
+                let mut windows = Windows::load(ui.ctx());
                 ui.toggle_value(
-                    &mut state.windows.open_christie,
+                    &mut windows.open_christie,
                     RichText::new(BROWSERS).heading(),
                 );
+                windows.store(ui.ctx());
                 response.on_hover_localized("Normalize-Christie.hover");
             });
             ui.end_row();

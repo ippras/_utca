@@ -1,4 +1,8 @@
-use self::{settings::Settings, table::TableView};
+use self::{
+    settings::Settings,
+    state::{Table as CalculationTableState, Windows},
+    table::TableView,
+};
 use super::PaneDelegate;
 use crate::{
     app::{
@@ -71,6 +75,7 @@ impl Pane {
 
 impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
+        let mut windows = Windows::load(ui.ctx());
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));
         });
@@ -109,7 +114,9 @@ impl Pane {
             })
             .clicked()
         {
-            self.state.reset_table_state = true;
+            let mut table_state = CalculationTableState::load(ui.ctx());
+            table_state.reset = true;
+            table_state.store(ui.ctx());
         }
         // Resize
         ui.toggle_value(
@@ -122,7 +129,7 @@ impl Pane {
         ui.separator();
         // Parameters
         ui.toggle_value(
-            &mut self.state.windows.open_parameters,
+            &mut windows.open_parameters,
             RichText::new(SLIDERS_HORIZONTAL).heading(),
         )
         .on_hover_ui(|ui| {
@@ -130,22 +137,16 @@ impl Pane {
         });
         ui.separator();
         // Settings
-        ui.toggle_value(
-            &mut self.state.windows.open_settings,
-            RichText::new(GEAR).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("Settings"));
-        });
+        ui.toggle_value(&mut windows.open_settings, RichText::new(GEAR).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Settings"));
+            });
         ui.separator();
         // Indices
-        ui.toggle_value(
-            &mut self.state.windows.open_indices,
-            RichText::new(SIGMA).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("Indices"));
-        });
+        ui.toggle_value(&mut windows.open_indices, RichText::new(SIGMA).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Indices"));
+            });
         ui.separator();
         // Composition
         if ui
@@ -158,6 +159,7 @@ impl Pane {
             let _ = self.composition(ui);
         }
         ui.separator();
+        windows.store(ui.ctx());
         response
     }
 
@@ -214,24 +216,25 @@ impl Pane {
                     settings: &self.settings,
                 })
         });
-        TableView::new(&self.target, &self.settings, &mut self.state).show(ui);
+        TableView::new(&self.target, &self.settings).show(ui);
     }
 }
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
-        self.christie(ui);
-        self.indices(ui);
-        self.parameters(ui);
-        self.settings(ui);
+        let windows = &mut Windows::load(ui.ctx());
+        self.christie(ui, windows);
+        self.indices(ui, windows);
+        self.parameters(ui, windows);
+        self.settings(ui, windows);
+        windows.store(ui.ctx());
     }
 
-    fn christie(&mut self, ui: &mut Ui) {
-        let mut open = self.state.windows.open_christie;
+    fn christie(&mut self, ui: &mut Ui, windows: &mut Windows) {
         Window::new(format!("{MATH_OPERATIONS} Christie"))
             .default_pos(ui.next_widget_position())
             .id(ui.auto_id_with("Christie"))
-            .open(&mut open)
+            .open(&mut windows.open_christie)
             .show(ui.ctx(), |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
                     Grid::new(ui.next_auto_id()).show(ui, |ui| {
@@ -250,16 +253,13 @@ impl Pane {
                     });
                 });
             });
-        self.state.windows.open_christie = open;
     }
 
-    fn indices(&mut self, ui: &mut Ui) {
-        let mut open = self.state.windows.open_indices;
+    fn indices(&mut self, ui: &mut Ui, windows: &mut Windows) {
         Window::new(format!("{SIGMA} Calculation indices"))
             .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
-            .open(&mut open)
+            .open(&mut windows.open_indices)
             .show(ui.ctx(), |ui| self.indices_content(ui));
-        self.state.windows.open_indices = open;
     }
 
     #[instrument(skip_all, err)]
@@ -283,11 +283,10 @@ impl Pane {
             .inner
     }
 
-    fn parameters(&mut self, ui: &mut Ui) {
-        let mut open = self.state.windows.open_parameters;
+    fn parameters(&mut self, ui: &mut Ui, windows: &mut Windows) {
         Window::new(format!("{SLIDERS_HORIZONTAL} Calculation parameters"))
             .id(ui.auto_id_with(ID_SOURCE).with("Parameters"))
-            .open(&mut open)
+            .open(&mut windows.open_parameters)
             .show(ui.ctx(), |ui| {
                 self.state.parameters.show(ui);
                 let id = ui.make_persistent_id(ID_SOURCE).with("Parameters");
@@ -302,18 +301,15 @@ impl Pane {
                 table_state.show(ui);
                 table_state.store(ui.ctx());
             });
-        self.state.windows.open_parameters = open;
     }
 
-    fn settings(&mut self, ui: &mut Ui) {
-        let mut open = self.state.windows.open_settings;
+    fn settings(&mut self, ui: &mut Ui, windows: &mut Windows) {
         Window::new(format!("{GEAR} Calculation settings"))
             .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
-            .open(&mut open)
+            .open(&mut windows.open_settings)
             .show(ui.ctx(), |ui| {
                 self.settings.show(ui, &mut self.state);
             });
-        self.state.windows.open_settings = open;
     }
 }
 

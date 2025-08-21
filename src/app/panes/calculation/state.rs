@@ -1,38 +1,26 @@
 use super::ID_SOURCE;
-use crate::{app::MAX_PRECISION, utils::egui::State};
+use crate::app::MAX_PRECISION;
 use egui::{Context, Grid, Id, Slider, Ui};
 use egui_l20n::{ResponseExt, UiExt as _};
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 
-// #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-// pub(crate) struct State {
-//     pub(crate) parameters: Parameters,
-//     pub(crate) windows: Windows,
-//     pub(crate) reset_table_state: bool,
-// }
+static SETTINGS: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("Settings"));
+static WINDOWS: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("Windows"));
+static TABLE: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("Table"));
 
-// impl State {
-//     pub(crate) fn new() -> Self {
-//         Self {
-//             parameters: Parameters::new(),
-//             windows: Windows::new(),
-//             reset_table_state: false,
-//         }
-//     }
-// }
-
-/// Calculation parameters state
+/// Calculation settings state
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-pub(crate) struct Parameters {
-    pub(crate) percent: bool,
-    pub(crate) precision: usize,
-    pub(crate) resizable: bool,
-    pub(crate) sticky_columns: usize,
-    pub(crate) truncate_headers: bool,
+pub struct Settings {
+    pub percent: bool,
+    pub precision: usize,
+    pub resizable: bool,
+    pub sticky_columns: usize,
+    pub truncate_headers: bool,
 }
 
-impl Parameters {
-    pub(crate) fn new() -> Self {
+impl Settings {
+    pub fn new() -> Self {
         Self {
             percent: true,
             precision: 1,
@@ -43,8 +31,8 @@ impl Parameters {
     }
 }
 
-impl Parameters {
-    pub(crate) fn show(&mut self, ui: &mut Ui) {
+impl Settings {
+    pub fn show(&mut self, ui: &mut Ui) {
         Grid::new(ID_SOURCE).show(ui, |ui| {
             // Precision
             ui.label(ui.localize("Precision"))
@@ -73,43 +61,97 @@ impl Parameters {
     }
 }
 
-impl State for Parameters {
-    fn load(ctx: &Context, id: Id) -> Self {
+impl Settings {
+    fn load(ctx: &Context) -> Self {
         ctx.data_mut(|data| {
-            data.get_persisted_mut_or_insert_with(id, || Parameters::new())
+            data.get_persisted_mut_or_insert_with(*SETTINGS, || Self::new())
                 .clone()
         })
     }
 
-    fn store(self, ctx: &Context, id: Id) {
+    fn store(self, ctx: &Context) {
         ctx.data_mut(|data| {
-            data.insert_persisted(id, self);
+            data.insert_persisted(*SETTINGS, self);
         });
     }
 
-    fn reset(ctx: &Context, id: Id) {
+    fn reset(ctx: &Context) {
         ctx.data_mut(|data| {
-            data.insert_persisted(id, Parameters::new());
+            data.insert_persisted(*SETTINGS, Self::new());
         })
     }
 }
 
 /// Calculation windows state
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-pub(crate) struct Windows {
-    pub(crate) open_christie: bool,
-    pub(crate) open_indices: bool,
-    pub(crate) open_parameters: bool,
-    pub(crate) open_settings: bool,
+pub struct Windows {
+    pub open_christie: bool,
+    pub open_indices: bool,
+    pub open_parameters: bool,
+    pub open_settings: bool,
 }
 
 impl Windows {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             open_christie: false,
             open_indices: false,
             open_parameters: false,
             open_settings: false,
         }
+    }
+}
+
+impl Windows {
+    pub fn load(ctx: &Context) -> Self {
+        ctx.data_mut(|data| {
+            data.get_persisted_mut_or_insert_with(*WINDOWS, || Self::new())
+                .clone()
+        })
+    }
+
+    pub fn store(self, ctx: &Context) {
+        ctx.data_mut(|data| {
+            data.insert_persisted(*WINDOWS, self);
+        });
+    }
+
+    pub fn reset(ctx: &Context) {
+        ctx.data_mut(|data| {
+            data.insert_persisted(*WINDOWS, Self::new());
+        })
+    }
+}
+
+/// Table state
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+pub struct Table {
+    pub reset: bool,
+}
+
+impl Table {
+    pub fn new() -> Self {
+        Self { reset: false }
+    }
+}
+
+impl Table {
+    pub fn load(ctx: &Context) -> Self {
+        ctx.data_mut(|data| {
+            data.get_persisted_mut_or_insert_with(*TABLE, || Self::new())
+                .clone()
+        })
+    }
+
+    pub fn store(self, ctx: &Context) {
+        ctx.data_mut(|data| {
+            data.insert_persisted(*TABLE, self);
+        });
+    }
+
+    pub fn reset(ctx: &Context) {
+        ctx.data_mut(|data| {
+            data.insert_persisted(*TABLE, Self::new());
+        })
     }
 }

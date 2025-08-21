@@ -1,6 +1,7 @@
 use super::{
-    ID_SOURCE, State,
+    ID_SOURCE,
     settings::{From, Settings},
+    state::Table as CalculationTableState,
 };
 use crate::app::{panes::MARGIN, widgets::FloatWidget};
 use egui::{Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
@@ -38,19 +39,13 @@ const MIDDLE: &[Range<usize>] = &[
 pub(crate) struct TableView<'a> {
     data_frame: &'a DataFrame,
     settings: &'a Settings,
-    state: &'a mut State,
 }
 
 impl<'a> TableView<'a> {
-    pub(crate) fn new(
-        data_frame: &'a DataFrame,
-        settings: &'a Settings,
-        state: &'a mut State,
-    ) -> Self {
+    pub(crate) fn new(data_frame: &'a DataFrame, settings: &'a Settings) -> Self {
         Self {
             data_frame,
             settings,
-            state,
         }
     }
 }
@@ -58,10 +53,12 @@ impl<'a> TableView<'a> {
 impl TableView<'_> {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        if self.state.reset_table_state {
+        let mut table_state = CalculationTableState::load(ui.ctx());
+        if table_state.reset {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            self.state.reset_table_state = false;
+            table_state.reset = false;
+            table_state.store(ui.ctx());
         }
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
         let num_rows = self.data_frame.height() as u64 + 1;
