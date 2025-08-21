@@ -1,6 +1,6 @@
 use super::{
     ID_SOURCE, State,
-    config::{From, Config},
+    settings::{From, Settings},
 };
 use crate::app::{panes::MARGIN, widgets::FloatWidget};
 use egui::{Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
@@ -37,14 +37,14 @@ const MIDDLE: &[Range<usize>] = &[
 /// Calculation table
 pub(crate) struct TableView<'a> {
     data_frame: &'a DataFrame,
-    settings: &'a Config,
+    settings: &'a Settings,
     state: &'a mut State,
 }
 
 impl<'a> TableView<'a> {
     pub(crate) fn new(
         data_frame: &'a DataFrame,
-        settings: &'a Config,
+        settings: &'a Settings,
         state: &'a mut State,
     ) -> Self {
         Self {

@@ -8,57 +8,37 @@ use egui_phosphor::regular::{DOTS_SIX_VERTICAL, EYE, EYE_SLASH, GEAR, SLIDERS_HO
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct TableConfig {
+pub struct TableState {
     id: Id,
-    columns: Vec<ColumnConfig>,
+    columns: Vec<ColumnState>,
 }
 
-impl TableConfig {
+impl TableState {
     pub fn new(id: Id) -> Self {
-        // Self {
-        //     id,
-        //     columns: Vec::new(),
-        // }
         Self {
             id,
-            columns: vec![
-                ColumnConfig {
-                    id: Id::new("0"),
-                    name: "0".to_owned(),
-                    visible: true,
-                },
-                ColumnConfig {
-                    id: Id::new("1"),
-                    name: "1".to_owned(),
-                    visible: true,
-                },
-                ColumnConfig {
-                    id: Id::new("2"),
-                    name: "2".to_owned(),
-                    visible: true,
-                },
-            ],
+            columns: Vec::new(),
         }
     }
 
-    pub fn load(ctx: &Context, id: Id, columns: impl Iterator<Item = ColumnConfig>) -> Self {
+    pub fn load(ctx: &Context, id: Id, columns: impl Iterator<Item = ColumnState>) -> Self {
         ctx.data_mut(|data| {
-            let config = data.get_persisted_mut_or_insert_with(id, || Self::new(id));
+            let table_state = data.get_persisted_mut_or_insert_with(id, || Self::new(id));
             let mut has_columns = HashSet::default();
-            for column_config in columns {
-                has_columns.insert(column_config.id);
-                if !config
+            for column_state in columns {
+                has_columns.insert(column_state.id);
+                if !table_state
                     .columns
                     .iter()
-                    .any(|ColumnConfig { name, .. }| *name == column_config.name)
+                    .any(|ColumnState { name, .. }| *name == column_state.name)
                 {
-                    config.columns.push(column_config);
+                    table_state.columns.push(column_state);
                 }
             }
-            config
+            table_state
                 .columns
                 .retain(|column| has_columns.contains(&column.id));
-            config.clone()
+            table_state.clone()
         })
     }
 
@@ -68,7 +48,7 @@ impl TableConfig {
         });
     }
 
-    pub fn visible_columns(&self) -> impl Iterator<Item = &ColumnConfig> {
+    pub fn visible_columns(&self) -> impl Iterator<Item = &ColumnState> {
         self.columns.iter().filter(|column| column.visible)
     }
 
@@ -81,14 +61,15 @@ impl TableConfig {
     }
 }
 
-impl TableConfig {
+impl TableState {
     pub fn show(&mut self, ui: &mut Ui) {
         self.columns(ui);
     }
 
     pub fn columns(&mut self, ui: &mut Ui) {
-        let response =
-            dnd(ui, "Columns").show(self.columns.iter_mut(), |ui, item, handle, _state| {
+        let response = dnd(ui, self.id.with("Columns")).show(
+            self.columns.iter_mut(),
+            |ui, item, handle, _state| {
                 let visible = item.visible;
                 Sides::new().show(
                     ui,
@@ -111,7 +92,8 @@ impl TableConfig {
                         }
                     },
                 );
-            });
+            },
+        );
         if response.is_drag_finished() {
             response.update_vec(self.columns.as_mut_slice());
         }
@@ -119,13 +101,13 @@ impl TableConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Hash, Serialize)]
-pub struct ColumnConfig {
+pub struct ColumnState {
     id: Id,
     name: String,
     visible: bool,
 }
 
-impl ColumnConfig {
+impl ColumnState {
     pub fn new(id: Id, name: String) -> Self {
         Self {
             id,
