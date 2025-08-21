@@ -34,3 +34,5 @@ pub trait State: Sized {
 //         self.set_undoer(SettingsUndoer::default());
 //     }
 // }
+
+pub mod table;

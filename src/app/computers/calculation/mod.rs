@@ -1,6 +1,6 @@
 use crate::{
     app::{
-        panes::calculation::settings::{From, Settings},
+        panes::calculation::config::{From, Config},
         presets::CHRISTIE,
     },
     utils::{Hashed, hash},
@@ -72,7 +72,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Key<'a> {
     pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
-    pub(crate) settings: &'a Settings,
+    pub(crate) settings: &'a Config,
 }
 
 impl Hash for Key<'_> {
@@ -97,7 +97,7 @@ impl Hash for Key<'_> {
 /// Calculation value
 type Value = DataFrame;
 
-fn compute(mut lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
+fn compute(mut lazy_frame: LazyFrame, settings: &Config) -> PolarsResult<LazyFrame> {
     // Christie
     if settings.christie {
         lazy_frame = christie(lazy_frame);
@@ -158,7 +158,7 @@ fn christie(lazy_frame: LazyFrame) -> LazyFrame {
         .drop(by_name(["Hash"], true))
 }
 
-fn means(lazy_frame: LazyFrame, settings: &Settings) -> PolarsResult<LazyFrame> {
+fn means(lazy_frame: LazyFrame, settings: &Config) -> PolarsResult<LazyFrame> {
     Ok(lazy_frame.select([
         col("Label"),
         col("FattyAcid"),
@@ -229,7 +229,7 @@ struct ExperimentalExpr(Expr);
 // TODO
 // if Fraction then: UserWarning: groups may be out of bounds; more groups than elements in a series is only possible in dynamic group_by
 impl ExperimentalExpr {
-    fn compute(self, fatty_acid: Expr, settings: &Settings) -> Expr {
+    fn compute(self, fatty_acid: Expr, settings: &Config) -> Expr {
         // // col(name) / (col(name) * col("FA").fa().mass() / lit(10)).sum()
         let experimental = |mut expr: Expr| {
             // S / ∑(S * M)
@@ -270,7 +270,7 @@ impl Mag2 for ExperimentalExpr {
 struct TheoreticalExpr(Expr);
 
 impl TheoreticalExpr {
-    fn compute(self, settings: &Settings) -> Expr {
+    fn compute(self, settings: &Config) -> Expr {
         // 3 * TAG =  2 * DAG13 + MAG2
         let tag = || (lit(4) * self.clone().dag1223() - self.clone().mag2()) / lit(3);
         // DAG1223 = (3 * TAG + MAG2) / 4

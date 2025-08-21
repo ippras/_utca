@@ -1,0 +1,136 @@
+use ahash::HashSet;
+use egui::{
+    Context, Id, PopupCloseBehavior, RichText, Sides, Ui,
+    containers::menu::{MenuButton, MenuConfig},
+};
+use egui_dnd::dnd;
+use egui_phosphor::regular::{DOTS_SIX_VERTICAL, EYE, EYE_SLASH, GEAR, SLIDERS_HORIZONTAL};
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TableConfig {
+    id: Id,
+    columns: Vec<ColumnConfig>,
+}
+
+impl TableConfig {
+    pub fn new(id: Id) -> Self {
+        // Self {
+        //     id,
+        //     columns: Vec::new(),
+        // }
+        Self {
+            id,
+            columns: vec![
+                ColumnConfig {
+                    id: Id::new("0"),
+                    name: "0".to_owned(),
+                    visible: true,
+                },
+                ColumnConfig {
+                    id: Id::new("1"),
+                    name: "1".to_owned(),
+                    visible: true,
+                },
+                ColumnConfig {
+                    id: Id::new("2"),
+                    name: "2".to_owned(),
+                    visible: true,
+                },
+            ],
+        }
+    }
+
+    pub fn load(ctx: &Context, id: Id, columns: impl Iterator<Item = ColumnConfig>) -> Self {
+        ctx.data_mut(|data| {
+            let config = data.get_persisted_mut_or_insert_with(id, || Self::new(id));
+            let mut has_columns = HashSet::default();
+            for column_config in columns {
+                has_columns.insert(column_config.id);
+                if !config
+                    .columns
+                    .iter()
+                    .any(|ColumnConfig { name, .. }| *name == column_config.name)
+                {
+                    config.columns.push(column_config);
+                }
+            }
+            config
+                .columns
+                .retain(|column| has_columns.contains(&column.id));
+            config.clone()
+        })
+    }
+
+    pub fn store(self, ctx: &Context) {
+        ctx.data_mut(|data| {
+            data.insert_persisted(self.id, self);
+        });
+    }
+
+    pub fn visible_columns(&self) -> impl Iterator<Item = &ColumnConfig> {
+        self.columns.iter().filter(|column| column.visible)
+    }
+
+    pub fn visible_column_names(&self) -> impl Iterator<Item = &str> {
+        self.visible_columns().map(|column| column.name.as_str())
+    }
+
+    pub fn visible_column_ids(&self) -> impl Iterator<Item = Id> + use<'_> {
+        self.visible_columns().map(|column| column.id)
+    }
+}
+
+impl TableConfig {
+    pub fn show(&mut self, ui: &mut Ui) {
+        self.columns(ui);
+    }
+
+    pub fn columns(&mut self, ui: &mut Ui) {
+        let response =
+            dnd(ui, "Columns").show(self.columns.iter_mut(), |ui, item, handle, _state| {
+                let visible = item.visible;
+                Sides::new().show(
+                    ui,
+                    |ui| {
+                        handle.ui(ui, |ui| {
+                            ui.label(DOTS_SIX_VERTICAL);
+                        });
+                        let mut label = RichText::new(&item.name);
+                        if !visible {
+                            label = label.weak();
+                        }
+                        ui.label(label);
+                    },
+                    |ui| {
+                        if ui
+                            .small_button(if item.visible { EYE } else { EYE_SLASH })
+                            .clicked()
+                        {
+                            item.visible = !item.visible;
+                        }
+                    },
+                );
+            });
+        if response.is_drag_finished() {
+            response.update_vec(self.columns.as_mut_slice());
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Hash, Serialize)]
+pub struct ColumnConfig {
+    id: Id,
+    name: String,
+    visible: bool,
+}
+
+impl ColumnConfig {
+    pub fn new(id: Id, name: String) -> Self {
+        Self {
+            id,
+            name,
+            visible: true,
+        }
+    }
+}

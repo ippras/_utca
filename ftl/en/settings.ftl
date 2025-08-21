@@ -4,6 +4,7 @@ About = About
 Calculation = Calculation
 Composition = Composition
 Configuration = Configuration
+Config = Config
 Create = Create
 Edit = Edit
 Grid = Grid
