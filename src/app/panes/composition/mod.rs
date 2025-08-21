@@ -16,9 +16,9 @@ use crate::{
     },
     export::{parquet, xlsx},
     text::Text,
-    utils::Hashed,
+    utils::{Hashed, egui::table::TableState},
 };
-use egui::{CursorIcon, Response, RichText, Ui, Window, util::hash};
+use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, SIGMA,
@@ -221,6 +221,10 @@ impl Pane {
         .on_hover_text(self.state.view.hover_text());
         ui.end_row();
         ui.separator();
+        // let id = Id::new("TableConfig");
+        // let mut table_config = TableConfig::load(ui.ctx(), id);
+        // table_config.show(ui);
+        // table_config.store(ui.ctx());
         response
     }
 

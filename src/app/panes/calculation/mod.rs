@@ -1,4 +1,8 @@
-use self::{settings::Settings, state::State, table::TableView};
+use self::{
+    parameters::Parameters,
+    settings::{Settings, Windows},
+    table::TableView,
+};
 use super::PaneDelegate;
 use crate::{
     app::{
@@ -9,13 +13,16 @@ use crate::{
         presets::CHRISTIE,
         widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
     },
-    utils::Hashed,
+    utils::{
+        Hashed,
+        egui::table::{ColumnState, TableState},
+    },
 };
 use egui::{CursorIcon, Grid, Id, Response, RichText, ScrollArea, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS,
-    SIGMA,
+    SIGMA, SLIDERS_HORIZONTAL,
 };
 use lipid::prelude::*;
 use metadata::MetaDataFrame;
@@ -31,8 +38,7 @@ const ID_SOURCE: &str = "Calculation";
 pub(crate) struct Pane {
     source: Hashed<Vec<MetaDataFrame>>,
     target: DataFrame,
-    settings: Settings,
-    state: State,
+    parameters: Parameters,
 }
 
 impl Pane {
@@ -40,8 +46,7 @@ impl Pane {
         Self {
             source: Hashed::new(frames),
             target: DataFrame::empty(),
-            settings: Settings::new(Some(index)),
-            state: State::new(),
+            parameters: Parameters::new(Some(index)),
         }
     }
 
@@ -50,7 +55,7 @@ impl Pane {
     }
 
     pub(crate) fn title(&self) -> String {
-        match self.settings.index {
+        match self.parameters.index {
             Some(index) => self.source[index].meta.format(" ").to_string(),
             None => {
                 format_list_truncated!(
@@ -70,6 +75,8 @@ impl Pane {
 
 impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
+        let mut settings = Settings::load(ui.ctx());
+        let mut windows = Windows::load(ui.ctx());
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));
         });
@@ -84,13 +91,17 @@ impl Pane {
             for index in 0..self.source.len() {
                 clicked |= ui
                     .selectable_value(
-                        &mut self.settings.index,
+                        &mut self.parameters.index,
                         Some(index),
                         self.source[index].meta.format(".").to_string(),
                     )
                     .clicked()
             }
-            ui.selectable_value(&mut self.settings.index, None, "Mean ± standard deviations");
+            ui.selectable_value(
+                &mut self.parameters.index,
+                None,
+                "Mean ± standard deviations",
+            );
             if clicked {
                 ui.close();
             }
@@ -108,11 +119,11 @@ impl Pane {
             })
             .clicked()
         {
-            self.state.reset_table_state = true;
+            settings.table.state.reset = true;
         }
         // Resize
         ui.toggle_value(
-            &mut self.settings.resizable,
+            &mut settings.table.resizable,
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
         .on_hover_ui(|ui| {
@@ -121,21 +132,24 @@ impl Pane {
         ui.separator();
         // Settings
         ui.toggle_value(
-            &mut self.state.open_settings_window,
-            RichText::new(GEAR).heading(),
+            &mut windows.open_settings,
+            RichText::new(SLIDERS_HORIZONTAL).heading(),
         )
         .on_hover_ui(|ui| {
             ui.label(ui.localize("Settings"));
         });
         ui.separator();
+        // Parameters
+        ui.toggle_value(&mut windows.open_parameters, RichText::new(GEAR).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Parameters"));
+            });
+        ui.separator();
         // Indices
-        ui.toggle_value(
-            &mut self.state.open_indices_window,
-            RichText::new(SIGMA).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("Indices"));
-        });
+        ui.toggle_value(&mut windows.open_indices, RichText::new(SIGMA).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Indices"));
+            });
         ui.separator();
         // Composition
         if ui
@@ -148,6 +162,8 @@ impl Pane {
             let _ = self.composition(ui);
         }
         ui.separator();
+        settings.store(ui.ctx());
+        windows.store(ui.ctx());
         response
     }
 
@@ -162,9 +178,9 @@ impl Pane {
                     .cache::<CalculationComputed>()
                     .get(CalculationKey {
                         frames: &self.source,
-                        settings: &Settings {
+                        settings: &Parameters {
                             index: Some(index),
-                            ..self.settings
+                            ..self.parameters
                         },
                     })
             });
@@ -190,7 +206,7 @@ impl Pane {
             frames.push(MetaDataFrame::new(meta, data));
         }
         // println!("target: {target:?}");
-        ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (frames, self.settings.index)));
+        ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (frames, self.parameters.index)));
         Ok(())
     }
 
@@ -201,26 +217,28 @@ impl Pane {
                 .cache::<CalculationComputed>()
                 .get(CalculationKey {
                     frames: &self.source,
-                    settings: &self.settings,
+                    settings: &self.parameters,
                 })
         });
-        TableView::new(&self.target, &self.settings, &mut self.state).show(ui);
+        TableView::new(ui.ctx(), &self.target, &self.parameters).show(ui);
     }
 }
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
-        self.christie(ui);
-        self.indices(ui);
-        self.settings(ui);
+        let windows = &mut Windows::load(ui.ctx());
+        self.christie(ui, windows);
+        self.indices(ui, windows);
+        self.parameters(ui, windows);
+        self.settings(ui, windows);
+        windows.store(ui.ctx());
     }
 
-    fn christie(&mut self, ui: &mut Ui) {
-        let mut open_christie_window = self.state.open_christie_window;
+    fn christie(&mut self, ui: &mut Ui, windows: &mut Windows) {
         Window::new(format!("{MATH_OPERATIONS} Christie"))
             .default_pos(ui.next_widget_position())
             .id(ui.auto_id_with("Christie"))
-            .open(&mut open_christie_window)
+            .open(&mut windows.open_christie)
             .show(ui.ctx(), |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
                     Grid::new(ui.next_auto_id()).show(ui, |ui| {
@@ -239,16 +257,13 @@ impl Pane {
                     });
                 });
             });
-        self.state.open_christie_window = open_christie_window;
     }
 
-    fn indices(&mut self, ui: &mut Ui) {
-        let mut open_indices_window = self.state.open_indices_window;
+    fn indices(&mut self, ui: &mut Ui, windows: &mut Windows) {
         Window::new(format!("{SIGMA} Calculation indices"))
             .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
-            .open(&mut open_indices_window)
+            .open(&mut windows.open_indices)
             .show(ui.ctx(), |ui| self.indices_content(ui));
-        self.state.open_indices_window = open_indices_window;
     }
 
     #[instrument(skip_all, err)]
@@ -260,25 +275,54 @@ impl Pane {
                 .get(CalculationIndicesKey {
                     data_frame: Hashed {
                         value: &self.target,
-                        hash: hash(self.settings.index),
+                        hash: hash(self.parameters.index),
                     },
-                    ddof: self.settings.ddof,
+                    ddof: self.parameters.ddof,
                 })
         });
+        let settings = Settings::load(ui.ctx());
         IndicesWidget::new(&data_frame)
             .hover(true)
-            .precision(Some(self.settings.precision))
+            .precision(Some(settings.precision))
             .show(ui)
             .inner
     }
 
-    fn settings(&mut self, ui: &mut Ui) {
-        let mut open_settings_window = self.state.open_settings_window;
-        Window::new(format!("{GEAR} Calculation settings"))
+    fn parameters(&mut self, ui: &mut Ui, windows: &mut Windows) {
+        Window::new(format!("{GEAR} Calculation parameters"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Parameters"))
+            .open(&mut windows.open_parameters)
+            .show(ui.ctx(), |ui| {
+                self.parameters.show(ui);
+            });
+    }
+
+    fn settings(&mut self, ui: &mut Ui, windows: &mut Windows) {
+        Window::new(format!("{SLIDERS_HORIZONTAL} Calculation settings"))
             .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
-            .open(&mut open_settings_window)
-            .show(ui.ctx(), |ui| self.settings.show(ui, &mut self.state));
-        self.state.open_settings_window = open_settings_window;
+            .open(&mut windows.open_settings)
+            .show(ui.ctx(), |ui| {
+                // Settings
+                let mut settings = Settings::load(ui.ctx());
+                settings.show(ui);
+                settings.store(ui.ctx());
+                // Calculation table state
+                // let mut table = CalculationTableState::load(ui.ctx());
+                // table.show(ui);
+                // table.store(ui.ctx());
+                // //
+                // let id = Id::new(ID_SOURCE).with("Table");
+                // let mut table_state = TableState::load(
+                //     ui.ctx(),
+                //     id,
+                //     self.target
+                //         .get_column_names_str()
+                //         .into_iter()
+                //         .map(|name| ColumnState::new(Id::new(name), name.to_owned())),
+                // );
+                // table_state.show(ui);
+                // table_state.store(ui.ctx());
+            });
     }
 }
 
@@ -293,7 +337,7 @@ impl PaneDelegate for Pane {
     }
 }
 
-pub(crate) mod settings;
+pub(crate) mod parameters;
 
-mod state;
+mod settings;
 mod table;

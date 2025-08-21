@@ -2,7 +2,7 @@ use egui::{Context, Id};
 
 /// State
 pub trait State: Sized {
-    fn load(ctx: &Context, id: Id) -> Option<Self>;
+    fn load(ctx: &Context, id: Id) -> Self;
 
     fn store(self, ctx: &Context, id: Id);
 
@@ -34,3 +34,5 @@ pub trait State: Sized {
 //         self.set_undoer(SettingsUndoer::default());
 //     }
 // }
+
+pub mod table;

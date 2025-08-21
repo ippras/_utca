@@ -40,7 +40,7 @@ fn ui(ui: &mut Ui) -> Response {
     let id = ui.make_persistent_id(id_salt);
     let token_id = Id::new(GITHUB_TOKEN);
     // Load
-    let mut state = SettingsState::load(ui.ctx(), id).unwrap_or_default();
+    let mut state = SettingsState::load(ui.ctx(), id);
     let mut token = ui.data_mut(|data| data.get_persisted::<String>(token_id).unwrap_or_default());
     let response = ui
         .horizontal(|ui| {
@@ -69,8 +69,8 @@ pub(crate) struct SettingsState {
 }
 
 impl State for SettingsState {
-    fn load(ctx: &Context, id: Id) -> Option<Self> {
-        ctx.data_mut(|data| data.get_persisted(id))
+    fn load(ctx: &Context, id: Id) -> Self {
+        ctx.data_mut(|data| data.get_persisted_mut_or_default::<Self>(id).clone())
     }
 
     fn store(self, ctx: &Context, id: Id) {

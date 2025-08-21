@@ -1,63 +1,35 @@
-use super::State;
-use crate::app::MAX_PRECISION;
-use egui::{ComboBox, Grid, Key, KeyboardShortcut, Modifiers, RichText, Slider, Ui};
-use egui_ext::{LabeledSeparator, Markdown as _};
+use super::ID_SOURCE;
+use crate::{app::MAX_PRECISION, utils::egui::table::TableState};
+use egui::{Context, Grid, Id, Slider, Ui};
 use egui_l20n::{ResponseExt, UiExt as _};
-use egui_phosphor::regular::BROWSERS;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
+
+static SETTINGS: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("Settings"));
+static TABLE_STATE: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("TableState"));
+static WINDOWS: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("Windows"));
 
 /// Calculation settings
-#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) struct Settings {
-    pub(crate) index: Option<usize>,
-
-    pub(crate) percent: bool,
-    pub(crate) precision: usize,
-    pub(crate) resizable: bool,
-    pub(crate) sticky_columns: usize,
-    pub(crate) truncate_headers: bool,
-
-    pub(crate) weighted: bool,
-    pub(crate) from: From,
-    pub(crate) normalize: Normalize,
-    pub(crate) unsigned: bool,
-    pub(crate) christie: bool,
-    pub(crate) ddof: u8,
-
-    pub(crate) factors: bool,
-    pub(crate) theoretical: bool,
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Settings {
+    pub percent: bool,
+    pub precision: usize,
+    pub table: TableSettings,
 }
 
 impl Settings {
-    pub(crate) fn new(index: Option<usize>) -> Self {
+    pub fn new() -> Self {
         Self {
-            index,
             percent: true,
             precision: 1,
-            resizable: false,
-            sticky_columns: 0,
-            truncate_headers: false,
-            weighted: false,
-            from: From::Mag2,
-            normalize: Normalize::new(),
-            unsigned: true,
-            christie: false,
-            ddof: 1,
-            factors: true,
-            theoretical: true,
+            table: TableSettings::new(),
         }
     }
 }
 
-impl Default for Settings {
-    fn default() -> Self {
-        Self::new(None)
-    }
-}
-
 impl Settings {
-    pub(crate) fn show(&mut self, ui: &mut Ui, state: &mut State) {
-        Grid::new("Calculation").show(ui, |ui| {
+    pub fn show(&mut self, ui: &mut Ui) {
+        Grid::new(ID_SOURCE).show(ui, |ui| {
             // Precision
             ui.label(ui.localize("Precision"))
                 .on_hover_localized("Precision.hover");
@@ -70,187 +42,156 @@ impl Settings {
             ui.checkbox(&mut self.percent, "");
             ui.end_row();
 
-            // Sticky
-            ui.label(ui.localize("StickyColumns"))
-                .on_hover_localized("StickyColumns.hover");
-            ui.add(Slider::new(&mut self.sticky_columns, 0..=14));
-            ui.end_row();
+            // // Sticky
+            // ui.label(ui.localize("StickyColumns"))
+            //     .on_hover_localized("StickyColumns.hover");
+            // ui.add(Slider::new(&mut self.sticky_columns, 0..=14));
+            // ui.end_row();
 
-            // Truncate
-            ui.label(ui.localize("TruncateHeaders"))
-                .on_hover_localized("TruncateHeaders.hover");
-            ui.checkbox(&mut self.truncate_headers, "");
-            ui.end_row();
-
-            ui.separator();
-            ui.separator();
-            ui.end_row();
-
-            // Calculate
-            ui.label(ui.localize("CalculateFrom"))
-                .on_hover_localized("CalculateFrom.hover");
-            if ui.input_mut(|input| {
-                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Num1))
-            }) {
-                self.from = From::Dag1223;
-            }
-            if ui.input_mut(|input| {
-                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Num2))
-            }) {
-                self.from = From::Mag2;
-            }
-            ComboBox::from_id_salt("1|3")
-                .selected_text(ui.localize(self.from.text()))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.from,
-                        From::Dag1223,
-                        ui.localize(From::Dag1223.text()),
-                    )
-                    .on_hover_localized(From::Dag1223.hover_text());
-                    ui.selectable_value(&mut self.from, From::Mag2, ui.localize(From::Mag2.text()))
-                        .on_hover_localized(From::Mag2.hover_text());
-                })
-                .response
-                .on_hover_localized(self.from.hover_text());
-            ui.end_row();
-
-            // Unsigned
-            ui.label(ui.localize("Unsigned"))
-                .on_hover_localized("Unsigned.hover");
-            ui.checkbox(&mut self.unsigned, ui.localize("Theoretical"));
-            ui.end_row();
-
-            // Normalize
-            ui.label(ui.localize("Normalize"))
-                .on_hover_localized("Normalize.hover");
-            ui.checkbox(
-                &mut self.normalize.experimental,
-                ui.localize("Normalize-Experimental"),
-            )
-            .on_hover_localized("Normalize-Experimental.hover");
-            ui.end_row();
-            ui.label("");
-            ui.checkbox(
-                &mut self.normalize.theoretical,
-                ui.localize("Normalize-Theoretical"),
-            )
-            .on_hover_localized("Normalize-Theoretical.hover");
-            ui.end_row();
-            ui.label("");
-            let response = ui
-                .checkbox(&mut self.weighted, ui.localize("Normalize-Weighted"))
-                .on_hover_localized("Normalize-Weighted.hover");
-            if self.weighted {
-                response.on_hover_ui(|ui| {
-                    ui.markdown(r#"$$\frac{S}{\sum{(S \cdot M)}}$$"#);
-                });
-            } else {
-                response.on_hover_ui(|ui| {
-                    ui.markdown(r#"$$\frac{S}{\sum{S}}$$"#);
-                });
-            }
-            ui.end_row();
-
-            // Christie
-            let mut response = ui.label(ui.localize("Normalize-Christie"));
-            ui.horizontal(|ui| {
-                response |= ui.checkbox(&mut self.christie, "");
-                ui.toggle_value(
-                    &mut state.open_christie_window,
-                    RichText::new(BROWSERS).heading(),
-                );
-                response.on_hover_localized("Normalize-Christie.hover");
-            });
-            ui.end_row();
-
-            ui.separator();
-            ui.labeled_separator(RichText::new(ui.localize("Show")).heading());
-            ui.end_row();
-
-            // Factors
-            ui.label(ui.localize("Show-Factors"))
-                .on_hover_localized("Show-Factors.hover");
-            ui.checkbox(&mut self.factors, "");
-            ui.end_row();
-
-            // Theoretical
-            ui.label(ui.localize("Show-Theoretical"))
-                .on_hover_localized("Show-Theoretical.hover");
-            ui.checkbox(&mut self.theoretical, "");
-            ui.end_row();
-
-            if self.index.is_none() {
-                ui.separator();
-                ui.labeled_separator(RichText::new(ui.localize("Statistics")).heading());
-                ui.end_row();
-
-                // ui.label(ui.localize("Merge"));
-                // ui.checkbox(&mut self.merge, "");
-                // ComboBox::from_id_salt("show")
-                //     .selected_text(self.show.text())
-                //     .show_ui(ui, |ui| {
-                //         ui.selectable_value(&mut self.show, Show::Separate, Show::Separate.text())
-                //             .on_hover_text(Show::Separate.hover_text());
-                //         ui.selectable_value(&mut self.show, Show::Join, Show::Join.text())
-                //             .on_hover_text(Show::Join.hover_text());
-                //     })
-                //     .response
-                //     .on_hover_text(self.show.hover_text());
-                // ui.end_row();
-
-                // https://numpy.org/devdocs/reference/generated/numpy.std.html
-                ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
-                    .on_hover_localized("DeltaDegreesOfFreedom")
-                    .on_hover_localized("DeltaDegreesOfFreedom.hover");
-                ui.add(Slider::new(&mut self.ddof, 0..=2));
-                ui.end_row();
-            }
+            // // Truncate
+            // ui.label(ui.localize("TruncateHeaders"))
+            //     .on_hover_localized("TruncateHeaders.hover");
+            // ui.checkbox(&mut self.truncate_headers, "");
+            // ui.end_row();
         });
     }
 }
 
-/// From
-#[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) enum From {
-    Dag1223,
-    Mag2,
-}
-
-impl From {
-    pub(crate) fn text(self) -> &'static str {
-        match self {
-            Self::Dag1223 => "CalculateFrom-Sn12Sn23",
-            Self::Mag2 => "CalculateFrom-Sn2",
-        }
+impl Settings {
+    pub fn load(ctx: &Context) -> Self {
+        ctx.data_mut(|data| {
+            let settings = data.get_persisted_mut_or_insert_with(*SETTINGS, || Self::new());
+            settings.clone()
+        })
     }
 
-    pub(crate) fn hover_text(self) -> &'static str {
-        match self {
-            Self::Dag1223 => "CalculateFrom-Sn12Sn23.hover",
-            Self::Mag2 => "CalculateFrom-Sn2.hover",
-        }
+    pub fn store(self, ctx: &Context) {
+        ctx.data_mut(|data| {
+            data.insert_persisted(*SETTINGS, self);
+        });
     }
 }
 
-/// Normalize
-#[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) struct Normalize {
-    pub(crate) experimental: bool,
-    pub(crate) theoretical: bool,
+/// Calculation table settings
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TableSettings {
+    pub resizable: bool,
+    pub sticky_columns: usize,
+    pub truncate_headers: bool,
+    pub state: TableState,
 }
 
-impl Normalize {
-    pub(crate) fn new() -> Self {
+impl TableSettings {
+    pub fn new() -> Self {
         Self {
-            experimental: true,
-            theoretical: true,
+            resizable: false,
+            sticky_columns: 0,
+            truncate_headers: false,
+            state: TableState::new(*TABLE_STATE),
         }
     }
 }
 
-impl Default for Normalize {
-    fn default() -> Self {
-        Self::new()
+/// Calculation windows state
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+pub struct Windows {
+    pub open_christie: bool,
+    pub open_indices: bool,
+    pub open_parameters: bool,
+    pub open_settings: bool,
+}
+
+impl Windows {
+    pub fn new() -> Self {
+        Self {
+            open_christie: false,
+            open_indices: false,
+            open_parameters: false,
+            open_settings: false,
+        }
     }
 }
+
+impl Windows {
+    pub fn load(ctx: &Context) -> Self {
+        ctx.data_mut(|data| {
+            data.get_persisted_mut_or_insert_with(*WINDOWS, || Self::new())
+                .clone()
+        })
+    }
+
+    pub fn store(self, ctx: &Context) {
+        ctx.data_mut(|data| {
+            data.insert_persisted(*WINDOWS, self);
+        });
+    }
+}
+
+// /// Table state
+// #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+// pub struct Table {
+//     pub reset: bool,
+//     pub resizable: bool,
+//     pub sticky_columns: usize,
+//     pub truncate_headers: bool,
+// }
+
+// impl Table {
+//     pub fn new() -> Self {
+//         Self {
+//             reset: false,
+//             resizable: false,
+//             sticky_columns: 0,
+//             truncate_headers: false,
+//         }
+//     }
+// }
+
+// impl Table {
+//     pub(crate) fn show(&mut self, ui: &mut Ui) {
+//         // // Precision
+//         // ui.label(ui.localize("Precision"))
+//         //     .on_hover_localized("Precision.hover");
+//         // ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
+//         // ui.end_row();
+
+//         // // Percent
+//         // ui.label(ui.localize("Percent"))
+//         //     .on_hover_localized("Percent.hover");
+//         // ui.checkbox(&mut self.percent, "");
+//         // ui.end_row();
+
+//         // Sticky
+//         ui.label(ui.localize("StickyColumns"))
+//             .on_hover_localized("StickyColumns.hover");
+//         ui.add(Slider::new(&mut self.sticky_columns, 0..=14));
+//         ui.end_row();
+
+//         // Truncate
+//         ui.label(ui.localize("TruncateHeaders"))
+//             .on_hover_localized("TruncateHeaders.hover");
+//         ui.checkbox(&mut self.truncate_headers, "");
+//         ui.end_row();
+//     }
+// }
+
+// impl Table {
+//     pub fn load(ctx: &Context) -> Self {
+//         ctx.data_mut(|data| {
+//             data.get_persisted_mut_or_insert_with(*TABLE, || Self::new())
+//                 .clone()
+//         })
+//     }
+
+//     pub fn store(self, ctx: &Context) {
+//         ctx.data_mut(|data| {
+//             data.insert_persisted(*TABLE, self);
+//         });
+//     }
+
+//     pub fn reset(ctx: &Context) {
+//         ctx.data_mut(|data| {
+//             data.insert_persisted(*TABLE, Self::new());
+//         })
+//     }
+// }

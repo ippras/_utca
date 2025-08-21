@@ -13,6 +13,7 @@ Language = Language
 LeftPanel = Left panel
 List = List
 Load = Load
+Parameters = Parameters
 ResetApplication = Reset application
 ResetGui = Reset GUI
 ResetTable = Reset table state
