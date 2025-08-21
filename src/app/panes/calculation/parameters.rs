@@ -1,5 +1,5 @@
 use super::ID_SOURCE;
-use crate::app::{MAX_PRECISION, panes::calculation::state::Windows};
+use crate::app::{MAX_PRECISION, panes::calculation::settings::Windows};
 use egui::{ComboBox, Grid, Key, KeyboardShortcut, Modifiers, RichText, Slider, Ui};
 use egui_ext::{LabeledSeparator, Markdown as _};
 use egui_l20n::{ResponseExt, UiExt as _};

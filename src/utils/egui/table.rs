@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct TableState {
     id: Id,
     columns: Vec<ColumnState>,
+    pub(crate) reset: bool,
 }
 
 impl TableState {
@@ -18,33 +19,49 @@ impl TableState {
         Self {
             id,
             columns: Vec::new(),
+            reset: false,
         }
     }
 
-    pub fn load(ctx: &Context, id: Id, columns: impl Iterator<Item = ColumnState>) -> Self {
-        ctx.data_mut(|data| {
-            let table_state = data.get_persisted_mut_or_insert_with(id, || Self::new(id));
-            let mut has_columns = HashSet::default();
-            for column_state in columns {
-                has_columns.insert(column_state.id);
-                if !table_state
-                    .columns
-                    .iter()
-                    .any(|ColumnState { name, .. }| *name == column_state.name)
-                {
-                    table_state.columns.push(column_state);
-                }
-            }
-            table_state
+    pub fn update(&mut self, columns: impl Iterator<Item = ColumnState>) {
+        let mut has_columns = HashSet::default();
+        for column_state in columns {
+            has_columns.insert(column_state.id);
+            if !self
                 .columns
-                .retain(|column| has_columns.contains(&column.id));
-            table_state.clone()
+                .iter()
+                .any(|ColumnState { name, .. }| *name == column_state.name)
+            {
+                self.columns.push(column_state);
+            }
+        }
+        self.columns
+            .retain(|column| has_columns.contains(&column.id));
+    }
+
+    pub fn load(ctx: &Context, id: Id) -> Self {
+        ctx.data_mut(|data| {
+            data.get_persisted_mut_or_insert_with(id, || Self::new(id))
+                .clone()
         })
     }
 
     pub fn store(self, ctx: &Context) {
         ctx.data_mut(|data| {
             data.insert_persisted(self.id, self);
+        });
+    }
+
+    pub fn reset(self, ctx: &Context) {
+        ctx.data_mut(|data| {
+            data.insert_persisted(
+                self.id,
+                Self {
+                    id: self.id,
+                    columns: Vec::new(),
+                    reset: true,
+                },
+            );
         });
     }
 

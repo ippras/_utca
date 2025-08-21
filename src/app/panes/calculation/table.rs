@@ -1,7 +1,7 @@
 use super::{
     ID_SOURCE,
     parameters::{From, Parameters},
-    state::{Settings, Table as CalculationTableState},
+    settings::Settings,
 };
 use crate::app::{panes::MARGIN, widgets::FloatWidget};
 use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
@@ -40,7 +40,6 @@ pub(crate) struct TableView<'a> {
     data_frame: &'a DataFrame,
     parameters: &'a Parameters,
     settings: Settings,
-    table: CalculationTableState,
 }
 
 impl<'a> TableView<'a> {
@@ -53,7 +52,6 @@ impl<'a> TableView<'a> {
             data_frame,
             parameters,
             settings: Settings::load(ctx),
-            table: CalculationTableState::load(ctx),
         }
     }
 }
@@ -61,11 +59,11 @@ impl<'a> TableView<'a> {
 impl TableView<'_> {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        if self.table.reset {
+        if self.settings.table.state.reset {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            self.table.reset = false;
-            self.table.store(ui.ctx());
+            self.settings.table.state.reset = false;
+            self.settings.clone().store(ui.ctx());
         }
         // let settings = Settings::load(ui.ctx());
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
@@ -75,10 +73,11 @@ impl TableView<'_> {
             .id_salt(id_salt)
             .num_rows(num_rows)
             .columns(vec![
-                Column::default().resizable(self.table.resizable);
+                Column::default()
+                    .resizable(self.settings.table.resizable);
                 num_columns
             ])
-            .num_sticky_cols(self.table.sticky_columns)
+            .num_sticky_cols(self.settings.table.sticky_columns)
             .headers([
                 HeaderRow {
                     height,
@@ -94,7 +93,7 @@ impl TableView<'_> {
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
-        if self.table.truncate_headers {
+        if self.settings.table.truncate_headers {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {

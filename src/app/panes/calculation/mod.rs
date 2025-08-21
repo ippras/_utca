@@ -1,6 +1,6 @@
 use self::{
     parameters::Parameters,
-    state::{Settings, Table as CalculationTableState, Windows},
+    settings::{Settings, Windows},
     table::TableView,
 };
 use super::PaneDelegate;
@@ -75,7 +75,7 @@ impl Pane {
 
 impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
-        let mut table = CalculationTableState::load(ui.ctx());
+        let mut settings = Settings::load(ui.ctx());
         let mut windows = Windows::load(ui.ctx());
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));
@@ -119,12 +119,11 @@ impl Pane {
             })
             .clicked()
         {
-            table.reset = true;
-            table.store(ui.ctx());
+            settings.table.state.reset = true;
         }
         // Resize
         ui.toggle_value(
-            &mut table.resizable,
+            &mut settings.table.resizable,
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
         .on_hover_ui(|ui| {
@@ -163,7 +162,7 @@ impl Pane {
             let _ = self.composition(ui);
         }
         ui.separator();
-        table.store(ui.ctx());
+        settings.store(ui.ctx());
         windows.store(ui.ctx());
         response
     }
@@ -308,21 +307,21 @@ impl Pane {
                 settings.show(ui);
                 settings.store(ui.ctx());
                 // Calculation table state
-                let mut table = CalculationTableState::load(ui.ctx());
-                table.show(ui);
-                table.store(ui.ctx());
-                //
-                let id = Id::new(ID_SOURCE).with("Table");
-                let mut table_state = TableState::load(
-                    ui.ctx(),
-                    id,
-                    self.target
-                        .get_column_names_str()
-                        .into_iter()
-                        .map(|name| ColumnState::new(Id::new(name), name.to_owned())),
-                );
-                table_state.show(ui);
-                table_state.store(ui.ctx());
+                // let mut table = CalculationTableState::load(ui.ctx());
+                // table.show(ui);
+                // table.store(ui.ctx());
+                // //
+                // let id = Id::new(ID_SOURCE).with("Table");
+                // let mut table_state = TableState::load(
+                //     ui.ctx(),
+                //     id,
+                //     self.target
+                //         .get_column_names_str()
+                //         .into_iter()
+                //         .map(|name| ColumnState::new(Id::new(name), name.to_owned())),
+                // );
+                // table_state.show(ui);
+                // table_state.store(ui.ctx());
             });
     }
 }
@@ -340,5 +339,5 @@ impl PaneDelegate for Pane {
 
 pub(crate) mod parameters;
 
-mod state;
+mod settings;
 mod table;
