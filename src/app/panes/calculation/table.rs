@@ -1,10 +1,10 @@
 use super::{
     ID_SOURCE,
-    settings::{From, Settings},
-    state::Table as CalculationTableState,
+    parameters::{From, Parameters},
+    state::{Settings, Table as CalculationTableState},
 };
 use crate::app::{panes::MARGIN, widgets::FloatWidget};
-use egui::{Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
+use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
@@ -38,14 +38,22 @@ const MIDDLE: &[Range<usize>] = &[
 /// Calculation table
 pub(crate) struct TableView<'a> {
     data_frame: &'a DataFrame,
-    settings: &'a Settings,
+    parameters: &'a Parameters,
+    settings: Settings,
+    table: CalculationTableState,
 }
 
 impl<'a> TableView<'a> {
-    pub(crate) fn new(data_frame: &'a DataFrame, settings: &'a Settings) -> Self {
+    pub(crate) fn new(
+        ctx: &Context,
+        data_frame: &'a DataFrame,
+        parameters: &'a Parameters,
+    ) -> Self {
         Self {
             data_frame,
-            settings,
+            parameters,
+            settings: Settings::load(ctx),
+            table: CalculationTableState::load(ctx),
         }
     }
 }
@@ -53,13 +61,13 @@ impl<'a> TableView<'a> {
 impl TableView<'_> {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        let mut table_state = CalculationTableState::load(ui.ctx());
-        if table_state.reset {
+        if self.table.reset {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            table_state.reset = false;
-            table_state.store(ui.ctx());
+            self.table.reset = false;
+            self.table.store(ui.ctx());
         }
+        // let settings = Settings::load(ui.ctx());
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
         let num_rows = self.data_frame.height() as u64 + 1;
         let num_columns = LEN;
@@ -67,10 +75,10 @@ impl TableView<'_> {
             .id_salt(id_salt)
             .num_rows(num_rows)
             .columns(vec![
-                Column::default().resizable(self.settings.resizable);
+                Column::default().resizable(self.table.resizable);
                 num_columns
             ])
-            .num_sticky_cols(self.settings.sticky_columns)
+            .num_sticky_cols(self.table.sticky_columns)
             .headers([
                 HeaderRow {
                     height,
@@ -86,7 +94,7 @@ impl TableView<'_> {
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
-        if self.settings.truncate_headers {
+        if self.table.truncate_headers {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {
@@ -103,7 +111,7 @@ impl TableView<'_> {
             (0, THEORETICAL) => {
                 ui.heading(ui.localize("Theoretical"));
             }
-            (0, FACTORS) if self.settings.factors => {
+            (0, FACTORS) => {
                 ui.heading(ui.localize("Factors"));
             }
             // Middle
@@ -139,19 +147,19 @@ impl TableView<'_> {
                         ui.label(ui.localize("StereospecificNumber?number=2"));
                     });
             }
-            (1, theoretical::TAG) if self.settings.theoretical => {
+            (1, theoretical::TAG) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=2"));
                     });
             }
-            (1, theoretical::DAG1223) if self.settings.theoretical => {
+            (1, theoretical::DAG1223) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=1223"));
                     });
             }
-            (1, theoretical::MAG2) if self.settings.theoretical => {
+            (1, theoretical::MAG2) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=2"));
@@ -163,13 +171,13 @@ impl TableView<'_> {
                         ui.label(ui.localize("StereospecificNumber?number=13"));
                     });
             }
-            (1, factors::EF) if self.settings.factors => {
+            (1, factors::EF) => {
                 ui.heading(ui.localize("EnrichmentFactor.abbreviation"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("EnrichmentFactor"));
                     });
             }
-            (1, factors::SF) if self.settings.factors => {
+            (1, factors::SF) => {
                 ui.heading(ui.localize("SelectivityFactor.abbreviation"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("SelectivityFactor"));
@@ -248,7 +256,7 @@ impl TableView<'_> {
                         .field_by_name("Diacylglycerol1223")?,
                     Some(row),
                     self.settings.percent,
-                    self.settings.from != From::Dag1223,
+                    self.parameters.from != From::Dag1223,
                 )?;
             }
             (row, experimental::MAG2) => {
@@ -259,10 +267,10 @@ impl TableView<'_> {
                         .field_by_name("Monoacylglycerol2")?,
                     Some(row),
                     self.settings.percent,
-                    self.settings.from != From::Mag2,
+                    self.parameters.from != From::Mag2,
                 )?;
             }
-            (row, theoretical::TAG) if self.settings.theoretical => {
+            (row, theoretical::TAG) => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -273,7 +281,7 @@ impl TableView<'_> {
                     true,
                 )?;
             }
-            (row, theoretical::DAG1223) if self.settings.theoretical => {
+            (row, theoretical::DAG1223) => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -284,7 +292,7 @@ impl TableView<'_> {
                     true,
                 )?;
             }
-            (row, theoretical::MAG2) if self.settings.theoretical => {
+            (row, theoretical::MAG2) => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -305,7 +313,7 @@ impl TableView<'_> {
                         .field_by_name("Diacylglycerol1223")?,
                     Some(row),
                     self.settings.percent,
-                    self.settings.from != From::Dag1223,
+                    self.parameters.from != From::Dag1223,
                 )?;
             }
             (row, theoretical::dag13::MAG2) => {
@@ -318,10 +326,10 @@ impl TableView<'_> {
                         .field_by_name("Monoacylglycerol2")?,
                     Some(row),
                     self.settings.percent,
-                    self.settings.from != From::Mag2,
+                    self.parameters.from != From::Mag2,
                 )?;
             }
-            (row, factors::ef::MAG2) if self.settings.factors => {
+            (row, factors::ef::MAG2) => {
                 self.value(
                     ui,
                     self.data_frame["Factors"]
@@ -332,7 +340,7 @@ impl TableView<'_> {
                     false,
                 )?;
             }
-            (row, factors::sf::MAG2) if self.settings.factors => {
+            (row, factors::sf::MAG2) => {
                 self.value(
                     ui,
                     self.data_frame["Factors"]
@@ -370,7 +378,7 @@ impl TableView<'_> {
                         .field_by_name("Diacylglycerol1223")?,
                     None,
                     self.settings.percent,
-                    self.settings.from != From::Dag1223,
+                    self.parameters.from != From::Dag1223,
                 )?
                 .on_hover_text("∑ DAG1223");
             }
@@ -382,11 +390,11 @@ impl TableView<'_> {
                         .field_by_name("Monoacylglycerol2")?,
                     None,
                     self.settings.percent,
-                    self.settings.from != From::Mag2,
+                    self.parameters.from != From::Mag2,
                 )?
                 .on_hover_text("∑ MAG2");
             }
-            theoretical::TAG if self.settings.theoretical => {
+            theoretical::TAG => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -398,7 +406,7 @@ impl TableView<'_> {
                 )?
                 .on_hover_text("∑ TAG");
             }
-            theoretical::DAG1223 if self.settings.theoretical => {
+            theoretical::DAG1223 => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -410,7 +418,7 @@ impl TableView<'_> {
                 )?
                 .on_hover_text("∑ DAG1223");
             }
-            theoretical::MAG2 if self.settings.theoretical => {
+            theoretical::MAG2 => {
                 self.value(
                     ui,
                     self.data_frame["Theoretical"]
@@ -432,7 +440,7 @@ impl TableView<'_> {
                         .field_by_name("Diacylglycerol1223")?,
                     None,
                     self.settings.percent,
-                    self.settings.from != From::Dag1223,
+                    self.parameters.from != From::Dag1223,
                 )?
                 .on_hover_text("∑ DAG13");
             }
@@ -446,7 +454,7 @@ impl TableView<'_> {
                         .field_by_name("Monoacylglycerol2")?,
                     None,
                     self.settings.percent,
-                    self.settings.from != From::Mag2,
+                    self.parameters.from != From::Mag2,
                 )?
                 .on_hover_text("∑ DAG13");
             }

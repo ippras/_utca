@@ -6,16 +6,10 @@ use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::BROWSERS;
 use serde::{Deserialize, Serialize};
 
-/// Calculation settings
+/// Calculation parameters
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) struct Settings {
+pub(crate) struct Parameters {
     pub(crate) index: Option<usize>,
-
-    pub(crate) percent: bool,
-    pub(crate) precision: usize,
-    pub(crate) resizable: bool,
-    pub(crate) sticky_columns: usize,
-    pub(crate) truncate_headers: bool,
 
     pub(crate) weighted: bool,
     pub(crate) from: From,
@@ -23,69 +17,31 @@ pub(crate) struct Settings {
     pub(crate) unsigned: bool,
     pub(crate) christie: bool,
     pub(crate) ddof: u8,
-
-    pub(crate) factors: bool,
-    pub(crate) theoretical: bool,
 }
 
-impl Settings {
+impl Parameters {
     pub(crate) fn new(index: Option<usize>) -> Self {
         Self {
             index,
-            percent: true,
-            precision: 1,
-            resizable: false,
-            sticky_columns: 0,
-            truncate_headers: false,
             weighted: false,
             from: From::Mag2,
             normalize: Normalize::new(),
             unsigned: true,
             christie: false,
             ddof: 1,
-            factors: true,
-            theoretical: true,
         }
     }
 }
 
-impl Default for Settings {
+impl Default for Parameters {
     fn default() -> Self {
         Self::new(None)
     }
 }
 
-impl Settings {
+impl Parameters {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         Grid::new(ID_SOURCE).show(ui, |ui| {
-            // Precision
-            ui.label(ui.localize("Precision"))
-                .on_hover_localized("Precision.hover");
-            ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
-            ui.end_row();
-
-            // Percent
-            ui.label(ui.localize("Percent"))
-                .on_hover_localized("Percent.hover");
-            ui.checkbox(&mut self.percent, "");
-            ui.end_row();
-
-            // Sticky
-            ui.label(ui.localize("StickyColumns"))
-                .on_hover_localized("StickyColumns.hover");
-            ui.add(Slider::new(&mut self.sticky_columns, 0..=14));
-            ui.end_row();
-
-            // Truncate
-            ui.label(ui.localize("TruncateHeaders"))
-                .on_hover_localized("TruncateHeaders.hover");
-            ui.checkbox(&mut self.truncate_headers, "");
-            ui.end_row();
-
-            ui.separator();
-            ui.separator();
-            ui.end_row();
-
             // Calculate
             ui.label(ui.localize("CalculateFrom"))
                 .on_hover_localized("CalculateFrom.hover");
@@ -164,22 +120,6 @@ impl Settings {
                 windows.store(ui.ctx());
                 response.on_hover_localized("Normalize-Christie.hover");
             });
-            ui.end_row();
-
-            ui.separator();
-            ui.labeled_separator(RichText::new(ui.localize("Show")).heading());
-            ui.end_row();
-
-            // Factors
-            ui.label(ui.localize("Show-Factors"))
-                .on_hover_localized("Show-Factors.hover");
-            ui.checkbox(&mut self.factors, "");
-            ui.end_row();
-
-            // Theoretical
-            ui.label(ui.localize("Show-Theoretical"))
-                .on_hover_localized("Show-Theoretical.hover");
-            ui.checkbox(&mut self.theoretical, "");
             ui.end_row();
 
             if self.index.is_none() {

@@ -14,9 +14,6 @@ static TABLE: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("Table"));
 pub struct Settings {
     pub percent: bool,
     pub precision: usize,
-    pub resizable: bool,
-    pub sticky_columns: usize,
-    pub truncate_headers: bool,
 }
 
 impl Settings {
@@ -24,9 +21,6 @@ impl Settings {
         Self {
             percent: true,
             precision: 1,
-            resizable: false,
-            sticky_columns: 0,
-            truncate_headers: false,
         }
     }
 }
@@ -46,36 +40,36 @@ impl Settings {
             ui.checkbox(&mut self.percent, "");
             ui.end_row();
 
-            // Sticky
-            ui.label(ui.localize("StickyColumns"))
-                .on_hover_localized("StickyColumns.hover");
-            ui.add(Slider::new(&mut self.sticky_columns, 0..=14));
-            ui.end_row();
+            // // Sticky
+            // ui.label(ui.localize("StickyColumns"))
+            //     .on_hover_localized("StickyColumns.hover");
+            // ui.add(Slider::new(&mut self.sticky_columns, 0..=14));
+            // ui.end_row();
 
-            // Truncate
-            ui.label(ui.localize("TruncateHeaders"))
-                .on_hover_localized("TruncateHeaders.hover");
-            ui.checkbox(&mut self.truncate_headers, "");
-            ui.end_row();
+            // // Truncate
+            // ui.label(ui.localize("TruncateHeaders"))
+            //     .on_hover_localized("TruncateHeaders.hover");
+            // ui.checkbox(&mut self.truncate_headers, "");
+            // ui.end_row();
         });
     }
 }
 
 impl Settings {
-    fn load(ctx: &Context) -> Self {
+    pub fn load(ctx: &Context) -> Self {
         ctx.data_mut(|data| {
             data.get_persisted_mut_or_insert_with(*SETTINGS, || Self::new())
                 .clone()
         })
     }
 
-    fn store(self, ctx: &Context) {
+    pub fn store(self, ctx: &Context) {
         ctx.data_mut(|data| {
             data.insert_persisted(*SETTINGS, self);
         });
     }
 
-    fn reset(ctx: &Context) {
+    pub fn reset(ctx: &Context) {
         ctx.data_mut(|data| {
             data.insert_persisted(*SETTINGS, Self::new());
         })
@@ -127,11 +121,47 @@ impl Windows {
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Table {
     pub reset: bool,
+    pub resizable: bool,
+    pub sticky_columns: usize,
+    pub truncate_headers: bool,
 }
 
 impl Table {
     pub fn new() -> Self {
-        Self { reset: false }
+        Self {
+            reset: false,
+            resizable: false,
+            sticky_columns: 0,
+            truncate_headers: false,
+        }
+    }
+}
+
+impl Table {
+    pub(crate) fn show(&mut self, ui: &mut Ui) {
+        // // Precision
+        // ui.label(ui.localize("Precision"))
+        //     .on_hover_localized("Precision.hover");
+        // ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
+        // ui.end_row();
+
+        // // Percent
+        // ui.label(ui.localize("Percent"))
+        //     .on_hover_localized("Percent.hover");
+        // ui.checkbox(&mut self.percent, "");
+        // ui.end_row();
+
+        // Sticky
+        ui.label(ui.localize("StickyColumns"))
+            .on_hover_localized("StickyColumns.hover");
+        ui.add(Slider::new(&mut self.sticky_columns, 0..=14));
+        ui.end_row();
+
+        // Truncate
+        ui.label(ui.localize("TruncateHeaders"))
+            .on_hover_localized("TruncateHeaders.hover");
+        ui.checkbox(&mut self.truncate_headers, "");
+        ui.end_row();
     }
 }
 
