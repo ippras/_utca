@@ -29,22 +29,15 @@ impl egui_tiles::Behavior<Pane> for Behavior {
                     .ui(ui, |ui| {
                         ScrollArea::horizontal()
                             .show(ui, |ui| {
+                                ui.set_height(
+                                    ui.text_style_height(&TextStyle::Heading) + 4.0 * MARGIN.y,
+                                );
                                 ui.visuals_mut().button_frame = false;
-                                Sides::new()
-                                    .height(
-                                        ui.text_style_height(&TextStyle::Heading) + 4.0 * MARGIN.y,
-                                    )
-                                    .show(
-                                        ui,
-                                        |ui| pane.header(ui),
-                                        |ui| {
-                                            ui.visuals_mut().button_frame = false;
-                                            if ui.button(RichText::new(X).heading()).clicked() {
-                                                self.close = Some(tile_id);
-                                            }
-                                        },
-                                    )
-                                    .0
+                                if ui.button(RichText::new(X).heading()).clicked() {
+                                    self.close = Some(tile_id);
+                                }
+                                ui.separator();
+                                pane.header(ui)
                             })
                             .inner
                     })
