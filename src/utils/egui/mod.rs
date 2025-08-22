@@ -35,4 +35,4 @@ pub trait State: Sized {
 //     }
 // }
 
-pub mod table;
+pub mod state;

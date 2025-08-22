@@ -1,7 +1,7 @@
 use super::{
     ID_SOURCE,
     parameters::{From, Parameters},
-    settings::Settings,
+    state::Settings,
 };
 use crate::app::{panes::MARGIN, widgets::FloatWidget};
 use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
@@ -59,10 +59,10 @@ impl<'a> TableView<'a> {
 impl TableView<'_> {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        if self.settings.table.state.reset {
+        if self.settings.table.reset_state {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            self.settings.table.state.reset = false;
+            self.settings.table.reset_state = false;
             self.settings.clone().store(ui.ctx());
         }
         // let settings = Settings::load(ui.ctx());
@@ -137,7 +137,7 @@ impl TableView<'_> {
             (1, experimental::DAG1223) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber.abbreviation?number=1223"));
+                        ui.label(ui.localize("StereospecificNumber?number=1223"));
                     });
             }
             (1, experimental::MAG2) => {
@@ -149,7 +149,7 @@ impl TableView<'_> {
             (1, theoretical::TAG) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=2"));
+                        ui.label(ui.localize("StereospecificNumber?number=123"));
                     });
             }
             (1, theoretical::DAG1223) => {

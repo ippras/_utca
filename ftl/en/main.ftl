@@ -18,6 +18,8 @@ ResetApplication = Reset application
 ResetGui = Reset GUI
 ResetTable = Reset table state
 ResizeTable = Resize table columns
+Resizable = Resizable
+    .hover = Resize table columns
 Save = Save
 Settings = Settings
 Tabs = Tabs
@@ -111,6 +113,8 @@ Show-Theoretical = Theoretical
     .hover = Show theoretical columns
 Unsigned = Unsigned
     .hover = Theoretically calculated negative values are replaced with zeros.
+FilterTableColumns = Filter
+    .hover = Filter table columns
 
 ## Composition
 

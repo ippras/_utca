@@ -16,7 +16,7 @@ use crate::{
     },
     export::{parquet, xlsx},
     text::Text,
-    utils::{Hashed, egui::table::TableState},
+    utils::Hashed,
 };
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;

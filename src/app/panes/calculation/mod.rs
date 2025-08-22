@@ -1,6 +1,6 @@
 use self::{
     parameters::Parameters,
-    settings::{Settings, Windows},
+    state::{Settings, Windows},
     table::TableView,
 };
 use super::PaneDelegate;
@@ -13,10 +13,7 @@ use crate::{
         presets::CHRISTIE,
         widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
     },
-    utils::{
-        Hashed,
-        egui::table::{ColumnState, TableState},
-    },
+    utils::Hashed,
 };
 use egui::{CursorIcon, Grid, Id, Response, RichText, ScrollArea, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -76,6 +73,10 @@ impl Pane {
 impl Pane {
     fn header_content(&mut self, ui: &mut Ui) -> Response {
         let mut settings = Settings::load(ui.ctx());
+        settings
+            .table
+            .filter
+            .update(self.target.get_column_names_str());
         let mut windows = Windows::load(ui.ctx());
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));
@@ -119,7 +120,7 @@ impl Pane {
             })
             .clicked()
         {
-            settings.table.state.reset = true;
+            settings.table.reset_state = true;
         }
         // Resize
         ui.toggle_value(
@@ -306,22 +307,6 @@ impl Pane {
                 let mut settings = Settings::load(ui.ctx());
                 settings.show(ui);
                 settings.store(ui.ctx());
-                // Calculation table state
-                // let mut table = CalculationTableState::load(ui.ctx());
-                // table.show(ui);
-                // table.store(ui.ctx());
-                // //
-                // let id = Id::new(ID_SOURCE).with("Table");
-                // let mut table_state = TableState::load(
-                //     ui.ctx(),
-                //     id,
-                //     self.target
-                //         .get_column_names_str()
-                //         .into_iter()
-                //         .map(|name| ColumnState::new(Id::new(name), name.to_owned())),
-                // );
-                // table_state.show(ui);
-                // table_state.store(ui.ctx());
             });
     }
 }
@@ -339,5 +324,5 @@ impl PaneDelegate for Pane {
 
 pub(crate) mod parameters;
 
-mod settings;
+mod state;
 mod table;
