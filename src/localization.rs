@@ -32,13 +32,13 @@ mod sources {
 
     pub(super) const EN: &[&str] = &[
         // asset!("/ftl/en/fatty_acids/byrdwell.com.ftl"),
+        asset!("/ftl/en/main.ftl"),
         asset!("/ftl/en/fatty_acids/ippras.ftl"),
         asset!("/ftl/en/headers.ftl"),
         asset!("/ftl/en/indices.ftl"),
         asset!("/ftl/en/menu.ftl"),
         asset!("/ftl/en/names.ftl"),
         asset!("/ftl/en/properties.ftl"),
-        asset!("/ftl/en/settings.ftl"),
     ];
 
     pub(super) const RU: &[&str] = &[

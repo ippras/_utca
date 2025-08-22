@@ -8,31 +8,26 @@ use egui_phosphor::regular::{DOTS_SIX_VERTICAL, EYE, EYE_SLASH, GEAR, SLIDERS_HO
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct TableState {
+pub struct Table {
     id: Id,
-    columns: Vec<ColumnState>,
-    pub(crate) reset: bool,
+    columns: Vec<Column>,
 }
 
-impl TableState {
+impl Table {
     pub fn new(id: Id) -> Self {
         Self {
             id,
             columns: Vec::new(),
-            reset: false,
         }
     }
 
-    pub fn update(&mut self, columns: impl Iterator<Item = ColumnState>) {
+    pub fn update(&mut self, columns: Vec<&str>) {
         let mut has_columns = HashSet::default();
-        for column_state in columns {
-            has_columns.insert(column_state.id);
-            if !self
-                .columns
-                .iter()
-                .any(|ColumnState { name, .. }| *name == column_state.name)
-            {
-                self.columns.push(column_state);
+        for name in columns {
+            let id = Id::new(name);
+            has_columns.insert(id);
+            if !self.columns.iter().any(|column| column.name == name) {
+                self.columns.push(Column::new(id, name.to_owned()));
             }
         }
         self.columns
@@ -59,13 +54,12 @@ impl TableState {
                 Self {
                     id: self.id,
                     columns: Vec::new(),
-                    reset: true,
                 },
             );
         });
     }
 
-    pub fn visible_columns(&self) -> impl Iterator<Item = &ColumnState> {
+    pub fn visible_columns(&self) -> impl Iterator<Item = &Column> {
         self.columns.iter().filter(|column| column.visible)
     }
 
@@ -78,7 +72,7 @@ impl TableState {
     }
 }
 
-impl TableState {
+impl Table {
     pub fn show(&mut self, ui: &mut Ui) {
         self.columns(ui);
     }
@@ -118,13 +112,13 @@ impl TableState {
 }
 
 #[derive(Clone, Debug, Deserialize, Hash, Serialize)]
-pub struct ColumnState {
+pub struct Column {
     id: Id,
     name: String,
     visible: bool,
 }
 
-impl ColumnState {
+impl Column {
     pub fn new(id: Id, name: String) -> Self {
         Self {
             id,
