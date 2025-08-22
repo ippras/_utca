@@ -1,12 +1,12 @@
-
 use super::ID_SOURCE;
 use crate::{app::MAX_PRECISION, utils::egui::state::Table};
 use egui::{
+    Button, Context, Grid, Id, IntoAtoms, PopupCloseBehavior, Response, RichText, Slider, Ui,
+    Widget,
     containers::menu::{MenuButton, MenuConfig},
-    Context, Grid, Id, PopupCloseBehavior, Slider, Ui,
 };
-use egui_l20n::{ResponseExt, UiExt as _};
-use egui_phosphor::regular::FUNNEL;
+use egui_l20n::UiExt as _;
+use egui_phosphor::regular::{ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, DOTS_THREE, FUNNEL};
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 
@@ -34,6 +34,8 @@ impl Settings {
 impl Settings {
     pub fn show(&mut self, ui: &mut Ui) {
         Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
+            ui.visuals_mut().button_frame = true;
+
             // Precision
             ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
                 ui.label(ui.localize("Precision.hover"));
@@ -52,11 +54,18 @@ impl Settings {
             ui.separator();
             ui.end_row();
 
+            // Reset
+            ui.label(ui.localize("ResetTable")).on_hover_ui(|ui| {
+                ui.label(ui.localize("ResetTable.hover"));
+            });
+            ui.toggle_value(&mut self.table.reset_state, ARROWS_CLOCKWISE);
+            ui.end_row();
+
             // Resizable
             ui.label(ui.localize("Resizable")).on_hover_ui(|ui| {
                 ui.label(ui.localize("Resizable.hover"));
             });
-            ui.checkbox(&mut self.table.resizable, "");
+            ui.checkbox(&mut self.table.resizable, ARROWS_HORIZONTAL);
             ui.end_row();
 
             // Sticky
@@ -70,7 +79,7 @@ impl Settings {
             ui.label(ui.localize("TruncateHeaders")).on_hover_ui(|ui| {
                 ui.label(ui.localize("TruncateHeaders.hover"));
             });
-            ui.checkbox(&mut self.table.truncate_headers, "");
+            ui.checkbox(&mut self.table.truncate_headers, DOTS_THREE);
             ui.end_row();
 
             // Filter
