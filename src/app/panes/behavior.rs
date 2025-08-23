@@ -1,6 +1,6 @@
 use super::{MARGIN, Pane};
 use egui::{
-    CentralPanel, MenuBar, RichText, ScrollArea, Sides, TextStyle, TopBottomPanel, Ui, WidgetText,
+    CentralPanel, MenuBar, RichText, ScrollArea, TextStyle, TopBottomPanel, Ui, WidgetText,
 };
 use egui_phosphor::regular::X;
 use egui_tiles::{TileId, UiResponse};
@@ -29,10 +29,10 @@ impl egui_tiles::Behavior<Pane> for Behavior {
                     .ui(ui, |ui| {
                         ScrollArea::horizontal()
                             .show(ui, |ui| {
+                                ui.visuals_mut().button_frame = false;
                                 ui.set_height(
                                     ui.text_style_height(&TextStyle::Heading) + 4.0 * MARGIN.y,
                                 );
-                                ui.visuals_mut().button_frame = false;
                                 if ui.button(RichText::new(X).heading()).clicked() {
                                     self.close = Some(tile_id);
                                 }

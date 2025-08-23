@@ -113,15 +113,13 @@ impl Pane {
         });
         ui.separator();
         // Reset
-        if ui
-            .button(RichText::new(ARROWS_CLOCKWISE).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("ResetTable"));
-            })
-            .clicked()
-        {
-            settings.table.reset_state = true;
-        }
+        ui.toggle_value(
+            &mut settings.table.reset_state,
+            RichText::new(ARROWS_CLOCKWISE).heading(),
+        )
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("ResetTable"));
+        });
         // Resize
         ui.toggle_value(
             &mut settings.table.resizable,
