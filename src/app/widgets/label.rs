@@ -10,7 +10,7 @@ pub(crate) struct LabelWidget<'a> {
     fatty_acid: &'a FattyAcidChunked,
     row: usize,
     editable: bool,
-    hover: bool,
+    hover_names: bool,
 }
 
 impl<'a> LabelWidget<'a> {
@@ -24,7 +24,7 @@ impl<'a> LabelWidget<'a> {
             fatty_acid,
             row,
             editable: false,
-            hover: false,
+            hover_names: false,
         }
     }
 
@@ -32,8 +32,11 @@ impl<'a> LabelWidget<'a> {
         Self { editable, ..self }
     }
 
-    pub(crate) fn hover(self, hover: bool) -> Self {
-        Self { hover, ..self }
+    pub(crate) fn hover_names(self, hover_names: bool) -> Self {
+        Self {
+            hover_names,
+            ..self
+        }
     }
 }
 
@@ -98,7 +101,7 @@ impl LabelWidget<'_> {
         } else {
             ui.label(text)
         };
-        if self.hover {
+        if self.hover_names {
             response = response.on_hover_ui(|ui| {
                 ui.add(NamesWidget::new(fatty_acid.as_ref()));
             });

@@ -76,7 +76,7 @@ impl Pane {
         settings
             .table
             .filter
-            .update(self.target.get_column_names_str());
+            .update(&self.target.get_column_names_str());
         let mut windows = Windows::load(ui.ctx());
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));
@@ -267,6 +267,7 @@ impl Pane {
 
     #[instrument(skip_all, err)]
     fn indices_content(&mut self, ui: &mut Ui) -> PolarsResult<()> {
+        println!("lazydata_frame_frame0: {:?}", self.target);
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
@@ -301,7 +302,6 @@ impl Pane {
             .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
             .open(&mut windows.open_settings)
             .show(ui.ctx(), |ui| {
-                // Settings
                 let mut settings = Settings::load(ui.ctx());
                 settings.show(ui);
                 settings.store(ui.ctx());

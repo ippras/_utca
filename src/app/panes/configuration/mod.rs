@@ -1,4 +1,8 @@
-use self::{settings::Settings, state::State, table::TableView};
+use self::{
+    parameters::Parameters,
+    state::{Settings, Windows},
+    table::TableView,
+};
 use super::PaneDelegate;
 use crate::{app::identifiers::CALCULATE, export::parquet::save};
 use anyhow::Result;
@@ -6,7 +10,7 @@ use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, ERASER, FLOPPY_DISK, GEAR, LIST, NOTE_PENCIL,
-    PENCIL, TAG, TRASH,
+    PENCIL, SLIDERS_HORIZONTAL, TAG, TRASH,
 };
 use lipid::prelude::*;
 use metadata::{MetaDataFrame, egui::MetadataWidget};
@@ -16,6 +20,14 @@ use std::sync::LazyLock;
 use tracing::instrument;
 
 const ID_SOURCE: &str = "Configuration";
+const COLUMNS: [&str; 6] = [
+    "Index",
+    "Label",
+    "Fatty acid",
+    "SN-1,2,3",
+    "SN-1,2(2,3)",
+    "SN-2",
+];
 
 pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
     Schema::from_iter([
@@ -31,16 +43,14 @@ pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
     frames: Vec<MetaDataFrame>,
-    settings: Settings,
-    state: State,
+    parameters: Parameters,
 }
 
 impl Pane {
     pub(crate) fn new(frames: Vec<MetaDataFrame>) -> Self {
         Self {
             frames,
-            settings: Settings::new(),
-            state: State::new(),
+            parameters: Parameters::new(),
         }
     }
 
@@ -53,7 +63,7 @@ impl Pane {
     }
 
     fn title_with_separator(&self, separator: &str) -> String {
-        self.frames[self.settings.index]
+        self.frames[self.parameters.index]
             .meta
             .format(separator)
             .to_string()
@@ -65,14 +75,17 @@ impl Pane {
 }
 
 impl Pane {
-    fn header_content(&mut self, ui: &mut Ui) -> Response {
+    fn header_content(&mut self, ui: &mut Ui, settings: &mut Settings) -> Response {
+        let mut windows = Windows::load(ui.ctx());
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Configuration"));
         });
         response |= ui.heading(self.title());
         response = response
             .on_hover_text(format!("{:x}", self.hash()))
-            .on_hover_ui(|ui| MetadataWidget::new(&self.frames[self.settings.index].meta).show(ui))
+            .on_hover_ui(|ui| {
+                MetadataWidget::new(&self.frames[self.parameters.index].meta).show(ui)
+            })
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         // List
@@ -80,7 +93,7 @@ impl Pane {
             for index in 0..self.frames.len() {
                 if ui
                     .selectable_value(
-                        &mut self.settings.index,
+                        &mut self.parameters.index,
                         index,
                         self.frames[index].meta.format(" ").to_string(),
                     )
@@ -103,24 +116,24 @@ impl Pane {
             })
             .clicked()
         {
-            self.state.reset_table_state = true;
+            settings.reset_state = true;
         }
         // Resize
         ui.toggle_value(
-            &mut self.settings.resizable,
+            &mut settings.resize_table,
             RichText::new(ARROWS_HORIZONTAL).heading(),
         )
         .on_hover_ui(|ui| {
             ui.label(ui.localize("ResizeTable"));
         });
         // Edit
-        ui.toggle_value(&mut self.settings.editable, RichText::new(PENCIL).heading())
+        ui.toggle_value(&mut settings.edit_table, RichText::new(PENCIL).heading())
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("Edit"));
             });
         // Clear
         ui.add_enabled_ui(
-            self.settings.editable && self.frames[self.settings.index].data.height() > 0,
+            settings.edit_table && self.frames[self.parameters.index].data.height() > 0,
             |ui| {
                 if ui
                     .button(RichText::new(ERASER).heading())
@@ -129,13 +142,13 @@ impl Pane {
                     })
                     .clicked()
                 {
-                    let data_frame = &mut self.frames[self.settings.index].data;
+                    let data_frame = &mut self.frames[self.parameters.index].data;
                     *data_frame = data_frame.clear();
                 }
             },
         );
         // Delete
-        ui.add_enabled_ui(self.settings.editable && self.frames.len() > 1, |ui| {
+        ui.add_enabled_ui(settings.edit_table && self.frames.len() > 1, |ui| {
             if ui
                 .button(RichText::new(TRASH).heading())
                 .on_hover_ui(|ui| {
@@ -143,19 +156,35 @@ impl Pane {
                 })
                 .clicked()
             {
-                self.frames.remove(self.settings.index);
-                self.settings.index = 0;
+                self.frames.remove(self.parameters.index);
+                self.parameters.index = 0;
             }
         });
         ui.separator();
+        // // Settings
+        // ui.toggle_value(
+        //     &mut self.state.open_settings_window,
+        //     RichText::new(GEAR).heading(),
+        // )
+        // .on_hover_ui(|ui| {
+        //     ui.label(ui.localize("Settings"));
+        // });
+        // ui.separator();
+
         // Settings
         ui.toggle_value(
-            &mut self.state.open_settings_window,
-            RichText::new(GEAR).heading(),
+            &mut windows.open_settings,
+            RichText::new(SLIDERS_HORIZONTAL).heading(),
         )
         .on_hover_ui(|ui| {
             ui.label(ui.localize("Settings"));
         });
+        ui.separator();
+        // Parameters
+        ui.toggle_value(&mut windows.open_parameters, RichText::new(GEAR).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Parameters"));
+            });
         ui.separator();
         // Save
         if ui
@@ -194,11 +223,12 @@ impl Pane {
             ui.data_mut(|data| {
                 data.insert_temp(
                     Id::new(CALCULATE),
-                    (self.frames.clone(), self.settings.index),
+                    (self.frames.clone(), self.parameters.index),
                 );
             });
         }
         ui.separator();
+        windows.store(ui.ctx());
         response
     }
 
@@ -211,48 +241,76 @@ impl Pane {
         });
     }
 
-    fn body_content_data(&mut self, ui: &mut Ui, index: usize) {
+    fn body_content_data(&mut self, ui: &mut Ui, index: usize, settings: &mut Settings) {
         let data_frame = &mut self.frames[index].data;
-        TableView::new(data_frame, &self.settings, &mut self.state).show(ui);
+        TableView::new(data_frame, settings).show(ui);
     }
 
     #[instrument(skip(self), err)]
     fn save(&mut self) -> Result<()> {
         let name = format!("{}.utca.parquet", self.title_with_separator("."));
-        save(&mut self.frames[self.settings.index], &name)?;
+        save(&mut self.frames[self.parameters.index], &name)?;
         Ok(())
     }
 }
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
-        self.settings(ui);
+        let windows = &mut Windows::load(ui.ctx());
+        self.parameters(ui, windows);
+        self.settings(ui, windows);
+        windows.store(ui.ctx());
     }
 
-    fn settings(&mut self, ui: &mut Ui) {
-        Window::new(format!("{GEAR} Configuration settings"))
+    fn parameters(&mut self, ui: &mut Ui, windows: &mut Windows) {
+        Window::new(format!("{GEAR} Configuration parameters"))
             .id(ui.auto_id_with(ID_SOURCE))
             .default_pos(ui.next_widget_position())
-            .open(&mut self.state.open_settings_window)
-            .show(ui.ctx(), |ui| self.settings.show(ui));
+            .open(&mut windows.open_parameters)
+            .show(ui.ctx(), |ui| self.parameters.show(ui));
     }
+
+    fn settings(&mut self, ui: &mut Ui, windows: &mut Windows) {
+        Window::new(format!("{SLIDERS_HORIZONTAL} Configuration settings"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
+            .open(&mut windows.open_settings)
+            .show(ui.ctx(), |ui| {
+                let mut settings = Settings::load(ui.ctx(), self.hash());
+                settings.show(ui);
+                settings.store(ui.ctx(), self.hash());
+            });
+    }
+
+    // fn settings(&mut self, ui: &mut Ui) {
+    //     Window::new(format!("{GEAR} Configuration settings"))
+    //         .id(ui.auto_id_with(ID_SOURCE))
+    //         .default_pos(ui.next_widget_position())
+    //         .open(&mut self.state.open_settings_window)
+    //         .show(ui.ctx(), |ui| self.settings.show(ui));
+    // }
 }
 
 impl PaneDelegate for Pane {
     fn header(&mut self, ui: &mut Ui) -> Response {
-        self.header_content(ui)
+        let mut settings = Settings::load(ui.ctx(), self.hash());
+        settings.filter_columns.update(&COLUMNS);
+        let response = self.header_content(ui, &mut settings);
+        settings.store(ui.ctx(), self.hash());
+        response
     }
 
     fn body(&mut self, ui: &mut Ui) {
-        if self.settings.editable {
-            self.body_content_meta(ui, self.settings.index);
+        let mut settings = Settings::load(ui.ctx(), self.hash());
+        if settings.edit_table {
+            self.body_content_meta(ui, self.parameters.index);
         }
-        self.body_content_data(ui, self.settings.index);
+        self.body_content_data(ui, self.parameters.index, &mut settings);
+        settings.store(ui.ctx(), self.hash());
         self.windows(ui);
     }
 }
 
-pub(crate) mod settings;
+pub(crate) mod parameters;
 
 mod state;
 mod table;

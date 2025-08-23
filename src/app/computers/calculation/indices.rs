@@ -82,33 +82,39 @@ mod one {
 
     pub(super) fn compute(key: Key) -> PolarsResult<Value> {
         let mut lazy_frame = key.data_frame.value.clone().lazy();
-        let fatty_acid = col("FattyAcid").fatty_acid();
-        let value = {
-            col("Experimental")
+        let fatty_acid = || col(FATTY_ACID).fatty_acid();
+        let value = |stereospecific_number| {
+            col("Calculated")
                 .struct_()
-                .field_by_name("Triacylglycerol")
+                .field_by_name(stereospecific_number)
         };
-        #[rustfmt::skip]
+        let column = |value: Expr| {
+            as_struct(vec![
+                fatty_acid().monounsaturated(value.clone()),
+                fatty_acid().polyunsaturated(value.clone()),
+                fatty_acid().saturated(value.clone()),
+                fatty_acid().trans(value.clone()),
+                fatty_acid().unsaturated(value.clone(), None),
+                fatty_acid().unsaturated(value.clone(), NonZeroI8::new(-9)),
+                fatty_acid().unsaturated(value.clone(), NonZeroI8::new(-6)),
+                fatty_acid().unsaturated(value.clone(), NonZeroI8::new(-3)),
+                fatty_acid().unsaturated(value.clone(), NonZeroI8::new(9)),
+                fatty_acid().eicosapentaenoic_and_docosahexaenoic(value.clone()),
+                fatty_acid().fish_lipid_quality(value.clone()),
+                fatty_acid().health_promoting_index(value.clone()),
+                fatty_acid().hypocholesterolemic_to_hypercholesterolemic(value.clone()),
+                fatty_acid().index_of_atherogenicity(value.clone()),
+                fatty_acid().index_of_thrombogenicity(value.clone()),
+                fatty_acid().linoleic_to_alpha_linolenic(value.clone()),
+                fatty_acid().polyunsaturated_6_to_polyunsaturated_3(value.clone()),
+                fatty_acid().polyunsaturated_to_saturated(value.clone()),
+                fatty_acid().unsaturation_index(value.clone()),
+            ])
+        };
         let exprs = vec![
-            fatty_acid.clone().monounsaturated(value.clone()),
-            fatty_acid.clone().polyunsaturated(value.clone()),
-            fatty_acid.clone().saturated(value.clone()),
-            fatty_acid.clone().trans(value.clone()),
-            fatty_acid.clone().unsaturated(value.clone(), None),
-            fatty_acid.clone().unsaturated(value.clone(), NonZeroI8::new(-9)),
-            fatty_acid.clone().unsaturated(value.clone(), NonZeroI8::new(-6)),
-            fatty_acid.clone().unsaturated(value.clone(), NonZeroI8::new(-3)),
-            fatty_acid.clone().unsaturated(value.clone(), NonZeroI8::new(9)),
-            fatty_acid.clone().eicosapentaenoic_and_docosahexaenoic(value.clone()),
-            fatty_acid.clone().fish_lipid_quality(value.clone()),
-            fatty_acid.clone().health_promoting_index(value.clone()),
-            fatty_acid.clone().hypocholesterolemic_to_hypercholesterolemic(value.clone()),
-            fatty_acid.clone().index_of_atherogenicity(value.clone()),
-            fatty_acid.clone().index_of_thrombogenicity(value.clone()),
-            fatty_acid.clone().linoleic_to_alpha_linolenic(value.clone()),
-            fatty_acid.clone().polyunsaturated_6_to_polyunsaturated_3(value.clone()),
-            fatty_acid.clone().polyunsaturated_to_saturated(value.clone()),
-            fatty_acid.clone().unsaturation_index(value.clone()),
+            column(value("Triacylglycerol")).alias(STEREOSPECIFIC_NUMBER123),
+            column(value("Diacylglycerol13")).alias(STEREOSPECIFIC_NUMBER13),
+            column(value("Monoacylglycerol2")).alias(STEREOSPECIFIC_NUMBER2),
         ];
         lazy_frame = lazy_frame.select(exprs);
         lazy_frame.collect()
@@ -118,52 +124,166 @@ mod one {
 mod many {
     use super::*;
 
-    macro_rules! index {
-        ($f:ident, $fatty_acid:expr, $values:expr $(,$args:expr)*) => {{
-            concat_arr(
-                $values
-                    .clone()
-                    .map(|value| $fatty_acid.clone().$f(value $(,$args)*))
-                    .collect(),
-            )
-        }};
+    // macro_rules! index {
+    //     ($f:ident, $fatty_acid:expr, $values:expr $(,$args:expr)*) => {{
+    //         concat_arr(
+    //             $values
+    //                 .clone()
+    //                 .map(|value| $fatty_acid.clone().$f(value $(,$args)*))
+    //                 .collect(),
+    //         )
+    //     }};
+    // }
+
+    fn temp(values: impl Iterator<Item = Expr>, f: impl Fn(Expr) -> Expr) -> PolarsResult<Expr> {
+        concat_arr(values.map(f).collect())
     }
 
     pub(super) fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         let mut lazy_frame = key.data_frame.value.clone().lazy();
-        let fatty_acid = col("FattyAcid").fatty_acid();
-        let values = (0..length).map(|index| {
-            col("Experimental")
-                .struct_()
-                .field_by_name("Triacylglycerol")
-                .struct_()
-                .field_by_name("Values")
-                .arr()
-                .get(index.into(), false)
-        });
-        #[rustfmt::skip]
+        println!("lazy_frame0: {}", lazy_frame.clone().collect().unwrap());
+        let fatty_acid = || col(FATTY_ACID).fatty_acid();
+        let values = |stereospecific_number| {
+            (0..length).map(move |index| {
+                col("Calculated")
+                    .struct_()
+                    .field_by_name(stereospecific_number)
+                    .struct_()
+                    .field_by_name("Values")
+                    .arr()
+                    .get(index.into(), false)
+            })
+        };
+        let column = |stereospecific_number| -> PolarsResult<Expr> {
+            Ok(as_struct(vec![
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().monounsaturated(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().polyunsaturated(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().saturated(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().trans(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().unsaturated(value, None))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-9)))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-6)))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-3)))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(9)))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().eicosapentaenoic_and_docosahexaenoic(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().fish_lipid_quality(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().health_promoting_index(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| {
+                            fatty_acid().hypocholesterolemic_to_hypercholesterolemic(value)
+                        })
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().index_of_atherogenicity(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().index_of_thrombogenicity(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().linoleic_to_alpha_linolenic(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().polyunsaturated_6_to_polyunsaturated_3(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().polyunsaturated_to_saturated(value))
+                        .collect(),
+                )?,
+                concat_arr(
+                    values(stereospecific_number)
+                        .map(|value| fatty_acid().unsaturation_index(value))
+                        .collect(),
+                )?,
+            ]))
+        };
+        // #[rustfmt::skip]
+        // let exprs = vec![
+        //     index!(monounsaturated, fatty_acid, values)?,
+        //     index!(polyunsaturated, fatty_acid, values)?,
+        //     index!(saturated, fatty_acid, values)?,
+        //     index!(trans, fatty_acid, values)?,
+        //     index!(unsaturated, fatty_acid, values, None)?,
+        //     index!(unsaturated, fatty_acid, values, NonZeroI8::new(-9))?,
+        //     index!(unsaturated, fatty_acid, values, NonZeroI8::new(-6))?,
+        //     index!(unsaturated, fatty_acid, values, NonZeroI8::new(-3))?,
+        //     index!(unsaturated, fatty_acid, values, NonZeroI8::new(9))?,
+        //     index!(eicosapentaenoic_and_docosahexaenoic, fatty_acid, values)?,
+        //     index!(fish_lipid_quality, fatty_acid, values)?,
+        //     index!(health_promoting_index, fatty_acid, values)?,
+        //     index!(hypocholesterolemic_to_hypercholesterolemic, fatty_acid, values)?,
+        //     index!(index_of_atherogenicity, fatty_acid, values)?,
+        //     index!(index_of_thrombogenicity, fatty_acid, values)?,
+        //     index!(linoleic_to_alpha_linolenic, fatty_acid, values)?,
+        //     index!(polyunsaturated_6_to_polyunsaturated_3, fatty_acid, values)?,
+        //     index!(polyunsaturated_to_saturated, fatty_acid, values)?,
+        //     index!(unsaturation_index, fatty_acid, values)?,
+        // ];
         let exprs = vec![
-            index!(monounsaturated, fatty_acid, values)?,
-            index!(polyunsaturated, fatty_acid, values)?,
-            index!(saturated, fatty_acid, values)?,
-            index!(trans, fatty_acid, values)?,
-            index!(unsaturated, fatty_acid, values, None)?,
-            index!(unsaturated, fatty_acid, values, NonZeroI8::new(-9))?,
-            index!(unsaturated, fatty_acid, values, NonZeroI8::new(-6))?,
-            index!(unsaturated, fatty_acid, values, NonZeroI8::new(-3))?,
-            index!(unsaturated, fatty_acid, values, NonZeroI8::new(9))?,
-            index!(eicosapentaenoic_and_docosahexaenoic, fatty_acid, values)?,
-            index!(fish_lipid_quality, fatty_acid, values)?,
-            index!(health_promoting_index, fatty_acid, values)?,
-            index!(hypocholesterolemic_to_hypercholesterolemic, fatty_acid, values)?,
-            index!(index_of_atherogenicity, fatty_acid, values)?,
-            index!(index_of_thrombogenicity, fatty_acid, values)?,
-            index!(linoleic_to_alpha_linolenic, fatty_acid, values)?,
-            index!(polyunsaturated_6_to_polyunsaturated_3, fatty_acid, values)?,
-            index!(polyunsaturated_to_saturated, fatty_acid, values)?,
-            index!(unsaturation_index, fatty_acid, values)?,
+            column("Triacylglycerol")?.alias(STEREOSPECIFIC_NUMBER123),
+            column("Diacylglycerol13")?.alias(STEREOSPECIFIC_NUMBER13),
+            column("Monoacylglycerol2")?.alias(STEREOSPECIFIC_NUMBER2),
         ];
         lazy_frame = lazy_frame.select(exprs);
+        println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
         // Mean and standard deviation
         let exprs = lazy_frame
             .collect_schema()?

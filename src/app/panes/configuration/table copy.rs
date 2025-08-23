@@ -1,4 +1,4 @@
-use super::{ID_SOURCE, state::Settings};
+use super::{ID_SOURCE, Parameters, state::Settings};
 use crate::app::{
     panes::MARGIN,
     widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
@@ -143,7 +143,7 @@ impl TableView<'_> {
                 let label = self.data_frame["Label"].str()?;
                 let inner_response = LabelWidget::new(label, fatty_acid, row)
                     .editable(self.settings.edit_table)
-                    .hover_names(self.settings.hover_names)
+                    .hover(true)
                     .show(ui);
                 if inner_response.response.changed() {
                     match inner_response.inner? {
