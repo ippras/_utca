@@ -134,7 +134,7 @@ impl TableSettings {
     }
 }
 
-/// Calculation windows state
+/// Calculation windows
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Windows {
     pub open_christie: bool,

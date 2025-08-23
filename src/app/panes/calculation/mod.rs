@@ -301,7 +301,6 @@ impl Pane {
             .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
             .open(&mut windows.open_settings)
             .show(ui.ctx(), |ui| {
-                // Settings
                 let mut settings = Settings::load(ui.ctx());
                 settings.show(ui);
                 settings.store(ui.ctx());
