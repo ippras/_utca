@@ -20,6 +20,14 @@ use std::sync::LazyLock;
 use tracing::instrument;
 
 const ID_SOURCE: &str = "Configuration";
+const COLUMNS: [&str; 6] = [
+    "Index",
+    "Label",
+    "Fatty acid",
+    "SN-1,2,3",
+    "SN-1,2(2,3)",
+    "SN-2",
+];
 
 pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
     Schema::from_iter([
@@ -285,14 +293,7 @@ impl Pane {
 impl PaneDelegate for Pane {
     fn header(&mut self, ui: &mut Ui) -> Response {
         let mut settings = Settings::load(ui.ctx(), self.hash());
-        settings.filter_columns.update(vec![
-            "Index",
-            "Label",
-            "Fatty acid",
-            "SN-1,2,3",
-            "SN-1,2(2,3)",
-            "SN-2",
-        ]);
+        settings.filter_columns.update(&COLUMNS);
         let response = self.header_content(ui, &mut settings);
         settings.store(ui.ctx(), self.hash());
         response

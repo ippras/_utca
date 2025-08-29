@@ -76,7 +76,7 @@ impl Pane {
         settings
             .table
             .filter
-            .update(self.target.get_column_names_str());
+            .update(&self.target.get_column_names_str());
         let mut windows = Windows::load(ui.ctx());
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));

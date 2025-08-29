@@ -21,9 +21,9 @@ impl Table {
         }
     }
 
-    pub fn update(&mut self, columns: Vec<&str>) {
+    pub fn update(&mut self, columns: &[&str]) {
         let mut has_columns = HashSet::default();
-        for name in columns {
+        for &name in columns {
             let id = Id::new(name);
             has_columns.insert(id);
             if !self.columns.iter().any(|column| column.name == name) {
