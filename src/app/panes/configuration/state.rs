@@ -44,8 +44,8 @@ pub struct Settings {
     pub sticky_columns: usize,
     pub truncate_headers: bool,
 
-    pub show_names: bool,
-    pub show_properties: bool,
+    pub hover_names: bool,
+    pub hover_properties: bool,
 }
 
 impl Settings {
@@ -60,8 +60,8 @@ impl Settings {
             resize_table: false,
             sticky_columns: 0,
             truncate_headers: false,
-            show_names: true,
-            show_properties: true,
+            hover_names: true,
+            hover_properties: true,
         }
     }
 }
@@ -127,19 +127,17 @@ impl Settings {
             ui.end_row();
 
             // Names
-            let mut response = ui.label(ui.localize("Names"));
-            response |= ui.checkbox(&mut self.show_names, "");
-            response.on_hover_ui(|ui| {
+            ui.label(ui.localize("Names")).on_hover_ui(|ui| {
                 ui.label(ui.localize("Names.hover"));
             });
+            ui.checkbox(&mut self.hover_names, "");
             ui.end_row();
 
             // Properties
-            let mut response = ui.label(ui.localize("Properties"));
-            response |= ui.checkbox(&mut self.show_properties, "");
-            response.on_hover_ui(|ui| {
+            ui.label(ui.localize("Properties")).on_hover_ui(|ui| {
                 ui.label(ui.localize("Properties.hover"));
             });
+            ui.checkbox(&mut self.hover_properties, "");
             ui.end_row();
         });
     }
