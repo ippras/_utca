@@ -43,99 +43,115 @@ impl<'a> IndicesWidget<'a> {
                     .on_hover_text(r#struct.field_by_name("Repetitions")?.str_value(0)?);
                 Ok(())
             };
-        let index = |ui: &mut Ui, name: &str| -> PolarsResult<()> {
-            let column = &self.data_frame[name];
-            match column.dtype() {
-                DataType::Float64 => {
-                    FloatWidget::new(self.data_frame[name].f64()?.first())
-                        .precision(self.settings.precision)
-                        .hover(self.settings.hover)
-                        .show(ui);
-                }
-                DataType::Struct(_) => {
-                    mean_and_standard_deviation(ui, column.struct_()?)?;
-                }
-                DataType::Array(box DataType::Float64, 3) => {
-                    let array = column.array()?;
-                    let stereospecific_number = |index| {
-                        array.array_get(&Int64Chunked::full(PlSmallStr::EMPTY, index, 1), false)
-                    };
-                    FloatWidget::new(stereospecific_number(0)?.f64()?.first())
-                        .precision(self.settings.precision)
-                        .hover(self.settings.hover)
-                        .show(ui);
-                    FloatWidget::new(stereospecific_number(1)?.f64()?.first())
-                        .precision(self.settings.precision)
-                        .hover(self.settings.hover)
-                        .show(ui);
-                    FloatWidget::new(stereospecific_number(2)?.f64()?.first())
-                        .precision(self.settings.precision)
-                        .hover(self.settings.hover)
-                        .show(ui);
-                }
-                DataType::Array(box DataType::Struct(_), 3) => {
-                    let array = column.array()?;
-                    let stereospecific_number = |index| {
-                        array.array_get(&Int64Chunked::full(PlSmallStr::EMPTY, index, 1), false)
-                    };
-                    mean_and_standard_deviation(ui, stereospecific_number(0)?.struct_()?)?;
-                    mean_and_standard_deviation(ui, stereospecific_number(1)?.struct_()?)?;
-                    mean_and_standard_deviation(ui, stereospecific_number(2)?.struct_()?)?;
-                }
-                _ => {
-                    polars_bail!(SchemaMismatch: "cannot show indices, data types don't match");
-                }
-            };
+        let values = |ui: &mut Ui, name: &str| -> PolarsResult<()> {
+            for column in self.data_frame.get_columns() {
+                let column = &column.struct_()?.field_by_name(name)?;
+                match column.dtype() {
+                    DataType::Float64 => {
+                        FloatWidget::new(column.f64()?.first())
+                            .precision(self.settings.precision)
+                            .hover(self.settings.hover)
+                            .show(ui);
+                    }
+                    DataType::Struct(_) => {
+                        mean_and_standard_deviation(ui, column.struct_()?)?;
+                    }
+                    DataType::Array(box DataType::Float64, 3) => {
+                        let array = column.array()?;
+                        let stereospecific_number = |index| {
+                            array.array_get(&Int64Chunked::full(PlSmallStr::EMPTY, index, 1), false)
+                        };
+                        FloatWidget::new(stereospecific_number(0)?.f64()?.first())
+                            .precision(self.settings.precision)
+                            .hover(self.settings.hover)
+                            .show(ui);
+                        FloatWidget::new(stereospecific_number(1)?.f64()?.first())
+                            .precision(self.settings.precision)
+                            .hover(self.settings.hover)
+                            .show(ui);
+                        FloatWidget::new(stereospecific_number(2)?.f64()?.first())
+                            .precision(self.settings.precision)
+                            .hover(self.settings.hover)
+                            .show(ui);
+                    }
+                    DataType::Array(box DataType::Struct(_), 3) => {
+                        let array = column.array()?;
+                        let stereospecific_number = |index| {
+                            array.array_get(&Int64Chunked::full(PlSmallStr::EMPTY, index, 1), false)
+                        };
+                        mean_and_standard_deviation(ui, stereospecific_number(0)?.struct_()?)?;
+                        mean_and_standard_deviation(ui, stereospecific_number(1)?.struct_()?)?;
+                        mean_and_standard_deviation(ui, stereospecific_number(2)?.struct_()?)?;
+                    }
+                    _ => {
+                        polars_bail!(SchemaMismatch: "cannot show indices, data types don't match");
+                    }
+                };
+            }
             Ok(())
         };
         Grid::new(ui.auto_id_with("Indices")).show(ui, |ui| -> PolarsResult<()> {
+            ui.heading(ui.localize("Index"));
+            ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("StereospecificNumber?number=123"));
+                });
+            ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("StereospecificNumber?number=13"));
+                });
+            ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("StereospecificNumber?number=2"));
+                });
+            ui.end_row();
             // Simple
             ui.label(ui.localize("Saturated"));
-            index(ui, "Saturated")?;
+            values(ui, "Saturated")?;
             ui.end_row();
             ui.label(ui.localize("Monounsaturated"));
-            index(ui, "Monounsaturated")?;
+            values(ui, "Monounsaturated")?;
             ui.end_row();
             ui.label(ui.localize("Polyunsaturated"));
-            index(ui, "Polyunsaturated")?;
+            values(ui, "Polyunsaturated")?;
             ui.end_row();
             ui.label(ui.localize("Unsaturated"));
-            index(ui, "Unsaturated")?;
+            values(ui, "Unsaturated")?;
             ui.end_row();
             ui.label(ui.localize("Omega?index=-9"));
-            index(ui, "Unsaturated-9")?;
+            values(ui, "Unsaturated-9")?;
             ui.end_row();
             ui.label(ui.localize("Omega?index=-6"));
-            index(ui, "Unsaturated-6")?;
+            values(ui, "Unsaturated-6")?;
             ui.end_row();
             ui.label(ui.localize("Omega?index=-3"));
-            index(ui, "Unsaturated-3")?;
+            values(ui, "Unsaturated-3")?;
             ui.end_row();
             ui.label(ui.localize("Delta?index=9"));
-            index(ui, "Unsaturated9")?;
+            values(ui, "Unsaturated9")?;
             ui.end_row();
             ui.label(ui.localize("Trans")).on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/Indices/Trans.md"));
             });
-            index(ui, "Trans")?;
+            values(ui, "Trans")?;
             ui.end_row();
             // Complex
             ui.label(ui.localize("EicosapentaenoicAndDocosahexaenoic"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!("/doc/Indices/EicosapentaenoicAndDocosahexaenoic.md"));
                 });
-            index(ui, "EicosapentaenoicAndDocosahexaenoic")?;
+            values(ui, "EicosapentaenoicAndDocosahexaenoic")?;
             ui.end_row();
             ui.label(ui.localize("FishLipidQuality")).on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/Indices/FishLipidQuality.md"));
             });
-            index(ui, "FishLipidQuality")?;
+            values(ui, "FishLipidQuality")?;
             ui.end_row();
             ui.label(ui.localize("HealthPromotingIndex"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!("/doc/Indices/HealthPromotingIndex.md"));
                 });
-            index(ui, "HealthPromotingIndex")?;
+            values(ui, "HealthPromotingIndex")?;
             ui.end_row();
             ui.label(ui.localize("HypocholesterolemicToHypercholesterolemic"))
                 .on_hover_ui(|ui| {
@@ -143,25 +159,25 @@ impl<'a> IndicesWidget<'a> {
                         "/doc/Indices/HypocholesterolemicToHypercholesterolemic.md"
                     ));
                 });
-            index(ui, "HypocholesterolemicToHypercholesterolemic")?;
+            values(ui, "HypocholesterolemicToHypercholesterolemic")?;
             ui.end_row();
             ui.label(ui.localize("IndexOfAtherogenicity"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!("/doc/Indices/IndexOfAtherogenicity.md"));
                 });
-            index(ui, "IndexOfAtherogenicity")?;
+            values(ui, "IndexOfAtherogenicity")?;
             ui.end_row();
             ui.label(ui.localize("IndexOfThrombogenicity"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!("/doc/Indices/IndexOfThrombogenicity.md"));
                 });
-            index(ui, "IndexOfThrombogenicity")?;
+            values(ui, "IndexOfThrombogenicity")?;
             ui.end_row();
             ui.label(ui.localize("LinoleicToAlphaLinolenic"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!("/doc/Indices/LinoleicToAlphaLinolenic.md"));
                 });
-            index(ui, "LinoleicToAlphaLinolenic")?;
+            values(ui, "LinoleicToAlphaLinolenic")?;
             ui.end_row();
             ui.label(ui.localize("Polyunsaturated-6ToPolyunsaturated-3"))
                 .on_hover_ui(|ui| {
@@ -169,19 +185,19 @@ impl<'a> IndicesWidget<'a> {
                         "/doc/Indices/Polyunsaturated-6ToPolyunsaturated-3.md"
                     ));
                 });
-            index(ui, "Polyunsaturated-6ToPolyunsaturated-3")?;
+            values(ui, "Polyunsaturated-6ToPolyunsaturated-3")?;
             ui.end_row();
             ui.label(ui.localize("PolyunsaturatedToSaturated"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!("/doc/Indices/PolyunsaturatedToSaturated.md"));
                 });
-            index(ui, "PolyunsaturatedToSaturated")?;
+            values(ui, "PolyunsaturatedToSaturated")?;
             ui.end_row();
             ui.label(ui.localize("UnsaturationIndex"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!("/doc/Indices/UnsaturationIndex.md"));
                 });
-            index(ui, "UnsaturationIndex")?;
+            values(ui, "UnsaturationIndex")?;
             Ok(())
         })
     }

@@ -267,6 +267,7 @@ impl Pane {
 
     #[instrument(skip_all, err)]
     fn indices_content(&mut self, ui: &mut Ui) -> PolarsResult<()> {
+        println!("lazydata_frame_frame0: {:?}", self.target);
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
