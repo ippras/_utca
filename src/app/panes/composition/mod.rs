@@ -136,15 +136,6 @@ impl Pane {
             ui.label(ui.localize("Settings"));
         });
         ui.separator();
-        // Indices
-        ui.toggle_value(
-            &mut self.state.open_indices_window,
-            RichText::new(SIGMA).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("Indices"));
-        });
-        ui.separator();
         // Save
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             let title = self.title_with_separator(".");
@@ -274,52 +265,7 @@ impl Pane {
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
-        self.indices(ui);
         self.settings(ui);
-    }
-
-    fn indices(&mut self, ui: &mut Ui) {
-        let mut open_indices_window = self.state.open_indices_window;
-        Window::new(format!("{SIGMA} Composition indices"))
-            .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
-            .open(&mut open_indices_window)
-            .show(ui.ctx(), |ui| self.indices_content(ui));
-        self.state.open_indices_window = open_indices_window;
-    }
-
-    #[instrument(skip_all, err)]
-    fn indices_content(&mut self, ui: &mut Ui) -> PolarsResult<()> {
-        // Species
-        let data_frame = ui.memory_mut(|memory| {
-            memory
-                .caches
-                .cache::<CompositionSpeciesComputed>()
-                .get(CompositionSpeciesKey {
-                    frames: &self.source,
-                    index: self.settings.index,
-                    ddof: self.settings.special.ddof,
-                    method: self.settings.special.method,
-                    discriminants: &self.settings.special.discriminants,
-                })
-        });
-        // Indices
-        let data_frame = ui.memory_mut(|memory| {
-            memory
-                .caches
-                .cache::<CompositionIndicesComputed>()
-                .get(CompositionIndicesKey {
-                    data_frame: Hashed {
-                        value: &data_frame,
-                        hash: hash(self.settings.index),
-                    },
-                    ddof: self.settings.special.ddof,
-                })
-        });
-        IndicesWidget::new(&data_frame)
-            .hover(true)
-            .precision(Some(self.settings.precision))
-            .show(ui)
-            .inner
     }
 
     fn settings(&mut self, ui: &mut Ui) {

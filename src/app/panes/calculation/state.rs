@@ -1,8 +1,7 @@
 use super::ID_SOURCE;
 use crate::{app::MAX_PRECISION, utils::egui::state::Table};
 use egui::{
-    Button, Context, Grid, Id, IntoAtoms, PopupCloseBehavior, Response, RichText, Slider, Ui,
-    Widget,
+    Context, Grid, Id, PopupCloseBehavior, Slider, Ui,
     containers::menu::{MenuButton, MenuConfig},
 };
 use egui_l20n::UiExt as _;

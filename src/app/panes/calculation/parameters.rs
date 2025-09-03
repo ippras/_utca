@@ -24,7 +24,7 @@ impl Parameters {
         Self {
             index,
             weighted: false,
-            from: From::Mag2,
+            from: From::Sn2,
             normalize: Normalize::new(),
             unsigned: true,
             christie: false,
@@ -48,24 +48,24 @@ impl Parameters {
             if ui.input_mut(|input| {
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Num1))
             }) {
-                self.from = From::Dag1223;
+                self.from = From::Sn12_23;
             }
             if ui.input_mut(|input| {
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Num2))
             }) {
-                self.from = From::Mag2;
+                self.from = From::Sn2;
             }
             ComboBox::from_id_salt("1|3")
                 .selected_text(ui.localize(self.from.text()))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
                         &mut self.from,
-                        From::Dag1223,
-                        ui.localize(From::Dag1223.text()),
+                        From::Sn12_23,
+                        ui.localize(From::Sn12_23.text()),
                     )
-                    .on_hover_localized(From::Dag1223.hover_text());
-                    ui.selectable_value(&mut self.from, From::Mag2, ui.localize(From::Mag2.text()))
-                        .on_hover_localized(From::Mag2.hover_text());
+                    .on_hover_localized(From::Sn12_23.hover_text());
+                    ui.selectable_value(&mut self.from, From::Sn2, ui.localize(From::Sn2.text()))
+                        .on_hover_localized(From::Sn2.hover_text());
                 })
                 .response
                 .on_hover_localized(self.from.hover_text());
@@ -155,22 +155,22 @@ impl Parameters {
 /// From
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) enum From {
-    Dag1223,
-    Mag2,
+    Sn12_23,
+    Sn2,
 }
 
 impl From {
     pub(crate) fn text(self) -> &'static str {
         match self {
-            Self::Dag1223 => "CalculateFrom-Sn12Sn23",
-            Self::Mag2 => "CalculateFrom-Sn2",
+            Self::Sn12_23 => "CalculateFrom-Sn12Sn23",
+            Self::Sn2 => "CalculateFrom-Sn2",
         }
     }
 
     pub(crate) fn hover_text(self) -> &'static str {
         match self {
-            Self::Dag1223 => "CalculateFrom-Sn12Sn23.hover",
-            Self::Mag2 => "CalculateFrom-Sn2.hover",
+            Self::Sn12_23 => "CalculateFrom-Sn12Sn23.hover",
+            Self::Sn2 => "CalculateFrom-Sn2.hover",
         }
     }
 }

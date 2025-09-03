@@ -1,8 +1,5 @@
 use crate::{
-    app::{
-        panes::calculation::parameters::{From, Parameters},
-        presets::CHRISTIE,
-    },
+    app::{panes::calculation::parameters::Parameters, presets::CHRISTIE},
     utils::{Hashed, hash},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -20,24 +17,36 @@ pub(crate) type Computed = FrameCache<Value, Computer>;
 pub(crate) struct Computer;
 
 impl Computer {
-    fn try_compute(&mut self, key: Key) -> PolarsResult<DataFrame> {
-        match key.settings.index {
+    fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
+        let mut lazy_frame = match key.parameters.index {
             Some(index) => {
                 let frame = &key.frames[index];
                 let mut lazy_frame = frame.data.clone().lazy();
-                lazy_frame = compute(lazy_frame, key.settings)?;
-                lazy_frame.collect()
+                lazy_frame = compute(lazy_frame, key.parameters)?.select([
+                    col(LABEL),
+                    col(FATTY_ACID),
+                    as_struct(vec![
+                        col(STEREOSPECIFIC_NUMBERS123),
+                        col(STEREOSPECIFIC_NUMBERS12_23),
+                        col(STEREOSPECIFIC_NUMBERS2),
+                        col(STEREOSPECIFIC_NUMBERS13),
+                        col("Factors"),
+                    ])
+                    .alias(frame.meta.format(".").to_string()),
+                ]);
+                lazy_frame
             }
             None => {
                 let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
-                    Ok(compute(frame.data.clone().lazy(), key.settings)?.select([
-                        hash(as_struct(vec![col("Label"), col("FattyAcid")])),
-                        col("Label"),
-                        col("FattyAcid"),
+                    Ok(compute(frame.data.clone().lazy(), key.parameters)?.select([
+                        hash(as_struct(vec![col(LABEL), col(FATTY_ACID)])),
+                        col(LABEL),
+                        col(FATTY_ACID),
                         as_struct(vec![
-                            col("Experimental"),
-                            col("Theoretical"),
-                            col("Calculated"),
+                            col(STEREOSPECIFIC_NUMBERS123),
+                            col(STEREOSPECIFIC_NUMBERS12_23),
+                            col(STEREOSPECIFIC_NUMBERS2),
+                            col(STEREOSPECIFIC_NUMBERS13),
                             col("Factors"),
                         ])
                         .alias(frame.meta.format(".").to_string()),
@@ -47,18 +56,22 @@ impl Computer {
                 for frame in &key.frames[1..] {
                     lazy_frame = lazy_frame.join(
                         compute(frame)?,
-                        [col("Hash"), col("Label"), col("FattyAcid")],
-                        [col("Hash"), col("Label"), col("FattyAcid")],
+                        [col("Hash"), col(LABEL), col(FATTY_ACID)],
+                        [col("Hash"), col(LABEL), col(FATTY_ACID)],
                         JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
                     );
                 }
                 lazy_frame = lazy_frame.drop(by_name(["Hash"], true));
-                lazy_frame = means(lazy_frame, key.settings)?;
-                // Index
-                lazy_frame = lazy_frame.with_row_index("Index", None);
-                lazy_frame.collect()
+                lazy_frame
             }
-        }
+        };
+        lazy_frame = mean_and_standard_deviations(lazy_frame, key.parameters.ddof)?;
+        let mut data_frame = lazy_frame.collect()?;
+        let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
+        Ok(Hashed {
+            value: data_frame,
+            hash,
+        })
     }
 }
 
@@ -72,121 +85,143 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Key<'a> {
     pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
-    pub(crate) settings: &'a Parameters,
+    pub(crate) parameters: &'a Parameters,
 }
 
 impl Hash for Key<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.frames.hash(state);
-        self.settings.index.hash(state);
-        // self.settings.percent.hash(state);
-        // self.settings.precision.hash(state);
-        // self.settings.resizable.hash(state);
-        // self.settings.sticky_columns.hash(state);
-        // self.settings.truncate.hash(state);
-        self.settings.weighted.hash(state);
-        self.settings.from.hash(state);
-        self.settings.normalize.hash(state);
-        self.settings.unsigned.hash(state);
-        self.settings.christie.hash(state);
-        self.settings.ddof.hash(state);
+        self.parameters.index.hash(state);
+        self.parameters.weighted.hash(state);
+        self.parameters.from.hash(state);
+        self.parameters.normalize.hash(state);
+        self.parameters.unsigned.hash(state);
+        self.parameters.christie.hash(state);
+        self.parameters.ddof.hash(state);
     }
 }
 
 /// Calculation value
-type Value = DataFrame;
+type Value = Hashed<DataFrame>;
 
-fn compute(mut lazy_frame: LazyFrame, settings: &Parameters) -> PolarsResult<LazyFrame> {
+fn compute(mut lazy_frame: LazyFrame, parameters: &Parameters) -> PolarsResult<LazyFrame> {
     // Christie
-    if settings.christie {
+    if parameters.christie {
         lazy_frame = christie(lazy_frame);
     }
-    // Experimental
-    lazy_frame = lazy_frame.with_column(
-        ExperimentalExpr(as_struct(vec![
-            col("Triacylglycerol"),
-            col("Diacylglycerol1223"),
-            col("Monoacylglycerol2"),
-        ]))
-        .compute(col("FattyAcid"), settings),
-    );
-    // Theoretical
-    lazy_frame = lazy_frame.with_column(TheoreticalExpr(col("Experimental")).compute(settings));
-    // Calculated
-    lazy_frame = lazy_frame.with_column(
-        as_struct(vec![
-            col("Experimental").struct_().field_by_name("*"),
-            col("Theoretical")
-                .struct_()
-                .field_by_name("Diacylglycerol13")
-                .struct_()
-                .field_by_name(match settings.from {
-                    From::Dag1223 => "Diacylglycerol1223",
-                    From::Mag2 => "Monoacylglycerol2",
-                })
-                .alias("Diacylglycerol13"),
-        ])
-        .alias("Calculated"),
-    );
+    lazy_frame = lazy_frame.select([
+        col(LABEL),
+        col(FATTY_ACID),
+        col("Triacylglycerol").alias(STEREOSPECIFIC_NUMBERS123),
+        col("Diacylglycerol1223").alias(STEREOSPECIFIC_NUMBERS12_23),
+        col("Monoacylglycerol2").alias(STEREOSPECIFIC_NUMBERS2),
+    ]);
+    // Stereospecific numbers
+    lazy_frame = lazy_frame.with_columns(compute_sn(
+        col(FATTY_ACID),
+        col(STEREOSPECIFIC_NUMBERS123),
+        col(STEREOSPECIFIC_NUMBERS12_23),
+        col(STEREOSPECIFIC_NUMBERS2),
+        parameters,
+    ));
     // Factors
-    lazy_frame = lazy_frame.with_column(FactorsExpr(col("Calculated")).compute(col("FattyAcid")));
-    Ok(lazy_frame.select(vec![
-        col("Label"),
-        col("FattyAcid"),
-        col("Experimental"),
-        col("Theoretical"),
-        col("Calculated"),
-        col("Factors"),
-    ]))
+    lazy_frame = lazy_frame.with_column(factors(
+        col(FATTY_ACID),
+        col(STEREOSPECIFIC_NUMBERS123),
+        col(STEREOSPECIFIC_NUMBERS2),
+    ));
+    Ok(lazy_frame)
 }
 
 fn christie(lazy_frame: LazyFrame) -> LazyFrame {
     lazy_frame
-        .with_column(hash(col("FattyAcid")))
+        .with_column(hash(col(FATTY_ACID)))
         .join(
             CHRISTIE.data.clone().lazy().select([
-                hash(col("FattyAcid")),
-                col("FattyAcid"),
+                hash(col(FATTY_ACID)),
+                col(FATTY_ACID),
                 col("Christie"),
             ]),
-            [col("Hash"), col("FattyAcid")],
-            [col("Hash"), col("FattyAcid")],
+            [col("Hash"), col(FATTY_ACID)],
+            [col("Hash"), col(FATTY_ACID)],
             JoinArgs::new(JoinType::Left),
         )
         // col("Christie").fill_null(lit(1)),
         .drop(by_name(["Hash"], true))
 }
 
-fn means(lazy_frame: LazyFrame, settings: &Parameters) -> PolarsResult<LazyFrame> {
+// fn mean_and_standard_deviations(lazy_frame: LazyFrame, ddof: u8) -> PolarsResult<LazyFrame> {
+//     Ok(lazy_frame.select([
+//         col(LABEL),
+//         col(FATTY_ACID),
+//         as_struct(vec![
+//             mean(&["Experimental", STEREOSPECIFIC_NUMBERS123], ddof)?,
+//             mean(&["Experimental", STEREOSPECIFIC_NUMBERS12_23], ddof)?,
+//             mean(&["Experimental", STEREOSPECIFIC_NUMBERS2], ddof)?,
+//         ])
+//         .alias("Experimental"),
+//         as_struct(vec![
+//             mean(&["Theoretical", STEREOSPECIFIC_NUMBERS123], ddof)?,
+//             mean(&["Theoretical", STEREOSPECIFIC_NUMBERS12_23], ddof)?,
+//             mean(&["Theoretical", STEREOSPECIFIC_NUMBERS2], ddof)?,
+//             as_struct(vec![
+//                 mean(
+//                     &[
+//                         "Theoretical",
+//                         STEREOSPECIFIC_NUMBERS13,
+//                         STEREOSPECIFIC_NUMBERS12_23,
+//                     ],
+//                     ddof,
+//                 )?,
+//                 mean(
+//                     &[
+//                         "Theoretical",
+//                         STEREOSPECIFIC_NUMBERS13,
+//                         STEREOSPECIFIC_NUMBERS2,
+//                     ],
+//                     ddof,
+//                 )?,
+//             ])
+//             .alias(STEREOSPECIFIC_NUMBERS13),
+//         ])
+//         .alias("Theoretical"),
+//         as_struct(vec![
+//             mean(&["Factors", "Enrichment"], ddof)?,
+//             mean(&["Factors", "Selectivity"], ddof)?,
+//         ])
+//         .alias("Factors"),
+//     ]))
+// }
+fn mean_and_standard_deviations(lazy_frame: LazyFrame, ddof: u8) -> PolarsResult<LazyFrame> {
     Ok(lazy_frame.select([
-        col("Label"),
-        col("FattyAcid"),
+        col(LABEL),
+        col(FATTY_ACID),
         as_struct(vec![
-            mean(&["Experimental", "Triacylglycerol"], settings.ddof)?,
-            mean(&["Experimental", "Diacylglycerol1223"], settings.ddof)?,
-            mean(&["Experimental", "Monoacylglycerol2"], settings.ddof)?,
+            mean(&[STEREOSPECIFIC_NUMBERS123, "Experimental"], ddof)?,
+            mean(&[STEREOSPECIFIC_NUMBERS123, "Theoretical"], ddof)?,
         ])
-        .alias("Experimental"),
+        .alias(STEREOSPECIFIC_NUMBERS123),
         as_struct(vec![
-            mean(&["Theoretical", "Triacylglycerol"], settings.ddof)?,
-            mean(&["Theoretical", "Diacylglycerol1223"], settings.ddof)?,
-            mean(&["Theoretical", "Monoacylglycerol2"], settings.ddof)?,
-            as_struct(vec![
-                mean(
-                    &["Theoretical", "Diacylglycerol13", "Diacylglycerol1223"],
-                    settings.ddof,
-                )?,
-                mean(
-                    &["Theoretical", "Diacylglycerol13", "Monoacylglycerol2"],
-                    settings.ddof,
-                )?,
-            ])
-            .alias("Diacylglycerol13"),
+            mean(&[STEREOSPECIFIC_NUMBERS12_23, "Experimental"], ddof)?,
+            mean(&[STEREOSPECIFIC_NUMBERS12_23, "Theoretical"], ddof)?,
         ])
-        .alias("Theoretical"),
+        .alias(STEREOSPECIFIC_NUMBERS12_23),
         as_struct(vec![
-            mean(&["Factors", "Enrichment"], settings.ddof)?,
-            mean(&["Factors", "Selectivity"], settings.ddof)?,
+            mean(&[STEREOSPECIFIC_NUMBERS2, "Experimental"], ddof)?,
+            mean(&[STEREOSPECIFIC_NUMBERS2, "Theoretical"], ddof)?,
+        ])
+        .alias(STEREOSPECIFIC_NUMBERS2),
+        as_struct(vec![
+            mean(
+                &[STEREOSPECIFIC_NUMBERS13, STEREOSPECIFIC_NUMBERS12_23],
+                ddof,
+            )?,
+            mean(&[STEREOSPECIFIC_NUMBERS13, STEREOSPECIFIC_NUMBERS2], ddof)?,
+        ])
+        .alias(STEREOSPECIFIC_NUMBERS13),
+        as_struct(vec![
+            mean(&["Factors", "Enrichment"], ddof)?,
+            mean(&["Factors", "Selectivity"], ddof)?,
         ])
         .alias("Factors"),
     ]))
@@ -196,7 +231,7 @@ fn mean(names: &[&str], ddof: u8) -> PolarsResult<Expr> {
     let array = || {
         concat_arr(vec![
             all()
-                .exclude_cols(["Label", "FattyAcid"])
+                .exclude_cols([LABEL, FATTY_ACID])
                 .as_expr()
                 .destruct(names),
         ])
@@ -204,160 +239,188 @@ fn mean(names: &[&str], ddof: u8) -> PolarsResult<Expr> {
     Ok(as_struct(vec![
         array()?.arr().mean().alias("Mean"),
         array()?.arr().std(ddof).alias("StandardDeviation"),
-        array()?.alias("Values"),
+        array()?.alias("Repetitions"),
     ])
     .alias(names[names.len() - 1]))
 }
 
-trait Tag {
-    fn tag(self) -> Expr;
-}
-
-trait Dag1223 {
-    fn dag1223(self) -> Expr;
-}
-
-trait Mag2 {
-    fn mag2(self) -> Expr;
-}
-
-/// Experimental
-#[derive(Clone, Debug)]
-struct ExperimentalExpr(Expr);
-
-// TODO
-// if Fraction then: UserWarning: groups may be out of bounds; more groups than elements in a series is only possible in dynamic group_by
-impl ExperimentalExpr {
-    fn compute(self, fatty_acid: Expr, settings: &Parameters) -> Expr {
-        // // col(name) / (col(name) * col("FA").fa().mass() / lit(10)).sum()
-        let experimental = |mut expr: Expr| {
-            // S / ∑(S * M)
-            if settings.weighted {
-                expr = expr.clone() / (expr * fatty_acid.clone().fatty_acid().mass(None)).sum()
-            };
-            expr.normalize_if(settings.normalize.experimental)
+fn compute_sn(
+    fatty_acid: Expr,
+    sn123: Expr,
+    sn12_23: Expr,
+    sn2: Expr,
+    parameters: &Parameters,
+) -> [Expr; 4] {
+    let experimental = |mut sn: Expr| {
+        if parameters.weighted {
+            sn = sn.clone() / (sn * fatty_acid.clone().fatty_acid().mass(None)).sum()
         };
-        as_struct(vec![
-            experimental(self.clone().tag()),
-            experimental(self.clone().dag1223()),
-            experimental(self.clone().mag2()),
-        ])
-        .alias("Experimental")
-    }
+        sn.normalize_if(parameters.normalize.experimental)
+    };
+    let sn123 = experimental(sn123);
+    let sn12_23 = experimental(sn12_23);
+    let sn2 = experimental(sn2);
+    [
+        compute_sn123(sn123.clone(), sn12_23.clone(), sn2.clone(), parameters),
+        compute_sn12_23(sn123.clone(), sn12_23.clone(), sn2.clone(), parameters),
+        compute_sn2(sn123.clone(), sn12_23.clone(), sn2.clone(), parameters),
+        compute_sn13(sn123, sn12_23, sn2, parameters),
+    ]
 }
 
-impl Tag for ExperimentalExpr {
-    fn tag(self) -> Expr {
-        self.0.struct_().field_by_name("Triacylglycerol")
-    }
+/// 3 * x{1,2,3: i} = 2 * x{1,3: i} + x{2: i}
+/// 3 * x{1,2,3: i} = 4 * x{1,2: i; 2,3: i} - x{2: i}
+/// 3 * TAG = 2 * DAG1(3) + MAG2
+/// 3 * TAG = 4 * DAG1223 - MAG2
+fn compute_sn123(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+    let theoretical = ((lit(4) * sn12_23 - sn2) / lit(3))
+        .clip_min_if(parameters.unsigned)
+        .normalize_if(parameters.normalize.theoretical);
+    as_struct(vec![
+        sn123.alias("Experimental"),
+        theoretical.alias("Theoretical"),
+    ])
+    .alias(STEREOSPECIFIC_NUMBERS123)
 }
 
-impl Dag1223 for ExperimentalExpr {
-    fn dag1223(self) -> Expr {
-        self.0.struct_().field_by_name("Diacylglycerol1223")
-    }
+/// DAG1223 = (3 * TAG + MAG2) / 4
+fn compute_sn12_23(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+    let theoretical =
+        ((lit(3) * sn123 + sn2) / lit(4)).normalize_if(parameters.normalize.theoretical);
+    as_struct(vec![
+        sn12_23.alias("Experimental"),
+        theoretical.alias("Theoretical"),
+    ])
+    .alias(STEREOSPECIFIC_NUMBERS12_23)
 }
 
-impl Mag2 for ExperimentalExpr {
-    fn mag2(self) -> Expr {
-        self.0.struct_().field_by_name("Monoacylglycerol2")
-    }
+/// MAG2 = 4 * DAG1223 - 3 * TAG
+fn compute_sn2(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+    let theoretical = (lit(4) * sn12_23 - lit(3) * sn123)
+        .clip_min_if(parameters.unsigned)
+        .normalize_if(parameters.normalize.theoretical);
+    as_struct(vec![
+        sn2.alias("Experimental"),
+        theoretical.alias("Theoretical"),
+    ])
+    .alias(STEREOSPECIFIC_NUMBERS2)
 }
 
-/// Theoretical
-#[derive(Clone, Debug)]
-struct TheoreticalExpr(Expr);
+// xi мольная доля i-й ЖК в ТГ
+// x[i,,] мольная доля i-й ЖК в sn-1 положении ТГ
+// x[,i,] мольная доля i-й ЖК в sn-2 положении ТГ
+// x[,,i] мольная доля i-й ЖК в sn-3 положении ТГ
+// x[i,j,k] мольная доля стереоизомера ТГ, содержащего ацил i-й ЖК в положении sn-1, ацил j-й ЖК в положении sn-2 и ацил k-й ЖК в положении sn-3
 
-impl TheoreticalExpr {
-    fn compute(self, settings: &Parameters) -> Expr {
-        // 3 * TAG =  2 * DAG13 + MAG2
-        let tag = || (lit(4) * self.clone().dag1223() - self.clone().mag2()) / lit(3);
-        // DAG1223 = (3 * TAG + MAG2) / 4
-        let dag1223 = || (lit(3) * self.clone().tag() + self.clone().mag2()) / lit(4);
-        // MAG2 = 4 * DAG1223 - 3 * TAG
-        let mag2 = || lit(4) * self.clone().dag1223() - lit(3) * self.clone().tag();
-        // 2 * DAG13 = 3 * TAG - MAG2 (стр. 116)
-        let dag13 = || {
-            // DAG13 = (3 * TAG - MAG2) / 2
-            let mag2 = || (lit(3) * self.clone().tag() - self.clone().mag2()) / lit(2);
-            // DAG13 = 3 * TAG - 2 * DAG1223
-            let dag1223 = || lit(3) * self.clone().tag() - lit(2) * self.clone().dag1223();
-            as_struct(vec![
-                dag1223()
-                    .clip_min_if(settings.unsigned)
-                    .normalize_if(settings.normalize.theoretical)
-                    .alias("Diacylglycerol1223"),
-                mag2()
-                    .clip_min_if(settings.unsigned)
-                    .normalize_if(settings.normalize.theoretical)
-                    .alias("Monoacylglycerol2"),
-            ])
-        };
-        as_struct(vec![
-            tag()
-                .clip_min_if(settings.unsigned)
-                .normalize_if(settings.normalize.theoretical)
-                .alias("Triacylglycerol"),
-            dag1223()
-                .normalize_if(settings.normalize.theoretical)
-                .alias("Diacylglycerol1223"),
-            mag2()
-                .clip_min_if(settings.unsigned)
-                .normalize_if(settings.normalize.theoretical)
-                .alias("Monoacylglycerol2"),
-            dag13().alias("Diacylglycerol13"),
-        ])
-        .alias("Theoretical")
-    }
+/// 2 * DAG1(3) = 3 * TAG - MAG2 (стр. 116)
+/// $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$ (Sovová2008)
+fn compute_sn13(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+    // DAG1(3) = 3 * TAG - 2 * DAG1223
+    let sn12_23 = (lit(3) * sn123.clone() - lit(2) * sn12_23)
+        .clip_min_if(parameters.unsigned)
+        .normalize_if(parameters.normalize.theoretical)
+        .alias(STEREOSPECIFIC_NUMBERS12_23);
+    // DAG1(3) = (3 * TAG - MAG2) / 2
+    // $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$
+    let sn2 = ((lit(3) * sn123 - sn2) / lit(2))
+        .clip_min_if(parameters.unsigned)
+        .normalize_if(parameters.normalize.theoretical)
+        .alias(STEREOSPECIFIC_NUMBERS2);
+    as_struct(vec![sn12_23, sn2]).alias(STEREOSPECIFIC_NUMBERS13)
 }
 
-impl Tag for TheoreticalExpr {
-    fn tag(self) -> Expr {
-        self.0.struct_().field_by_name("Triacylglycerol")
-    }
+fn factors(fatty_acid: Expr, sn123: Expr, sn2: Expr) -> Expr {
+    let sn123 = sn123
+        .clone()
+        .struct_()
+        .field_by_index(0)
+        .fill_nan(sn123.struct_().field_by_index(1));
+    let sn2 = sn2
+        .clone()
+        .struct_()
+        .field_by_index(0)
+        .fill_nan(sn2.struct_().field_by_index(1));
+    as_struct(vec![
+        FattyAcidExpr::enrichment_factor(sn2.clone(), sn123.clone()).alias("Enrichment"),
+        fatty_acid
+            .fatty_acid()
+            .selectivity_factor(sn2, sn123)
+            .alias("Selectivity"),
+    ])
+    .alias("Factors")
 }
 
-impl Dag1223 for TheoreticalExpr {
-    fn dag1223(self) -> Expr {
-        self.0.struct_().field_by_name("Diacylglycerol1223")
-    }
-}
+// fn experimental(
+//     fatty_acid: Expr,
+//     sn123: Expr,
+//     sn12_23: Expr,
+//     sn2: Expr,
+//     parameters: &Parameters,
+// ) -> Expr {
+//     // // col(name) / (col(name) * col("FA").fa().mass() / lit(10)).sum()
+//     let compute = |mut expr: Expr| {
+//         // S / ∑(S * M)
+//         if parameters.weighted {
+//             expr = expr.clone() / (expr * fatty_acid.clone().fatty_acid().mass(None)).sum()
+//         };
+//         expr.normalize_if(parameters.normalize.experimental)
+//     };
+//     as_struct(vec![compute(sn123), compute(sn12_23), compute(sn2)]).alias("Experimental")
+// }
 
-impl Mag2 for TheoreticalExpr {
-    fn mag2(self) -> Expr {
-        self.0.struct_().field_by_name("Monoacylglycerol2")
-    }
-}
+// fn theoretical(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+//     // 3 * TAG =  2 * DAG13 + MAG2
+//     let tag = || (lit(4) * sn12_23.clone() - sn2.clone()) / lit(3);
+//     // DAG1223 = (3 * TAG + MAG2) / 4
+//     let dag1223 = || (lit(3) * sn123.clone() + sn2.clone()) / lit(4);
+//     // MAG2 = 4 * DAG1223 - 3 * TAG
+//     let mag2 = || lit(4) * sn12_23.clone() - lit(3) * sn123.clone();
+//     // 2 * DAG13 = 3 * TAG - MAG2 (стр. 116)
+//     let sn13 = || {
+//         // DAG13 = (3 * TAG - MAG2) / 2
+//         let sn2 = || (lit(3) * sn123.clone() - sn2.clone()) / lit(2);
+//         // DAG13 = 3 * TAG - 2 * DAG1223
+//         let sn12_23 = || lit(3) * sn123.clone() - lit(2) * sn12_23.clone();
+//         let sn12_23 = sn12_23()
+//             .clip_min_if(parameters.unsigned)
+//             .normalize_if(parameters.normalize.theoretical)
+//             .alias(STEREOSPECIFIC_NUMBERS12_23);
+//         let sn2 = sn2()
+//             .clip_min_if(parameters.unsigned)
+//             .normalize_if(parameters.normalize.theoretical)
+//             .alias(STEREOSPECIFIC_NUMBERS2);
+//         match parameters.from {
+//             From::Sn12_23 => as_struct(vec![sn12_23, sn2]),
+//             From::Sn2 => as_struct(vec![sn2, sn12_23]),
+//         }
+//     };
+//     as_struct(vec![
+//         tag()
+//             .clip_min_if(parameters.unsigned)
+//             .normalize_if(parameters.normalize.theoretical)
+//             .alias(STEREOSPECIFIC_NUMBERS123),
+//         dag1223()
+//             .normalize_if(parameters.normalize.theoretical)
+//             .alias(STEREOSPECIFIC_NUMBERS12_23),
+//         mag2()
+//             .clip_min_if(parameters.unsigned)
+//             .normalize_if(parameters.normalize.theoretical)
+//             .alias(STEREOSPECIFIC_NUMBERS2),
+//         sn13().alias(STEREOSPECIFIC_NUMBERS13),
+//     ])
+//     .alias("Theoretical")
+// }
 
-/// Factors
-#[derive(Clone, Debug)]
-struct FactorsExpr(Expr);
-
-impl FactorsExpr {
-    fn compute(self, fatty_acid: Expr) -> Expr {
-        as_struct(vec![
-            FattyAcidExpr::enrichment_factor(self.clone().mag2(), self.clone().tag())
-                .alias("Enrichment"),
-            fatty_acid
-                .fatty_acid()
-                .selectivity_factor(self.clone().mag2(), self.tag())
-                .alias("Selectivity"),
-        ])
-        .alias("Factors")
-    }
-}
-
-impl Tag for FactorsExpr {
-    fn tag(self) -> Expr {
-        self.0.struct_().field_by_name("Triacylglycerol")
-    }
-}
-
-impl Mag2 for FactorsExpr {
-    fn mag2(self) -> Expr {
-        self.0.struct_().field_by_name("Monoacylglycerol2")
-    }
-}
+// fn old_factors(fatty_acid: Expr, sn123: Expr, sn2: Expr) -> Expr {
+//     as_struct(vec![
+//         FattyAcidExpr::enrichment_factor(sn2.clone(), sn123.clone()).alias("Enrichment"),
+//         fatty_acid
+//             .fatty_acid()
+//             .selectivity_factor(sn2, sn123)
+//             .alias("Selectivity"),
+//     ])
+//     .alias("Factors")
+// }
 
 // fn single(mut lazy_frame: LazyFrame, column: &str, key: Key) -> PolarsResult<LazyFrame> {
 //     let fraction = match key.settings.fraction {

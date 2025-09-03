@@ -10,6 +10,10 @@ pub(super) use self::{
         species::{Computed as CompositionSpeciesComputed, Key as CompositionSpeciesKey},
         unique::{Computed as UniqueCompositionComputed, Key as UniqueCompositionKey},
     },
+    display::{
+        factor::{Computed as DisplayFactorComputed, Factor, Key as DisplayFactorKey},
+        value::{Computed as DisplayValueComputed, Key as DisplayValueKey},
+    },
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -20,3 +24,4 @@ enum Mode {
 
 pub(super) mod calculation;
 pub(super) mod composition;
+pub(super) mod display;

@@ -1,5 +1,4 @@
 use self::{
-    parameters::Parameters,
     state::{Settings, Windows},
     table::TableView,
 };
@@ -43,15 +42,12 @@ pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
     frames: Vec<MetaDataFrame>,
-    parameters: Parameters,
+    index: usize,
 }
 
 impl Pane {
     pub(crate) fn new(frames: Vec<MetaDataFrame>) -> Self {
-        Self {
-            frames,
-            parameters: Parameters::new(),
-        }
+        Self { frames, index: 0 }
     }
 
     pub(crate) const fn icon() -> &'static str {
@@ -63,10 +59,7 @@ impl Pane {
     }
 
     fn title_with_separator(&self, separator: &str) -> String {
-        self.frames[self.parameters.index]
-            .meta
-            .format(separator)
-            .to_string()
+        self.frames[self.index].meta.format(separator).to_string()
     }
 
     fn hash(&self) -> u64 {
@@ -83,9 +76,7 @@ impl Pane {
         response |= ui.heading(self.title());
         response = response
             .on_hover_text(format!("{:x}", self.hash()))
-            .on_hover_ui(|ui| {
-                MetadataWidget::new(&self.frames[self.parameters.index].meta).show(ui)
-            })
+            .on_hover_ui(|ui| MetadataWidget::new(&self.frames[self.index].meta).show(ui))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         // List
@@ -93,7 +84,7 @@ impl Pane {
             for index in 0..self.frames.len() {
                 if ui
                     .selectable_value(
-                        &mut self.parameters.index,
+                        &mut self.index,
                         index,
                         self.frames[index].meta.format(" ").to_string(),
                     )
@@ -133,7 +124,7 @@ impl Pane {
             });
         // Clear
         ui.add_enabled_ui(
-            settings.edit_table && self.frames[self.parameters.index].data.height() > 0,
+            settings.edit_table && self.frames[self.index].data.height() > 0,
             |ui| {
                 if ui
                     .button(RichText::new(ERASER).heading())
@@ -142,7 +133,7 @@ impl Pane {
                     })
                     .clicked()
                 {
-                    let data_frame = &mut self.frames[self.parameters.index].data;
+                    let data_frame = &mut self.frames[self.index].data;
                     *data_frame = data_frame.clear();
                 }
             },
@@ -156,8 +147,8 @@ impl Pane {
                 })
                 .clicked()
             {
-                self.frames.remove(self.parameters.index);
-                self.parameters.index = 0;
+                self.frames.remove(self.index);
+                self.index = 0;
             }
         });
         ui.separator();
@@ -180,12 +171,6 @@ impl Pane {
             ui.label(ui.localize("Settings"));
         });
         ui.separator();
-        // Parameters
-        ui.toggle_value(&mut windows.open_parameters, RichText::new(GEAR).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Parameters"));
-            });
-        ui.separator();
         // Save
         if ui
             .button(RichText::new(FLOPPY_DISK).heading())
@@ -197,20 +182,6 @@ impl Pane {
         {
             let _ = self.save();
         }
-        // if ui
-        //     .button(RichText::new("JSON").heading())
-        //     .on_hover_ui(|ui| {
-        //         ui.label(ui.localize("Save"));
-        //     })
-        //     .on_hover_text(format!("{}.utca.json", self.title()))
-        //     .clicked()
-        // {
-        //     let mut file = std::fs::File::create(format!("{}.utca.json", self.title())).unwrap();
-        //     JsonWriter::new(&mut file)
-        //         .with_json_format(JsonFormat::JsonLines)
-        //         .finish(&mut self.frames[self.settings.index].data)
-        //         .unwrap();
-        // }
         ui.separator();
         // Calculation
         if ui
@@ -221,10 +192,7 @@ impl Pane {
             .clicked()
         {
             ui.data_mut(|data| {
-                data.insert_temp(
-                    Id::new(CALCULATE),
-                    (self.frames.clone(), self.parameters.index),
-                );
+                data.insert_temp(Id::new(CALCULATE), (self.frames.clone(), self.index));
             });
         }
         ui.separator();
@@ -249,7 +217,7 @@ impl Pane {
     #[instrument(skip(self), err)]
     fn save(&mut self) -> Result<()> {
         let name = format!("{}.utca.parquet", self.title_with_separator("."));
-        save(&mut self.frames[self.parameters.index], &name)?;
+        save(&mut self.frames[self.index], &name)?;
         Ok(())
     }
 }
@@ -257,17 +225,8 @@ impl Pane {
 impl Pane {
     fn windows(&mut self, ui: &mut Ui) {
         let windows = &mut Windows::load(ui.ctx());
-        self.parameters(ui, windows);
         self.settings(ui, windows);
         windows.store(ui.ctx());
-    }
-
-    fn parameters(&mut self, ui: &mut Ui, windows: &mut Windows) {
-        Window::new(format!("{GEAR} Configuration parameters"))
-            .id(ui.auto_id_with(ID_SOURCE))
-            .default_pos(ui.next_widget_position())
-            .open(&mut windows.open_parameters)
-            .show(ui.ctx(), |ui| self.parameters.show(ui));
     }
 
     fn settings(&mut self, ui: &mut Ui, windows: &mut Windows) {
@@ -302,15 +261,13 @@ impl PaneDelegate for Pane {
     fn body(&mut self, ui: &mut Ui) {
         let mut settings = Settings::load(ui.ctx(), self.hash());
         if settings.edit_table {
-            self.body_content_meta(ui, self.parameters.index);
+            self.body_content_meta(ui, self.index);
         }
-        self.body_content_data(ui, self.parameters.index, &mut settings);
+        self.body_content_data(ui, self.index, &mut settings);
         settings.store(ui.ctx(), self.hash());
         self.windows(ui);
     }
 }
-
-pub(crate) mod parameters;
 
 mod state;
 mod table;

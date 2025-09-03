@@ -5,7 +5,7 @@ use self::{
     widgets::Presets,
     windows::{About, GithubWindow},
 };
-use crate::localization::ContextExt as _;
+use crate::{localization::ContextExt as _, utils::Hashed};
 use anyhow::Result;
 use chrono::Local;
 use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};

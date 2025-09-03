@@ -20,7 +20,7 @@ eframe = { version = "0.32.1", features = [
 egui = "0.32.1"
 egui-phosphor = "0.10.0"
 egui_dnd = "0.13.0"
-egui_extras = { version = "0.32.1", features = ["datepicker", "serde"] }
+egui_extras = { version = "0.32.1", features = ["datepicker", "serde", "svg"] }
 egui_plot = "0.33.0"
 egui_table = "0.4.0"
 egui_tiles = "0.13.0"
@@ -29,7 +29,9 @@ indexmap = "2.10.0"
 itertools = "0.14.0"
 log = "0.4.27"
 polars = { version = "0.50.0", default-features = false, features = [
+    "array_arithmetic",
     "bitwise",
+    "concat_str",
     "cross_join",
     "cum_agg",
     "diagonal_concat",
@@ -43,12 +45,14 @@ polars = { version = "0.50.0", default-features = false, features = [
     "lazy",
     "list_any_all",
     "list_eval",
+    "meta",
     "regex",
     "round_series",
     "row_hash",
     "serde",
     "serde-lazy",
     "sign",
+    "strings",
     # "row_hash",
     # "concat_str",
     # "strings",

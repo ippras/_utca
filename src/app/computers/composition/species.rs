@@ -139,12 +139,12 @@ fn gunstone(mut lazy_frame: LazyFrame, discriminants: &Discriminants) -> PolarsR
     //     .select([as_struct(vec![
     //         col(LABEL),
     //         col(FATTY_ACID),
-    //         col(STEREOSPECIFIC_NUMBER13).alias("Value"),
+    //         col(STEREOSPECIFIC_NUMBERS13).alias("Value"),
     //     ])
     lazy_frame = lazy_frame.select([
         col(LABEL),
         col(FATTY_ACID),
-        col(STEREOSPECIFIC_NUMBER123).alias("Value"),
+        col(STEREOSPECIFIC_NUMBERS123).alias("Value"),
     ]);
     println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
     let factor = gunstone_factor(lazy_frame.clone())?;
@@ -333,25 +333,25 @@ fn vander_wal(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
         .select([as_struct(vec![
             col(LABEL),
             col(FATTY_ACID),
-            col(STEREOSPECIFIC_NUMBER13).alias("Value"),
+            col(STEREOSPECIFIC_NUMBERS13).alias("Value"),
         ])
-        .alias(STEREOSPECIFIC_NUMBER1)])
+        .alias(STEREOSPECIFIC_NUMBERS1)])
         .cross_join(
             lazy_frame.clone().select([as_struct(vec![
                 col(LABEL),
                 col(FATTY_ACID),
-                col(STEREOSPECIFIC_NUMBER2).alias("Value"),
+                col(STEREOSPECIFIC_NUMBERS2).alias("Value"),
             ])
-            .alias(STEREOSPECIFIC_NUMBER2)]),
+            .alias(STEREOSPECIFIC_NUMBERS2)]),
             None,
         )
         .cross_join(
             lazy_frame.clone().select([as_struct(vec![
                 col(LABEL),
                 col(FATTY_ACID),
-                col(STEREOSPECIFIC_NUMBER13).alias("Value"),
+                col(STEREOSPECIFIC_NUMBERS13).alias("Value"),
             ])
-            .alias(STEREOSPECIFIC_NUMBER3)]),
+            .alias(STEREOSPECIFIC_NUMBERS3)]),
             None,
         );
     // Restruct
@@ -360,20 +360,20 @@ fn vander_wal(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
     let value = |name| col(name).struct_().field_by_name("Value");
     lazy_frame = lazy_frame.select([
         as_struct(vec![
-            label(STEREOSPECIFIC_NUMBER1),
-            label(STEREOSPECIFIC_NUMBER2),
-            label(STEREOSPECIFIC_NUMBER3),
+            label(STEREOSPECIFIC_NUMBERS1),
+            label(STEREOSPECIFIC_NUMBERS2),
+            label(STEREOSPECIFIC_NUMBERS3),
         ])
         .alias(LABEL),
         as_struct(vec![
-            fatty_acid(STEREOSPECIFIC_NUMBER1),
-            fatty_acid(STEREOSPECIFIC_NUMBER2),
-            fatty_acid(STEREOSPECIFIC_NUMBER3),
+            fatty_acid(STEREOSPECIFIC_NUMBERS1),
+            fatty_acid(STEREOSPECIFIC_NUMBERS2),
+            fatty_acid(STEREOSPECIFIC_NUMBERS3),
         ])
         .alias(TRIACYLGLYCEROL),
-        value(STEREOSPECIFIC_NUMBER1)
-            * value(STEREOSPECIFIC_NUMBER2)
-            * value(STEREOSPECIFIC_NUMBER3),
+        value(STEREOSPECIFIC_NUMBERS1)
+            * value(STEREOSPECIFIC_NUMBERS2)
+            * value(STEREOSPECIFIC_NUMBERS3),
     ]);
     Ok(lazy_frame)
 }

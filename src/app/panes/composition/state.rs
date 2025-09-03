@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub(crate) struct State {
     pub(crate) open_settings_window: bool,
-    pub(crate) open_indices_window: bool,
     pub(crate) view: View,
     // Table
     pub(crate) reset_table_state: bool,
@@ -21,7 +20,6 @@ impl State {
     pub(crate) fn new() -> Self {
         Self {
             open_settings_window: false,
-            open_indices_window: false,
             view: View::Table,
 
             reset_table_state: false,

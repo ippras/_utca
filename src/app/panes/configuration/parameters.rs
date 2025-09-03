@@ -7,23 +7,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) struct Parameters {
     pub(crate) index: usize,
-    // pub(crate) resizable: bool,
-    // pub(crate) editable: bool,
-    // pub(crate) precision: usize,
-    // pub(crate) sticky: usize,
-    // pub(crate) truncate: bool,
 }
 
 impl Parameters {
     pub(crate) fn new() -> Self {
-        Self {
-            index: 0,
-            // resizable: false,
-            // editable: false,
-            // precision: 3,
-            // sticky: 0,
-            // truncate: false,
-        }
+        Self { index: 0 }
     }
 
     pub(crate) fn show(&mut self, ui: &mut Ui) {

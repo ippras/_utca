@@ -6,17 +6,17 @@ pub(super) fn compute(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
     lazy_frame = lazy_frame.select([
         col(LABEL),
         col(FATTY_ACID),
-        col(STEREOSPECIFIC_NUMBER123) * lit(100),
-        col(STEREOSPECIFIC_NUMBER2) * lit(100),
+        col(STEREOSPECIFIC_NUMBERS123) * lit(100),
+        col(STEREOSPECIFIC_NUMBERS2) * lit(100),
     ]);
     println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
     let s = || {
-        col(STEREOSPECIFIC_NUMBER123)
+        col(STEREOSPECIFIC_NUMBERS123)
             .filter(col(FATTY_ACID).fatty_acid().is_saturated())
             .sum()
     };
     let s2 = || {
-        col(STEREOSPECIFIC_NUMBER2)
+        col(STEREOSPECIFIC_NUMBERS2)
             .filter(col(FATTY_ACID).fatty_acid().is_saturated())
             .sum()
             .alias("S[2]")

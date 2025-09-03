@@ -135,9 +135,9 @@ mod one {
 
     fn stereospecific_numbers(index: impl Fn(&str) -> Expr) -> PolarsResult<Expr> {
         concat_arr(vec![
-            index(STEREOSPECIFIC_NUMBER1),
-            index(STEREOSPECIFIC_NUMBER2),
-            index(STEREOSPECIFIC_NUMBER3),
+            index(STEREOSPECIFIC_NUMBERS1),
+            index(STEREOSPECIFIC_NUMBERS2),
+            index(STEREOSPECIFIC_NUMBERS3),
         ])
     }
 }
@@ -204,9 +204,9 @@ mod many {
             ]))
         };
         concat_arr(vec![
-            index(STEREOSPECIFIC_NUMBER1)?,
-            index(STEREOSPECIFIC_NUMBER2)?,
-            index(STEREOSPECIFIC_NUMBER3)?,
+            index(STEREOSPECIFIC_NUMBERS1)?,
+            index(STEREOSPECIFIC_NUMBERS2)?,
+            index(STEREOSPECIFIC_NUMBERS3)?,
         ])
     }
 }

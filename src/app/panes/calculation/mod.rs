@@ -1,5 +1,5 @@
 use self::{
-    parameters::Parameters,
+    parameters::{From, Parameters},
     state::{Settings, Windows},
     table::TableView,
 };
@@ -34,7 +34,7 @@ const ID_SOURCE: &str = "Calculation";
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Pane {
     source: Hashed<Vec<MetaDataFrame>>,
-    target: DataFrame,
+    target: Hashed<DataFrame>,
     parameters: Parameters,
 }
 
@@ -42,7 +42,10 @@ impl Pane {
     pub(crate) fn new(frames: Vec<MetaDataFrame>, index: usize) -> Self {
         Self {
             source: Hashed::new(frames),
-            target: DataFrame::empty(),
+            target: Hashed {
+                value: DataFrame::empty(),
+                hash: 0,
+            },
             parameters: Parameters::new(Some(index)),
         }
     }
@@ -171,40 +174,42 @@ impl Pane {
         let mut frames = Vec::with_capacity(self.source.len());
         for index in 0..self.source.len() {
             let meta = self.source[index].meta.clone();
-            let mut data = ui.memory_mut(|memory| {
+            let data = ui.memory_mut(|memory| {
                 memory
                     .caches
                     .cache::<CalculationComputed>()
                     .get(CalculationKey {
                         frames: &self.source,
-                        settings: &Parameters {
+                        parameters: &Parameters {
                             index: Some(index),
                             ..self.parameters
                         },
                     })
             });
-            data = data
+            let data = data
+                .value
                 .lazy()
                 .select([
                     col(LABEL),
                     col(FATTY_ACID),
-                    col("Calculated")
+                    col(STEREOSPECIFIC_NUMBERS123)
                         .struct_()
-                        .field_by_name("Triacylglycerol")
-                        .alias(STEREOSPECIFIC_NUMBER123),
-                    col("Calculated")
+                        .field_by_name("Experimental"),
+                    col(STEREOSPECIFIC_NUMBERS13)
                         .struct_()
-                        .field_by_name("Diacylglycerol13")
-                        .alias(STEREOSPECIFIC_NUMBER13),
-                    col("Calculated")
+                        .field_by_name(match self.parameters.from {
+                            From::Sn12_23 => STEREOSPECIFIC_NUMBERS12_23,
+                            From::Sn2 => STEREOSPECIFIC_NUMBERS2,
+                        })
+                        .alias(STEREOSPECIFIC_NUMBERS13),
+                    col(STEREOSPECIFIC_NUMBERS2)
                         .struct_()
-                        .field_by_name("Monoacylglycerol2")
-                        .alias(STEREOSPECIFIC_NUMBER2),
+                        .field_by_name("Experimental")
+                        .alias(STEREOSPECIFIC_NUMBERS2),
                 ])
                 .collect()?;
             frames.push(MetaDataFrame::new(meta, data));
         }
-        // println!("target: {target:?}");
         ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (frames, self.parameters.index)));
         Ok(())
     }
@@ -216,7 +221,7 @@ impl Pane {
                 .cache::<CalculationComputed>()
                 .get(CalculationKey {
                     frames: &self.source,
-                    settings: &self.parameters,
+                    parameters: &self.parameters,
                 })
         });
         TableView::new(ui.ctx(), &self.target, &self.parameters).show(ui);
@@ -267,23 +272,19 @@ impl Pane {
 
     #[instrument(skip_all, err)]
     fn indices_content(&mut self, ui: &mut Ui) -> PolarsResult<()> {
-        println!("lazydata_frame_frame0: {:?}", self.target);
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
                 .cache::<CalculationIndicesComputed>()
                 .get(CalculationIndicesKey {
-                    data_frame: Hashed {
-                        value: &self.target,
-                        hash: hash(self.parameters.index),
-                    },
+                    data_frame: &self.target,
+                    from: self.parameters.from,
                     ddof: self.parameters.ddof,
                 })
         });
         let settings = Settings::load(ui.ctx());
         IndicesWidget::new(&data_frame)
-            .hover(true)
-            .precision(Some(settings.precision))
+            .precision(settings.precision)
             .show(ui)
             .inner
     }
