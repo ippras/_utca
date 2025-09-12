@@ -1,4 +1,4 @@
-use super::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, Selection, TMC, TPC, TSC, UMC, USC};
+use super::{MASS_MONO, MASS_STEREO, ECN_MONO, ECN_STEREO, SPECIES_MONO, SPECIES_POSITIONAL, SPECIES_STEREO, Selection, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO};
 use crate::text::Text;
 use ahash::RandomState;
 use egui::{
@@ -113,7 +113,7 @@ impl Widget for FilterWidget<'_> {
                 // Key
                 ui.labeled_separator("Key");
                 match self.selection.composition {
-                    MMC | NMC | TMC | UMC => {
+                    MASS_MONO | ECN_MONO | TYPE_MONO | UNSATURATION_MONO => {
                         let series = self.series.unique()?.sort(Default::default())?;
                         ui.add(ColumnWidget {
                             indices: vec![0, 1, 2],
@@ -121,7 +121,7 @@ impl Widget for FilterWidget<'_> {
                             series,
                         });
                     }
-                    SMC => {
+                    SPECIES_MONO => {
                         let fields = self.series.struct_()?.fields_as_series();
                         let series = fields[0].unique()?.sort(Default::default())?;
                         ui.add(ColumnWidget {
@@ -130,7 +130,7 @@ impl Widget for FilterWidget<'_> {
                             series,
                         });
                     }
-                    SPC | TPC => {
+                    SPECIES_POSITIONAL | TYPE_POSITIONAL => {
                         let fields = self.series.struct_()?.fields_as_series();
                         ui.columns_const(|ui: &mut [Ui; 2]| -> PolarsResult<()> {
                             let series = fields[0].unique()?.sort(Default::default())?;
@@ -148,7 +148,7 @@ impl Widget for FilterWidget<'_> {
                             Ok(())
                         })?;
                     }
-                    MSC | NSC | SSC | TSC | USC => {
+                    MASS_STEREO | ECN_STEREO | SPECIES_STEREO | TYPE_STEREO | UNSATURATION_STEREO => {
                         let fields = self.series.struct_()?.fields_as_series();
                         ui.columns_const(|ui: &mut [Ui; 3]| -> PolarsResult<()> {
                             for index in 0..3 {

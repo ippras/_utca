@@ -1,15 +1,27 @@
 use super::{
     ID_SOURCE, Settings, State,
-    settings::{MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
+    settings::{
+        ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
+        SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO,
+        UNSATURATION_STEREO,
+    },
 };
 use crate::{
-    app::{panes::MARGIN, widgets::FloatWidget},
+    app::{
+        computers::{DisplayCompositionComputed, DisplayCompositionKey, DisplayCompositionKind},
+        panes::MARGIN,
+        widgets::FloatWidget,
+    },
     text::Text,
+    utils::{Hashed, egui::ResponseExt as _},
 };
-use egui::{Frame, Grid, Id, Margin, ScrollArea, TextStyle, Ui};
+use egui::{
+    Color32, Frame, Grid, Id, Margin, Response, RichText, ScrollArea, Stroke, TextStyle, Ui,
+};
 use egui_l20n::{ResponseExt as _, UiExt as _};
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
+use itertools::Itertools as _;
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_utils::format_list;
@@ -24,7 +36,7 @@ const INDEX: Range<usize> = 0..1;
 /// Composition table
 #[derive(Debug)]
 pub(super) struct TableView<'a> {
-    data_frame: &'a DataFrame,
+    data_frame: &'a Hashed<DataFrame>,
     settings: &'a Settings,
     state: &'a mut State,
     // is_row_expanded: BTreeMap<u64, bool>,
@@ -33,7 +45,7 @@ pub(super) struct TableView<'a> {
 
 impl<'a> TableView<'a> {
     pub(crate) fn new(
-        data_frame: &'a DataFrame,
+        data_frame: &'a Hashed<DataFrame>,
         settings: &'a Settings,
         state: &'a mut State,
     ) -> Self {
@@ -87,7 +99,7 @@ impl TableView<'_> {
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
         match (row, column) {
             (0, INDEX) => {
-                ui.heading(HASH).on_hover_localized("index");
+                ui.heading(HASH).on_hover_localized("Index");
             }
             (0, _) => {
                 ui.heading("Compositions");
@@ -136,70 +148,119 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         match (row, column) {
             (row, INDEX) => {
-                ui.label(row.to_string());
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<DisplayCompositionComputed>()
+                        .get(DisplayCompositionKey {
+                            data_frame: self.data_frame,
+                            kind: DisplayCompositionKind::Enrichment,
+                            percent: self.settings.percent,
+                            compositions: &self
+                                .settings
+                                .special
+                                .selections
+                                .iter()
+                                .map(|selection| selection.composition)
+                                .collect::<Vec<_>>(),
+                        })
+                });
+                ui.label(row.to_string())
+                    .species(data_frame["Species"].as_materialized_series(), row)?;
             }
             (row, column) => {
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<DisplayCompositionComputed>()
+                        .get(DisplayCompositionKey {
+                            data_frame: self.data_frame,
+                            kind: DisplayCompositionKind::Enrichment,
+                            percent: self.settings.percent,
+                            compositions: &self
+                                .settings
+                                .special
+                                .selections
+                                .iter()
+                                .map(|selection| selection.composition)
+                                .collect::<Vec<_>>(),
+                        })
+                });
                 let index = (column.start + 1) / 2 - 1;
+                let name = &*index.to_string();
                 if column.start % 2 == 1 {
-                    let keys = self.data_frame["Keys"].struct_()?;
-                    let key = &keys.fields_as_series()[index];
-                    let response = match self.settings.special.selections[index].composition {
-                        MMC | NMC | UMC => {
-                            let text = Mono(key.str_value(row)?).to_string();
-                            ui.label(text)
-                        }
-                        MSC | NSC | USC => {
-                            let text = key
-                                .try_triacylglycerol()?
-                                .get_any_value(row)?
-                                .stereo()
-                                .to_string();
-                            ui.label(text)
-                        }
-                        // TMC => {
-                        //     match key.u32()?.get(row) {
-                        //         Some(0) => ui.label("S3"),
-                        //         Some(1) => ui.label("S2U"),
-                        //         Some(2) => ui.label("SU2"),
-                        //         Some(3) => ui.label("U3"),
-                        //         _ => ui.label("None"),
-                        //     };
-                        // }
-                        SMC | TMC => {
-                            let text = key
-                                .try_triacylglycerol()?
-                                .get_any_value(row)?
-                                .map(|any_value| any_value.str_value())
-                                .mono()
-                                .to_string();
-                            ui.label(text)
-                        }
-                        SPC | TPC => {
-                            let text = key
-                                .try_triacylglycerol()?
-                                .get_any_value(row)?
-                                .map(|any_value| any_value.str_value())
-                                .positional()
-                                .to_string();
-                            ui.label(text)
-                        }
-                        SSC | TSC => {
-                            let text = key
-                                .try_triacylglycerol()?
-                                .get_any_value(row)?
-                                .map(|any_value| any_value.str_value())
-                                .stereo()
-                                .to_string();
-                            ui.label(text)
-                        }
-                    };
-                    response.on_hover_ui(|ui| {
-                        let species = self.data_frame["Species"].as_materialized_series();
-                        let _ = self.species(species, row, ui);
-                    });
+                    let key = data_frame[name].struct_()?.field_by_name("Key")?;
+                    let text = key.str_value(row)?;
+                    ui.label(text);
+                    // let keys = self.data_frame["Keys"].struct_()?;
+                    // let key = &keys.fields_as_series()[index];
+                    // let response = match self.settings.special.selections[index].composition {
+                    //     ECN_MONO | MASS_MONO | UNSATURATION_MONO => {
+                    //         let text = Mono(key.str_value(row)?).to_string();
+                    //         ui.label(text)
+                    //     }
+                    //     ECN_STEREO | MASS_STEREO | UNSATURATION_STEREO => {
+                    //         let text = key
+                    //             .try_triacylglycerol()?
+                    //             .get_any_value(row)?
+                    //             .stereo()
+                    //             .to_string();
+                    //         ui.label(text)
+                    //     }
+                    //     // TMC => {
+                    //     //     match key.u32()?.get(row) {
+                    //     //         Some(0) => ui.label("S3"),
+                    //     //         Some(1) => ui.label("S2U"),
+                    //     //         Some(2) => ui.label("SU2"),
+                    //     //         Some(3) => ui.label("U3"),
+                    //     //         _ => ui.label("None"),
+                    //     //     };
+                    //     // }
+                    //     SPECIES_MONO | TYPE_MONO => {
+                    //         let text = key
+                    //             .try_triacylglycerol()?
+                    //             .get_any_value(row)?
+                    //             .map(|any_value| any_value.str_value())
+                    //             .mono()
+                    //             .to_string();
+                    //         ui.label(text)
+                    //     }
+                    //     SPECIES_POSITIONAL | TYPE_POSITIONAL => {
+                    //         let text = key
+                    //             .try_triacylglycerol()?
+                    //             .get_any_value(row)?
+                    //             .map(|any_value| any_value.str_value())
+                    //             .positional()
+                    //             .to_string();
+                    //         ui.label(text)
+                    //     }
+                    //     SPECIES_STEREO | TYPE_STEREO => {
+                    //         let text = key
+                    //             .try_triacylglycerol()?
+                    //             .get_any_value(row)?
+                    //             .map(|any_value| any_value.str_value())
+                    //             .stereo()
+                    //             .to_string();
+                    //         ui.label(text)
+                    //     }
+                    // };
+                    // response.on_hover_ui(|ui| {
+                    //     let species = self.data_frame["Species"].as_materialized_series();
+                    //     let _ = self.species(species, row, ui);
+                    // });
                 } else {
-                    let values = self.data_frame["Values"].as_materialized_series();
-                    self.value(ui, values, Some(row), index)?;
+                    let value = data_frame[name].struct_()?.field_by_name("Value")?;
+                    let mean = value.struct_()?.field_by_name("Mean")?;
+                    if let Some(mean) = mean.f64()?.get(row) {
+                        let response = ui
+                            .label(format!("{mean:.0$}", self.settings.precision))
+                            .on_hover_text(mean.to_string());
+                        if response.hovered() {
+                            response
+                                .standard_deviation(&value, row)?
+                                .repetitions(&value, row)?;
+                        }
+                    }
                 }
             }
         }
@@ -226,103 +287,127 @@ impl TableView<'_> {
         row: Option<usize>,
         index: usize,
     ) -> PolarsResult<()> {
-        Ok(match series.dtype() {
-            DataType::Array(inner, _) if inner.is_float() => {
-                let value = if let Some(row) = row {
-                    array_value(series, row, |array| Ok(array.f64()?.get(index)))?
-                } else {
-                    array_sum(series, |array| Ok(array.f64()?.get(index)))?
-                };
-                FloatWidget::new(value)
-                    .percent(self.settings.percent)
-                    .precision(Some(self.settings.precision))
-                    .hover(true)
-                    .show(ui);
-            }
-            DataType::Array(inner, _) if inner.is_struct() => {
-                let value = if let Some(row) = row {
-                    array_value(series, row, |array| {
-                        Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
-                    })?
-                } else {
-                    array_sum(series, |array| {
-                        Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
-                    })?
-                };
-                let response = FloatWidget::new(value)
-                    .percent(self.settings.percent)
-                    .precision(Some(self.settings.precision))
-                    .hover(true)
-                    .show(ui)
-                    .response
-                    .on_hover_ui(|ui| {
-                        let _ = self.standard_deviation(series, row, index, ui);
-                    });
-                if let Some(row) = row {
-                    response.on_hover_ui(|ui| {
-                        let _ = self.repetitions(series, row, index, ui);
-                    });
-                }
-            }
-            data_type => panic!("value not implemented for {data_type:?}"),
-        })
+        let value = if let Some(row) = row {
+            array_value(series, row, |array| {
+                Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+            })?
+        } else {
+            array_sum(series, |array| {
+                Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+            })?
+        };
+        let response = FloatWidget::new(value)
+            .percent(self.settings.percent)
+            .precision(Some(self.settings.precision))
+            .hover(true)
+            .show(ui)
+            .response
+            .on_hover_ui(|ui| {
+                let _ = self.standard_deviation(series, row, index, ui);
+            });
+        if let Some(row) = row {
+            response.on_hover_ui(|ui| {
+                let _ = self.repetitions(series, row, index, ui);
+            });
+        }
+        Ok(())
+        // Ok(match series.dtype() {
+        //     DataType::Array(inner, _) if inner.is_float() => {
+        //         let value = if let Some(row) = row {
+        //             array_value(series, row, |array| Ok(array.f64()?.get(index)))?
+        //         } else {
+        //             array_sum(series, |array| Ok(array.f64()?.get(index)))?
+        //         };
+        //         FloatWidget::new(value)
+        //             .percent(self.settings.percent)
+        //             .precision(Some(self.settings.precision))
+        //             .hover(true)
+        //             .show(ui);
+        //     }
+        //     DataType::Array(inner, _) if inner.is_struct() => {
+        //         let value = if let Some(row) = row {
+        //             array_value(series, row, |array| {
+        //                 Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+        //             })?
+        //         } else {
+        //             array_sum(series, |array| {
+        //                 Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+        //             })?
+        //         };
+        //         let response = FloatWidget::new(value)
+        //             .percent(self.settings.percent)
+        //             .precision(Some(self.settings.precision))
+        //             .hover(true)
+        //             .show(ui)
+        //             .response
+        //             .on_hover_ui(|ui| {
+        //                 let _ = self.standard_deviation(series, row, index, ui);
+        //             });
+        //         if let Some(row) = row {
+        //             response.on_hover_ui(|ui| {
+        //                 let _ = self.repetitions(series, row, index, ui);
+        //             });
+        //         }
+        //     }
+        //     data_type => panic!("value not implemented for {data_type:?}"),
+        // })
     }
 
-    #[instrument(skip(self, series, ui), err)]
-    fn species(&self, series: &Series, row: usize, ui: &mut Ui) -> PolarsResult<()> {
-        let Some(species) = series.list()?.get_as_series(row) else {
-            polars_bail!(NoData: r#"no "Species" list in row: {row}"#);
-        };
-        ui.heading("Species")
-            .on_hover_text(species.len().to_string());
-        ui.separator();
-        ScrollArea::vertical()
-            .auto_shrink(false)
-            .max_height(ui.spacing().combo_height)
-            .show(ui, |ui| {
-                Grid::new(ui.next_auto_id())
-                    .show(ui, |ui| -> PolarsResult<()> {
-                        for (index, stereospecific_numbers) in species
-                            .struct_()?
-                            .field_by_name(LABEL)?
-                            .try_triacylglycerol()?
-                            .fields(|series| Ok(series.str()?.clone()))?
-                            .iter()
-                            .zip(species.struct_()?.field_by_name("Value")?.f64()?)
-                            .enumerate()
-                        {
-                            ui.label(index.to_string());
-                            let text = Triacylglycerol([
-                                stereospecific_numbers.0.0,
-                                stereospecific_numbers.0.1,
-                                stereospecific_numbers.0.2,
-                            ])
-                            .map(|label| match label {
-                                Some(label) => label,
-                                None => "None",
-                            })
-                            .stereo()
-                            .to_string();
-                            ui.label(text);
-                            let text = from_fn(|f| match stereospecific_numbers.1 {
-                                Some(mut value) => {
-                                    if self.settings.percent {
-                                        value *= 100.0;
-                                    }
-                                    f.write_fmt(format_args!("{}", AnyValue::Float64(value)))
-                                }
-                                None => f.write_str("None"),
-                            })
-                            .to_string();
-                            ui.label(text);
-                            ui.end_row();
-                        }
-                        Ok(())
-                    })
-                    .inner
-            })
-            .inner
-    }
+    // #[instrument(skip(self, series, ui), err)]
+    // fn species(&self, series: &Series, row: usize, ui: &mut Ui) -> PolarsResult<()> {
+    //     let Some(species) = series.list()?.get_as_series(row) else {
+    //         polars_bail!(NoData: r#"no "Species" list in row: {row}"#);
+    //     };
+    //     ui.heading("Species")
+    //         .on_hover_text(species.len().to_string());
+    //     ui.separator();
+    //     ScrollArea::vertical()
+    //         .auto_shrink(false)
+    //         .max_height(ui.spacing().combo_height)
+    //         .show(ui, |ui| {
+    //             Grid::new(ui.next_auto_id())
+    //                 .show(ui, |ui| -> PolarsResult<()> {
+    //                     for (index, stereospecific_numbers) in species
+    //                         .struct_()?
+    //                         .field_by_name(LABEL)?
+    //                         .try_triacylglycerol()?
+    //                         .fields(|series| Ok(series.str()?.clone()))?
+    //                         .iter()
+    //                         .zip(species.struct_()?.field_by_name("Value")?.f64()?)
+    //                         .enumerate()
+    //                     {
+    //                         ui.label(index.to_string());
+    //                         let text = Triacylglycerol([
+    //                             stereospecific_numbers.0.0,
+    //                             stereospecific_numbers.0.1,
+    //                             stereospecific_numbers.0.2,
+    //                         ])
+    //                         .map(|label| match label {
+    //                             Some(label) => label,
+    //                             None => "None",
+    //                         })
+    //                         .stereo()
+    //                         .to_string();
+    //                         ui.label(text);
+    //                         let text = from_fn(|f| match stereospecific_numbers.1 {
+    //                             Some(mut value) => {
+    //                                 if self.settings.percent {
+    //                                     value *= 100.0;
+    //                                 }
+    //                                 f.write_fmt(format_args!("{}", AnyValue::Float64(value)))
+    //                             }
+    //                             None => f.write_str("None"),
+    //                         })
+    //                         .to_string();
+    //                         ui.label(text);
+    //                         ui.end_row();
+    //                     }
+    //                     Ok(())
+    //                 })
+    //                 .inner
+    //         })
+    //         .inner
+    // }
 
     #[instrument(skip(self, series, ui), err)]
     fn standard_deviation(
@@ -441,4 +526,86 @@ fn array_sum<T: Add<Output = T>>(
         }
     }
     Ok(sum)
+}
+
+/// Extension methods for [`Response`]
+trait ResponseExt: Sized {
+    fn species(self, value: &Series, row: usize) -> PolarsResult<Self>;
+
+    fn standard_deviation(self, value: &Series, row: usize) -> PolarsResult<Self>;
+
+    fn repetitions(self, value: &Series, row: usize) -> PolarsResult<Self>;
+}
+
+impl ResponseExt for Response {
+    fn species(mut self, species: &Series, row: usize) -> PolarsResult<Self> {
+        if let Some(species) = species.list()?.get_as_series(row) {
+            self = self.try_on_enabled_hover_ui(|ui| -> PolarsResult<()> {
+                ui.heading("Species")
+                    .on_hover_text(species.len().to_string());
+                ui.separator();
+                ScrollArea::vertical()
+                    .auto_shrink([false, true])
+                    .max_height(ui.spacing().combo_height)
+                    .show(ui, |ui| {
+                        Grid::new(ui.next_auto_id())
+                            .show(ui, |ui| -> PolarsResult<()> {
+                                for (index, (label, value)) in species
+                                    .struct_()?
+                                    .field_by_name(LABEL)?
+                                    .str()?
+                                    .iter()
+                                    .zip(species.struct_()?.field_by_name("Value")?.f64()?)
+                                    .enumerate()
+                                {
+                                    ui.label(index.to_string());
+                                    if let Some(label) = label {
+                                        ui.label(label);
+                                    }
+                                    if let Some(value) = value {
+                                        ui.label(value.to_string());
+                                    }
+                                    ui.end_row();
+                                }
+                                Ok(())
+                            })
+                            .inner
+                    })
+                    .inner?;
+                Ok(())
+            })?;
+        }
+        Ok(self)
+    }
+
+    fn standard_deviation(mut self, value: &Series, row: usize) -> PolarsResult<Self> {
+        if let Some(standard_deviation) = value
+            .struct_()?
+            .field_by_name("StandardDeviation")?
+            .f64()?
+            .get(row)
+        {
+            self = self.on_hover_text(format!("± {standard_deviation}"));
+        }
+        Ok(self)
+    }
+
+    fn repetitions(mut self, value: &Series, row: usize) -> PolarsResult<Self> {
+        if let Some(repetitions) = value
+            .struct_()?
+            .field_by_name("Repetitions")?
+            .array()?
+            .get_as_series(row)
+            && repetitions.len() > 1
+        {
+            let formated = repetitions.f64()?.iter().format_with(", ", |value, f| {
+                if let Some(value) = value {
+                    f(&value)?;
+                }
+                Ok(())
+            });
+            self = self.on_hover_text(format!("[{formated}]"));
+        }
+        Ok(self)
+    }
 }

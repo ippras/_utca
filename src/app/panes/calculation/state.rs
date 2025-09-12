@@ -17,7 +17,6 @@ static WINDOWS: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("Windows
 pub struct Settings {
     pub percent: bool,
     pub precision: usize,
-    pub standard_deviation: bool,
     pub table: TableSettings,
 }
 
@@ -26,7 +25,6 @@ impl Settings {
         Self {
             percent: true,
             precision: 1,
-            standard_deviation: false,
             table: TableSettings::new(),
         }
     }
@@ -49,14 +47,6 @@ impl Settings {
                 ui.label(ui.localize("Percent.hover"));
             });
             ui.checkbox(&mut self.percent, "");
-            ui.end_row();
-
-            // Standard deviation
-            ui.label(ui.localize("StandardDeviation"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StandardDeviation.hover"));
-                });
-            ui.checkbox(&mut self.standard_deviation, "");
             ui.end_row();
 
             ui.heading("Table");

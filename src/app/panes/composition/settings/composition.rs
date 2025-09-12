@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 use self::{
     Composition::*,
     Stereospecificity::{NonStereospecific, Stereospecific},
@@ -5,37 +7,50 @@ use self::{
 use crate::text::Text;
 use serde::{Deserialize, Serialize};
 
-pub const COMPOSITIONS: [Composition; 12] =
-    [SMC, SPC, SSC, TMC, TPC, TSC, MMC, MSC, NMC, NSC, UMC, USC];
+pub const COMPOSITIONS: [Composition; 12] = [
+    SPECIES_MONO,
+    SPECIES_POSITIONAL,
+    SPECIES_STEREO,
+    TYPE_MONO,
+    TYPE_POSITIONAL,
+    TYPE_STEREO,
+    MASS_MONO,
+    MASS_STEREO,
+    ECN_MONO,
+    ECN_STEREO,
+    UNSATURATION_MONO,
+    UNSATURATION_STEREO,
+];
 
 // Mass composition, non-stereospecific, agregation
-pub const MMC: Composition = Mass(NonStereospecific(Agregation));
+pub const MASS_MONO: Composition = Mass(NonStereospecific(Agregation));
 // Mass composition, stereospecific
-pub const MSC: Composition = Mass(Stereospecific);
+pub const MASS_STEREO: Composition = Mass(Stereospecific);
 
 // Equivalent carbon number composition, non-stereospecific, agregation
-pub const NMC: Composition = EquivalentCarbonNumber(NonStereospecific(Agregation));
+pub const ECN_MONO: Composition = EquivalentCarbonNumber(NonStereospecific(Agregation));
 // Equivalent carbon number composition, stereospecific
-pub const NSC: Composition = EquivalentCarbonNumber(Stereospecific);
+pub const ECN_STEREO: Composition = EquivalentCarbonNumber(Stereospecific);
 
 // Species composition, non-stereospecific, permutation
-pub const SMC: Composition = Species(NonStereospecific(Permutation { positional: false }));
+pub const SPECIES_MONO: Composition = Species(NonStereospecific(Permutation { positional: false }));
 // Species composition, non-stereospecific, permutation, positional
-pub const SPC: Composition = Species(NonStereospecific(Permutation { positional: true }));
+pub const SPECIES_POSITIONAL: Composition =
+    Species(NonStereospecific(Permutation { positional: true }));
 // Species composition, stereospecific
-pub const SSC: Composition = Species(Stereospecific);
+pub const SPECIES_STEREO: Composition = Species(Stereospecific);
 
 // Type composition, non-stereospecific, permutation
-pub const TMC: Composition = Type(NonStereospecific(Permutation { positional: false }));
+pub const TYPE_MONO: Composition = Type(NonStereospecific(Permutation { positional: false }));
 // Type composition, non-stereospecific, permutation, positional
-pub const TPC: Composition = Type(NonStereospecific(Permutation { positional: true }));
+pub const TYPE_POSITIONAL: Composition = Type(NonStereospecific(Permutation { positional: true }));
 // Type composition, stereospecific
-pub const TSC: Composition = Type(Stereospecific);
+pub const TYPE_STEREO: Composition = Type(Stereospecific);
 
 // Unsaturation composition, non-stereospecific, agregation
-pub const UMC: Composition = Unsaturation(NonStereospecific(Agregation));
+pub const UNSATURATION_MONO: Composition = Unsaturation(NonStereospecific(Agregation));
 // Unsaturation composition, stereospecific
-pub const USC: Composition = Unsaturation(Stereospecific);
+pub const UNSATURATION_STEREO: Composition = Unsaturation(Stereospecific);
 
 /// Composition
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -49,42 +64,61 @@ pub enum Composition {
 
 impl Composition {
     pub fn new() -> Self {
-        SSC
+        SPECIES_STEREO
     }
 }
 
 impl Text for Composition {
     fn text(&self) -> &'static str {
         match *self {
-            MMC => "Composition-Mass-Monospecific",
-            MSC => "Composition-Mass-Stereospecific",
-            NMC => "Composition-EquivalentCarbonNumber-Monospecific",
-            NSC => "Composition-EquivalentCarbonNumber-Stereospecific",
-            SMC => "Composition-Species-Monospecific",
-            SPC => "Composition-Species-Positionalspecific",
-            SSC => "Composition-Species-Stereospecific",
-            TMC => "Composition-Type-Monospecific",
-            TPC => "Composition-Type-Positionalspecific",
-            TSC => "Composition-Type-Stereospecific",
-            UMC => "Composition-Unsaturation-Monospecific",
-            USC => "Composition-Unsaturation-Stereospecific",
+            MASS_MONO => "Composition-Mass-Monospecific",
+            MASS_STEREO => "Composition-Mass-Stereospecific",
+            ECN_MONO => "Composition-EquivalentCarbonNumber-Monospecific",
+            ECN_STEREO => "Composition-EquivalentCarbonNumber-Stereospecific",
+            SPECIES_MONO => "Composition-Species-Monospecific",
+            SPECIES_POSITIONAL => "Composition-Species-Positionalspecific",
+            SPECIES_STEREO => "Composition-Species-Stereospecific",
+            TYPE_MONO => "Composition-Type-Monospecific",
+            TYPE_POSITIONAL => "Composition-Type-Positionalspecific",
+            TYPE_STEREO => "Composition-Type-Stereospecific",
+            UNSATURATION_MONO => "Composition-Unsaturation-Monospecific",
+            UNSATURATION_STEREO => "Composition-Unsaturation-Stereospecific",
         }
     }
 
     fn hover_text(&self) -> &'static str {
         match *self {
-            MMC => "Composition-Mass-Monospecific.hover",
-            MSC => "Composition-Mass-Stereospecific.hover",
-            NMC => "Composition-EquivalentCarbonNumber-Monospecific.hover",
-            NSC => "Composition-EquivalentCarbonNumber-Stereospecific.hover",
-            SMC => "Composition-Species-Monospecific.hover",
-            SPC => "Composition-Species-Positionalspecific.hover",
-            SSC => "Composition-Species-Stereospecific.hover",
-            TMC => "Composition-Type-Monospecific.hover",
-            TPC => "Composition-Type-Positionalspecific.hover",
-            TSC => "Composition-Type-Stereospecific.hover",
-            UMC => "Composition-Unsaturation-Monospecific.hover",
-            USC => "Composition-Unsaturation-Stereospecific.hover",
+            MASS_MONO => "Composition-Mass-Monospecific.hover",
+            MASS_STEREO => "Composition-Mass-Stereospecific.hover",
+            ECN_MONO => "Composition-EquivalentCarbonNumber-Monospecific.hover",
+            ECN_STEREO => "Composition-EquivalentCarbonNumber-Stereospecific.hover",
+            SPECIES_MONO => "Composition-Species-Monospecific.hover",
+            SPECIES_POSITIONAL => "Composition-Species-Positionalspecific.hover",
+            SPECIES_STEREO => "Composition-Species-Stereospecific.hover",
+            TYPE_MONO => "Composition-Type-Monospecific.hover",
+            TYPE_POSITIONAL => "Composition-Type-Positionalspecific.hover",
+            TYPE_STEREO => "Composition-Type-Stereospecific.hover",
+            UNSATURATION_MONO => "Composition-Unsaturation-Monospecific.hover",
+            UNSATURATION_STEREO => "Composition-Unsaturation-Stereospecific.hover",
+        }
+    }
+}
+
+impl Display for Composition {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match *self {
+            MASS_MONO => f.write_str("Mass-Monospecific"),
+            MASS_STEREO => f.write_str("Mass-Stereospecific"),
+            ECN_MONO => f.write_str("EquivalentCarbonNumber-Monospecific"),
+            ECN_STEREO => f.write_str("EquivalentCarbonNumber-Stereospecific"),
+            SPECIES_MONO => f.write_str("Species-Monospecific"),
+            SPECIES_POSITIONAL => f.write_str("Species-Positionalspecific"),
+            SPECIES_STEREO => f.write_str("Species-Stereospecific"),
+            TYPE_MONO => f.write_str("Type-Monospecific"),
+            TYPE_POSITIONAL => f.write_str("Type-Positionalspecific"),
+            TYPE_STEREO => f.write_str("Type-Stereospecific"),
+            UNSATURATION_MONO => f.write_str("Unsaturation-Monospecific"),
+            UNSATURATION_STEREO => f.write_str("Unsaturation-Stereospecific"),
         }
     }
 }

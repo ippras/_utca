@@ -13,13 +13,12 @@ use crate::{
         presets::CHRISTIE,
         widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
     },
-    utils::Hashed,
+    utils::{Hashed, egui::UiExt as _},
 };
 use egui::{CursorIcon, Grid, Id, Response, RichText, ScrollArea, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
-    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS,
-    SIGMA, SLIDERS_HORIZONTAL,
+    CALCULATOR, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS, SIGMA, SLIDERS_HORIZONTAL,
 };
 use lipid::prelude::*;
 use metadata::MetaDataFrame;
@@ -116,42 +115,18 @@ impl Pane {
         });
         ui.separator();
         // Reset
-        ui.toggle_value(
-            &mut settings.table.reset_state,
-            RichText::new(ARROWS_CLOCKWISE).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("ResetTable"));
-        });
+        ui.reset(&mut settings.table.reset_state);
         // Resize
-        ui.toggle_value(
-            &mut settings.table.resizable,
-            RichText::new(ARROWS_HORIZONTAL).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("ResizeTable"));
-        });
+        ui.resize(&mut settings.table.resizable);
         ui.separator();
         // Settings
-        ui.toggle_value(
-            &mut windows.open_settings,
-            RichText::new(SLIDERS_HORIZONTAL).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("Settings"));
-        });
+        ui.settings(&mut windows.open_settings);
         ui.separator();
         // Parameters
-        ui.toggle_value(&mut windows.open_parameters, RichText::new(GEAR).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Parameters"));
-            });
+        ui.parameters(&mut windows.open_parameters);
         ui.separator();
         // Indices
-        ui.toggle_value(&mut windows.open_indices, RichText::new(SIGMA).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Indices"));
-            });
+        ui.indices(&mut windows.open_indices);
         ui.separator();
         // Composition
         if ui
@@ -194,17 +169,24 @@ impl Pane {
                     col(FATTY_ACID),
                     col(STEREOSPECIFIC_NUMBERS123)
                         .struct_()
-                        .field_by_name("Experimental"),
+                        .field_by_name("Experimental")
+                        .struct_()
+                        .field_by_name("Mean")
+                        .alias(STEREOSPECIFIC_NUMBERS123),
                     col(STEREOSPECIFIC_NUMBERS13)
                         .struct_()
                         .field_by_name(match self.parameters.from {
-                            From::Sn12_23 => STEREOSPECIFIC_NUMBERS12_23,
-                            From::Sn2 => STEREOSPECIFIC_NUMBERS2,
+                            From::StereospecificNumbers12_23 => STEREOSPECIFIC_NUMBERS12_23,
+                            From::StereospecificNumbers2 => STEREOSPECIFIC_NUMBERS2,
                         })
+                        .struct_()
+                        .field_by_name("Mean")
                         .alias(STEREOSPECIFIC_NUMBERS13),
                     col(STEREOSPECIFIC_NUMBERS2)
                         .struct_()
                         .field_by_name("Experimental")
+                        .struct_()
+                        .field_by_name("Mean")
                         .alias(STEREOSPECIFIC_NUMBERS2),
                 ])
                 .collect()?;

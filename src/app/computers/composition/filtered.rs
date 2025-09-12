@@ -1,5 +1,5 @@
 use crate::{
-    app::panes::composition::settings::{MMC, NMC, Settings, TMC, UMC},
+    app::panes::composition::settings::{ECN_MONO, MASS_MONO, Settings, TYPE_MONO, UNSATURATION_MONO},
     utils::Hashed,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -18,7 +18,12 @@ impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let mut lazy_frame = key.data_frame.value.clone().lazy();
         lazy_frame = filter(lazy_frame, key.settings);
-        lazy_frame.collect()
+        let mut data_frame = lazy_frame.collect()?;
+        let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
+        Ok(Hashed {
+            value: data_frame,
+            hash,
+        })
     }
 }
 
@@ -43,17 +48,16 @@ impl Hash for Key<'_> {
 }
 
 /// Filtered composition value
-type Value = DataFrame;
+type Value = Hashed<DataFrame>;
 
 fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
-    // println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
     let mut predicate = lit(true);
     for (index, selection) in settings.special.selections.iter().enumerate() {
         // Key
         for (key, value) in &selection.filter.key {
             let expr = col("Keys").struct_().field_by_index(index as _);
             match selection.composition {
-                MMC | NMC | TMC | UMC if value[0] => {
+                MASS_MONO | ECN_MONO | TYPE_MONO | UNSATURATION_MONO if value[0] => {
                     predicate = predicate.and(expr.neq(lit(LiteralValue::from(key.clone()))));
                 }
                 _ => {
@@ -83,10 +87,11 @@ fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
             }
         }
         // Value
-        let mut expr = col("Values").arr().get(lit(index as u32), false);
-        if settings.index.is_none() {
-            expr = expr.struct_().field_by_name("Mean");
-        }
+        let expr = col("Values")
+            .arr()
+            .get(lit(index as u32), false)
+            .struct_()
+            .field_by_name("Mean");
         predicate = predicate.and(expr.gt_eq(lit(selection.filter.value)));
     }
     lazy_frame.filter(predicate)

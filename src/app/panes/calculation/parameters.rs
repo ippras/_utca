@@ -24,7 +24,7 @@ impl Parameters {
         Self {
             index,
             weighted: false,
-            from: From::Sn2,
+            from: From::StereospecificNumbers2,
             normalize: Normalize::new(),
             unsigned: true,
             christie: false,
@@ -48,24 +48,24 @@ impl Parameters {
             if ui.input_mut(|input| {
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Num1))
             }) {
-                self.from = From::Sn12_23;
+                self.from = From::StereospecificNumbers12_23;
             }
             if ui.input_mut(|input| {
                 input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::Num2))
             }) {
-                self.from = From::Sn2;
+                self.from = From::StereospecificNumbers2;
             }
             ComboBox::from_id_salt("1|3")
                 .selected_text(ui.localize(self.from.text()))
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
                         &mut self.from,
-                        From::Sn12_23,
-                        ui.localize(From::Sn12_23.text()),
+                        From::StereospecificNumbers12_23,
+                        ui.localize(From::StereospecificNumbers12_23.text()),
                     )
-                    .on_hover_localized(From::Sn12_23.hover_text());
-                    ui.selectable_value(&mut self.from, From::Sn2, ui.localize(From::Sn2.text()))
-                        .on_hover_localized(From::Sn2.hover_text());
+                    .on_hover_localized(From::StereospecificNumbers12_23.hover_text());
+                    ui.selectable_value(&mut self.from, From::StereospecificNumbers2, ui.localize(From::StereospecificNumbers2.text()))
+                        .on_hover_localized(From::StereospecificNumbers2.hover_text());
                 })
                 .response
                 .on_hover_localized(self.from.hover_text());
@@ -155,22 +155,22 @@ impl Parameters {
 /// From
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) enum From {
-    Sn12_23,
-    Sn2,
+    StereospecificNumbers12_23,
+    StereospecificNumbers2,
 }
 
 impl From {
     pub(crate) fn text(self) -> &'static str {
         match self {
-            Self::Sn12_23 => "CalculateFrom-Sn12Sn23",
-            Self::Sn2 => "CalculateFrom-Sn2",
+            Self::StereospecificNumbers12_23 => "CalculateFrom-Sn12Sn23",
+            Self::StereospecificNumbers2 => "CalculateFrom-Sn2",
         }
     }
 
     pub(crate) fn hover_text(self) -> &'static str {
         match self {
-            Self::Sn12_23 => "CalculateFrom-Sn12Sn23.hover",
-            Self::Sn2 => "CalculateFrom-Sn2.hover",
+            Self::StereospecificNumbers12_23 => "CalculateFrom-Sn12Sn23.hover",
+            Self::StereospecificNumbers2 => "CalculateFrom-Sn2.hover",
         }
     }
 }
