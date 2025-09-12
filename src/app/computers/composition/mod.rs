@@ -105,6 +105,7 @@ fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
     //     )
     // }
     let schema = data_frame.schema();
+    println!("data_frame: {:?}", data_frame.unnest(["Value"]));
     if let Some(label) = schema.get(LABEL)
         && *label == data_type!([DataType::String])
         && let Some(triacylglycerol) = schema.get(TRIACYLGLYCEROL)
@@ -135,9 +136,8 @@ fn compute(
     settings: &Settings,
 ) -> PolarsResult<LazyFrame> {
     // Compose
+    println!("Compose 0: {}", lazy_frame.clone().collect().unwrap());
     lazy_frame = compose(lazy_frame, mode, ddof, settings)?;
-    // // Filter
-    // lazy_frame = filter(lazy_frame, settings);
     // Sort
     lazy_frame = sort(lazy_frame, settings);
     Ok(lazy_frame)
