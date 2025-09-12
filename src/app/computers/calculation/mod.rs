@@ -539,6 +539,7 @@ fn factors(fatty_acid: Expr, sn123: Expr, sn2: Expr) -> Expr {
 //     destruct(names) / to_mass(names).sum()
 // }
 
+pub(super) mod display;
 pub(super) mod indices;
 
 #[cfg(test)]

@@ -1,4 +1,73 @@
-use egui::{Context, Id, Response, Tooltip, Ui};
+use egui::{Context, Id, Response, RichText, Tooltip, Ui};
+use egui_l20n::UiExt as _;
+use egui_phosphor::regular::{
+    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, GEAR, PENCIL, SIGMA, SLIDERS_HORIZONTAL,
+};
+
+/// Extension methods for [`Ui`]
+pub trait UiExt {
+    /// Edit
+    fn edit(&mut self, selected: &mut bool);
+
+    /// Indices
+    fn indices(&mut self, selected: &mut bool);
+
+    /// Parameters
+    fn parameters(&mut self, selected: &mut bool);
+
+    /// Reset
+    fn reset(&mut self, selected: &mut bool);
+
+    /// Resize
+    fn resize(&mut self, selected: &mut bool);
+
+    /// Settings
+    fn settings(&mut self, selected: &mut bool);
+}
+
+impl UiExt for Ui {
+    fn edit(&mut self, selected: &mut bool) {
+        self.toggle_value(selected, RichText::new(PENCIL).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Edit"));
+            });
+    }
+
+    fn indices(&mut self, selected: &mut bool) {
+        self.toggle_value(selected, RichText::new(SIGMA).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Indices"));
+            });
+    }
+
+    fn parameters(&mut self, selected: &mut bool) {
+        self.toggle_value(selected, RichText::new(GEAR).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Parameters"));
+            });
+    }
+
+    fn reset(&mut self, selected: &mut bool) {
+        self.toggle_value(selected, RichText::new(ARROWS_CLOCKWISE).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("ResetTable"));
+            });
+    }
+
+    fn resize(&mut self, selected: &mut bool) {
+        self.toggle_value(selected, RichText::new(ARROWS_HORIZONTAL).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("ResizeTable"));
+            });
+    }
+
+    fn settings(&mut self, selected: &mut bool) {
+        self.toggle_value(selected, RichText::new(SLIDERS_HORIZONTAL).heading())
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Settings"));
+            });
+    }
+}
 
 /// Extension methods for [`Response`]
 pub trait ResponseExt: Sized {

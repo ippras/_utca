@@ -1,6 +1,6 @@
 use super::{
     ID_SOURCE, Settings, State,
-    settings::{Composition, MMC, MSC, NMC, NSC, SMC, SPC, SSC, TMC, TPC, TSC, UMC, USC},
+    settings::{Composition, MASS_MONO, MASS_STEREO, ECN_MONO, ECN_STEREO, SPECIES_MONO, SPECIES_POSITIONAL, SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO},
 };
 use egui::{Align2, Color32, Id, Ui, Vec2b};
 use egui_plot::{AxisHints, Bar, BarChart, Line, Plot, PlotPoints};
@@ -53,9 +53,9 @@ impl PlotView<'_> {
                 let mut value = values.f64()?.get(index).unwrap();
                 let key = keys.str_value(row)?;
                 let x = match self.settings.special.selections[index].composition {
-                    MMC => keys.f64()?.get(row).unwrap(),
-                    NMC => keys.i64()?.get(row).unwrap() as _,
-                    UMC => keys.i64()?.get(row).unwrap() as _,
+                    MASS_MONO => keys.f64()?.get(row).unwrap(),
+                    ECN_MONO => keys.i64()?.get(row).unwrap() as _,
+                    UNSATURATION_MONO => keys.i64()?.get(row).unwrap() as _,
                     _ => indices.u32()?.get(row).unwrap() as _,
                 };
                 if self.settings.percent {

@@ -3,7 +3,7 @@ use self::{
     table::TableView,
 };
 use super::PaneDelegate;
-use crate::{app::identifiers::CALCULATE, export::parquet::save};
+use crate::{app::identifiers::CALCULATE, export::parquet::save, utils::egui::UiExt as _};
 use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -100,28 +100,11 @@ impl Pane {
         });
         ui.separator();
         // Reset
-        if ui
-            .button(RichText::new(ARROWS_CLOCKWISE).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("ResetTable"));
-            })
-            .clicked()
-        {
-            settings.reset_state = true;
-        }
+        ui.reset(&mut settings.reset_state);
         // Resize
-        ui.toggle_value(
-            &mut settings.resize_table,
-            RichText::new(ARROWS_HORIZONTAL).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("ResizeTable"));
-        });
+        ui.resize(&mut settings.resize_table);
         // Edit
-        ui.toggle_value(&mut settings.edit_table, RichText::new(PENCIL).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Edit"));
-            });
+        ui.edit(&mut settings.edit_table);
         // Clear
         ui.add_enabled_ui(
             settings.edit_table && self.frames[self.index].data.height() > 0,
@@ -152,24 +135,8 @@ impl Pane {
             }
         });
         ui.separator();
-        // // Settings
-        // ui.toggle_value(
-        //     &mut self.state.open_settings_window,
-        //     RichText::new(GEAR).heading(),
-        // )
-        // .on_hover_ui(|ui| {
-        //     ui.label(ui.localize("Settings"));
-        // });
-        // ui.separator();
-
         // Settings
-        ui.toggle_value(
-            &mut windows.open_settings,
-            RichText::new(SLIDERS_HORIZONTAL).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("Settings"));
-        });
+        ui.settings(&mut windows.open_settings);
         ui.separator();
         // Save
         if ui

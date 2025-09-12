@@ -1,8 +1,9 @@
 use super::Mode;
 use crate::{
     app::panes::composition::settings::{
-        Filter, MMC, MSC, NMC, NSC, Order, SMC, SPC, SSC, Selection, Settings, Sort, TMC, TPC, TSC,
-        UMC, USC,
+        ECN_MONO, ECN_STEREO, Filter, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO,
+        SPECIES_POSITIONAL, SPECIES_STEREO, Selection, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL,
+        TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
     },
     utils::Hashed,
 };
@@ -27,11 +28,14 @@ impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let data_frame = key.data_frame;
-        let mode = mode(data_frame)?;
+        // |Label|Triacylglycerol|Value|
+        println!("Compose 0: {:?}", key.data_frame);
+        let mode = length(data_frame)?;
+        // println!("Compose 1: {}", lazy_frame.clone().collect().unwrap());
         let mut settings = key.settings.clone();
         if settings.special.selections.is_empty() {
             settings.special.selections.push_back(Selection {
-                composition: SSC,
+                composition: SPECIES_STEREO,
                 filter: Filter::new(),
             });
         }
@@ -64,7 +68,7 @@ impl Hash for Key<'_> {
 /// Composition value
 type Value = DataFrame;
 
-fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
+fn length(data_frame: &DataFrame) -> PolarsResult<Mode> {
     const ONE: LazyLock<Schema> = LazyLock::new(|| {
         Schema::from_iter([
             field!(LABEL[DataType::String]),
@@ -105,7 +109,6 @@ fn mode(data_frame: &DataFrame) -> PolarsResult<Mode> {
     //     )
     // }
     let schema = data_frame.schema();
-    println!("data_frame: {:?}", data_frame.unnest(["Value"]));
     if let Some(label) = schema.get(LABEL)
         && *label == data_type!([DataType::String])
         && let Some(triacylglycerol) = schema.get(TRIACYLGLYCEROL)
@@ -136,7 +139,6 @@ fn compute(
     settings: &Settings,
 ) -> PolarsResult<LazyFrame> {
     // Compose
-    println!("Compose 0: {}", lazy_frame.clone().collect().unwrap());
     lazy_frame = compose(lazy_frame, mode, ddof, settings)?;
     // Sort
     lazy_frame = sort(lazy_frame, settings);
@@ -153,12 +155,12 @@ fn compose(
     for (index, selection) in settings.special.selections.iter().enumerate() {
         lazy_frame = lazy_frame.with_column(
             match selection.composition {
-                MMC => col(TRIACYLGLYCEROL)
+                MASS_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .mass(Some(lit(settings.special.adduct)))
                     .round(settings.special.round_mass, RoundMode::HalfToEven)
                     .alias("MMC"),
-                MSC => col(TRIACYLGLYCEROL)
+                MASS_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| {
                         expr.fatty_acid()
@@ -166,68 +168,50 @@ fn compose(
                             .round(settings.special.round_mass, RoundMode::HalfToEven)
                     })
                     .alias("MSC"),
-                NMC => col(TRIACYLGLYCEROL)
+                ECN_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .equivalent_carbon_number()
                     .alias("NMC"),
-                NSC => col(TRIACYLGLYCEROL)
+                ECN_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().equivalent_carbon_number())
                     .alias("NSC"),
-                SMC => col(LABEL)
+                SPECIES_MONO => col(LABEL)
                     .triacylglycerol()
                     .non_stereospecific(identity)
                     .alias("SMC"),
-                SPC => col(LABEL)
+                SPECIES_POSITIONAL => col(LABEL)
                     .triacylglycerol()
                     .positional(identity)
                     .alias("SPC"),
-                SSC => col(LABEL).alias("SSC"),
-                TMC => col(TRIACYLGLYCEROL)
+                SPECIES_STEREO => col(LABEL).alias("SSC"),
+                TYPE_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .non_stereospecific(|expr| expr.fatty_acid().is_saturated().not())
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().r#type())
                     .alias("TMC"),
-                TPC => col(TRIACYLGLYCEROL)
+                TYPE_POSITIONAL => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .positional(|expr| expr.fatty_acid().is_saturated().not())
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().r#type())
                     .alias("TPC"),
-                TSC => col(TRIACYLGLYCEROL)
+                TYPE_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().r#type())
                     .alias("TSC"),
-                UMC => col(TRIACYLGLYCEROL)
+                UNSATURATION_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .unsaturation()
                     .alias("UMC"),
-                USC => col(TRIACYLGLYCEROL)
+                UNSATURATION_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| expr.fatty_acid().unsaturation())
                     .alias("USC"),
             }
             .alias(format!("Key{index}")),
         );
-        // TODO
-        // col("Value").meta().output_name();
-        // let predicate = DataTypeExpr::OfExpr(Box::new(col("Value")))
-        //     .equals(DataTypeExpr::Literal(DataType::Float64));
-        // println!("predicate: {predicate:?}");
-        // let expr = when(
-        //     DataTypeExpr::OfExpr(Box::new(col("Value")))
-        //         .equals(DataTypeExpr::Literal(DataType::Float64)),
-        // )
-        // .then(sum("Value").over([as_struct(vec![col(format!("^Key[0-{index}]$"))])]))
-        // .otherwise(
-        //     as_struct(vec![
-        //         lit(1f64).alias("Mean"),
-        //         lit(1f64).alias("StandardDeviation"),
-        //         concat_arr(vec![lit(1f64)])?.alias("Repetitions"),
-        //     ])
-        //     .over([as_struct(vec![col(format!("^Key[0-{index}]$"))])]),
-        // );
         let expr = match mode {
             Mode::One => sum("Value"),
             Mode::Many(length) => {
@@ -350,7 +334,7 @@ fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
 //     Ok(lazy_frame)
 // }
 
+pub(super) mod display;
 pub(super) mod filtered;
-pub(super) mod indices;
 pub(super) mod species;
 pub(super) mod unique;

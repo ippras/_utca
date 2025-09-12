@@ -90,6 +90,7 @@ Properties = Properties
 
 ### Calculation
 
+Alternative = Alternative
 CalculateFrom = Calculate
     .hover = Calculate stereospecific numbers 1 or 3.
 CalculateFrom-Sn12Sn23 = From SN-1,2(2,3)
@@ -106,6 +107,8 @@ Normalize-Weighted = Weighted
     .hover = Use weighted sum for normalization.
 Normalize-Christie = Christie
     .hover = Use Christy coefficients for normalization.
+Repetitions = Repetitions
+    .hover = Show repetitions
 Show = Show
 Show-Factors = Factors
     .hover = Show factors columns

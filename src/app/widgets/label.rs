@@ -2,7 +2,10 @@ use egui::{Grid, InnerResponse, Response, Ui, Widget};
 use egui_l20n::UiExt as _;
 use lipid::prelude::*;
 use polars::prelude::*;
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    fmt::{Write, from_fn},
+};
 
 /// Label widget
 pub(crate) struct LabelWidget<'a> {
@@ -78,9 +81,44 @@ impl LabelWidget<'_> {
                 }
                 ui.menu_button("Fill all labels", |ui| -> PolarsResult<()> {
                     if ui.button("Common name").clicked() {
+                        // self.fatty_acid
+                        //     .fields()?
+                        //     .iter()
+                        //     .map(|fatty_acid| {
+                        //         let Some(fatty_acid) = fatty_acid? else {
+                        //             return Ok(None);
+                        //         };
+                        //         from_fn(|f| {
+                        //             // f.write_char('(');
+                        //             for unsaturated in fatty_acid.unsaturated {
+                        //                 f.write_fmt("{}{}", unsaturated.index, unsaturated.parity);
+                        //             }
+                        //             f.write_char('-');
+                        //             match fatty_acid.carbon % 10 {
+                        //                 1 => f.write_str("un")?,
+                        //                 2 => f.write_str("eth")?,
+                        //                 3 => f.write_str("prop")?,
+                        //                 4 => f.write_str("but")?,
+                        //                 5 => f.write_str("pent")?,
+                        //                 6 => f.write_str("hex")?,
+                        //                 7 => f.write_str("hept")?,
+                        //                 8 => f.write_str("oct")?,
+                        //             };
+                        //             match fatty_acid.carbon / 10 {
+                        //                 0 => {}
+                        //                 1 => f.write_str("dec")?,
+                        //             }
+                        //             Ok(())
+                        //         });
+                        //         Ok(Some(fatty_acid.id().to_string()))
+                        //     })
+                        //     .collect();
                         let label = self.fatty_acid.id()?.apply(|id| {
                             let id = id?;
-                            let name = ui.try_localize(&format!("{id}.common")).unwrap_or_default();
+                            let name = ui
+                                .try_localize(&format!("{id}.common"))
+                                .or_else(|| ui.try_localize(&format!("{id}.systematic")))
+                                .unwrap_or_default();
                             Some(Cow::Owned(name))
                         });
                         inner = Ok(Some(Inner::Column(label)));

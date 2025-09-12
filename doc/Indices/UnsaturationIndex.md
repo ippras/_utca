@@ -3,10 +3,12 @@
 $$1 \cdot monoenoics + 2 \cdot dienoics + 3 \cdot trienoics + 4 \cdot tetraenoics + 5 \cdot pentaenoics + 6 \cdot hexaenoics ...$$
 
 * **Abbreviation**: UI
-* **Description**: Indicates the degree of unsaturation in lipids.
+* **Description**: Measure of the number of double bonds in fatty acids moieties of phospholipids, calculated as the fraction of each unsaturated fatty acid multiplied by the number of double bonds within that fatty acid ([Labuda (2018)]).
 * **First Use**:
 * **Use**: Seaweeds [27], [28], [29], [59], [96], [97], [98], crops [61], [99], [100], meat [44], [101], milk [102].
 * **Value**: More is better.
+
+[Labuda (2018)]: https://doi.org/10.1351/goldbook.09864 "Labuda (2018)"
 
 [27]: https://doi.org/10.1007/s10811-010-9578-7 "Kumar2011"
 [28]: https://doi.org/10.1016/j.foodchem.2016.10.066 "Chan2017"

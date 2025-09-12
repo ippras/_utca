@@ -8,27 +8,27 @@ edition = "2024"
 ahash = "0.8.12"
 anyhow = "1.0.99"
 base64 = "0.22.1"
-chrono = "0.4.41"
+chrono = "0.4.42"
 constcat = "0.6.1"
-eframe = { version = "0.32.1", features = [
+eframe = { version = "0.32.3", features = [
     "accesskit",
     "default_fonts",
     "glow",
     "persistence",
     "wayland",
 ] }
-egui = "0.32.1"
+egui = "0.32.3"
 egui-phosphor = "0.10.0"
 egui_dnd = "0.13.0"
-egui_extras = { version = "0.32.1", features = ["datepicker", "serde", "svg"] }
+egui_extras = { version = "0.32.3", features = ["datepicker", "serde", "svg"] }
 egui_plot = "0.33.0"
 egui_table = "0.4.0"
 egui_tiles = "0.13.0"
 ehttp = { version = "0.5.0", features = ["json", "native-async"] }
-indexmap = "2.10.0"
+indexmap = "2.11.3"
 itertools = "0.14.0"
-log = "0.4.27"
-polars = { version = "0.50.0", default-features = false, features = [
+log = "0.4.28"
+polars = { version = "0.51.0", default-features = false, features = [
     "array_arithmetic",
     "bitwise",
     "concat_str",
@@ -53,24 +53,20 @@ polars = { version = "0.50.0", default-features = false, features = [
     "serde-lazy",
     "sign",
     "strings",
-    # "row_hash",
-    # "concat_str",
-    # "strings",
-    #
     # "diagonal_concat",
     # "list_drop_nulls",
     # "semi_anti_join",
 ] }
-polars-utils = { version = "0.50.0", features = ["nightly"] }
-radix_trie = "0.2.1"
+polars-utils = { version = "0.51.0", features = ["nightly"] }
+radix_trie = "0.3.0"
 rust_xlsxwriter = { version = "0.90.0", features = ["chrono", "wasm"] }
-serde = { version = "1.0.219", features = ["derive", "std"] }
+serde = { version = "1.0.225", features = ["derive", "std"] }
 thiserror = "2.0.16"
-toml = "0.9.5"
+toml = "0.9.6"
 tracing = "0.1.41"
 unic-langid = { version = "0.9.6", features = ["macros"] }
 uom = "0.37.0"
-url = { version = "2.5.4", features = ["serde"] }
+url = { version = "2.5.7", features = ["serde"] }
 
 # egui-any = "0.1.0"
 # egui-probe = { version = "0.8.0", features = ["derive"] }
@@ -91,7 +87,7 @@ egui_ext = { git = "https://github.com/kgv/egui_ext", features = [
 egui_l20n = { git = "https://github.com/kgv/egui_l20n", features = ["macros"] }
 egui_tiles_ext = { git = "https://github.com/kgv/egui_tiles_ext" }
 lipid = { git = "https://github.com/ippras/lipid" }
-metadata = { git = "https://github.com/ippras/metadata", branch = "map" }
+metadata = { git = "https://github.com/ippras/metadata", rev = "dd0199444cb4c42cadceeb4da13abce83186d96a" }
 molecule = { git = "https://github.com/ippras/molecule" }
 polars_ext = { git = "https://github.com/kgv/polars_ext", features = [
     "temporal_conversions",
@@ -101,7 +97,7 @@ polars_ext = { git = "https://github.com/kgv/polars_ext", features = [
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 poll-promise = { version = "0.3.0", features = ["tokio"] }
 tokio = { version = "1.47.1", features = ["full"] }
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
 # web
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -111,8 +107,8 @@ getrandom = { version = "0.3.3", default-features = false, features = [
 ] }
 poll-promise = { version = "0.3.0", features = ["web"] }
 tracing-wasm = "0.2.1"
-wasm-bindgen-futures = "0.4.50"
-web-sys = "0.3.77"
+wasm-bindgen-futures = "0.4.51"
+web-sys = "0.3.78"
 
 [profile.release]
 opt-level = 2 # fast and small wasm

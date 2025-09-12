@@ -221,8 +221,8 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         .alias(STEREOSPECIFIC_NUMBERS123),
         stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS13).struct_().field_by_name(
             match key.from {
-                From::Sn12_23 => STEREOSPECIFIC_NUMBERS12_23,
-                From::Sn2 => STEREOSPECIFIC_NUMBERS2,
+                From::StereospecificNumbers12_23 => STEREOSPECIFIC_NUMBERS12_23,
+                From::StereospecificNumbers2 => STEREOSPECIFIC_NUMBERS2,
             },
         ))?
         .alias(STEREOSPECIFIC_NUMBERS13),

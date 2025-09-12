@@ -12,7 +12,7 @@ use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
     Align, Align2, CentralPanel, Color32, Context, DroppedFile, FontDefinitions, Frame, Id,
     LayerId, Layout, MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle,
-    TopBottomPanel, Visuals, util::IdTypeMap, warn_if_debug_build,
+    TextWrapMode, TopBottomPanel, Visuals, util::IdTypeMap, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
 use egui_l20n::{ResponseExt, UiExt as _};

@@ -5,15 +5,13 @@ use super::{
 };
 use crate::{
     app::{
-        computers::{
-            DisplayFactorComputed, DisplayFactorKey, DisplayValueComputed, DisplayValueKey, Factor,
-        },
+        computers::{CalculationDisplayComputed, CalculationDisplayKey, CalculationDisplayKind},
         panes::MARGIN,
     },
     utils::Hashed,
 };
 use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
-use egui_l20n::UiExt as _;
+use egui_l20n::UiExt;
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use itertools::Itertools;
@@ -194,12 +192,10 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayValueComputed>()
-                        .get(DisplayValueKey {
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
                             data_frame: self.data_frame,
-                            expr: &col(STEREOSPECIFIC_NUMBERS123)
-                                .struct_()
-                                .field_by_name("Experimental"),
+                            kind: CalculationDisplayKind::StereospecificNumbers123,
                             percent: self.settings.percent,
                         })
                 });
@@ -210,7 +206,8 @@ impl TableView<'_> {
                     if response.hovered() {
                         response
                             .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?;
+                            .repetitions(&data_frame, row)?
+                            .theoretical(&data_frame, row)?;
                     }
                 }
             }
@@ -218,12 +215,10 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayValueComputed>()
-                        .get(DisplayValueKey {
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
                             data_frame: self.data_frame,
-                            expr: &col(STEREOSPECIFIC_NUMBERS12_23)
-                                .struct_()
-                                .field_by_name("Experimental"),
+                            kind: CalculationDisplayKind::StereospecificNumbers12_23,
                             percent: self.settings.percent,
                         })
                 });
@@ -234,7 +229,8 @@ impl TableView<'_> {
                     if response.hovered() {
                         response
                             .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?;
+                            .repetitions(&data_frame, row)?
+                            .theoretical(&data_frame, row)?;
                     }
                 }
                 // let experimental = self.data_frame[STEREOSPECIFIC_NUMBERS12_23]
@@ -267,12 +263,10 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayValueComputed>()
-                        .get(DisplayValueKey {
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
                             data_frame: self.data_frame,
-                            expr: &col(STEREOSPECIFIC_NUMBERS2)
-                                .struct_()
-                                .field_by_name("Experimental"),
+                            kind: CalculationDisplayKind::StereospecificNumbers2,
                             percent: self.settings.percent,
                         })
                 });
@@ -283,7 +277,8 @@ impl TableView<'_> {
                     if response.hovered() {
                         response
                             .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?;
+                            .repetitions(&data_frame, row)?
+                            .theoretical(&data_frame, row)?;
                     }
                 }
                 // let experimental = self.data_frame[STEREOSPECIFIC_NUMBERS2]
@@ -316,17 +311,12 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayValueComputed>()
-                        .get(DisplayValueKey {
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
                             data_frame: self.data_frame,
-                            expr: &match self.parameters.from {
-                                From::Sn12_23 => col(STEREOSPECIFIC_NUMBERS13)
-                                    .struct_()
-                                    .field_by_name(STEREOSPECIFIC_NUMBERS12_23),
-                                From::Sn2 => col(STEREOSPECIFIC_NUMBERS13)
-                                    .struct_()
-                                    .field_by_name(STEREOSPECIFIC_NUMBERS2),
-                            },
+                            kind: CalculationDisplayKind::StereospecificNumbers13(
+                                self.parameters.from,
+                            ),
                             percent: self.settings.percent,
                         })
                 });
@@ -337,7 +327,8 @@ impl TableView<'_> {
                     if response.hovered() {
                         response
                             .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?;
+                            .repetitions(&data_frame, row)?
+                            .alternative(&data_frame, row)?;
                     }
                 }
                 // let value = self.data_frame[STEREOSPECIFIC_NUMBERS13]
@@ -375,10 +366,10 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayFactorComputed>()
-                        .get(DisplayFactorKey {
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
                             data_frame: self.data_frame,
-                            factor: Factor::Enrichment,
+                            kind: CalculationDisplayKind::EnrichmentFactor,
                             percent: self.settings.percent,
                         })
                 });
@@ -398,10 +389,10 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayFactorComputed>()
-                        .get(DisplayFactorKey {
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
                             data_frame: self.data_frame,
-                            factor: Factor::Selectivity,
+                            kind: CalculationDisplayKind::SelectivityFactor,
                             percent: self.settings.percent,
                         })
                 });
@@ -428,12 +419,10 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayValueComputed>()
-                        .get(DisplayValueKey {
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
                             data_frame: self.data_frame,
-                            expr: &col(STEREOSPECIFIC_NUMBERS123)
-                                .struct_()
-                                .field_by_name("Experimental"),
+                            kind: CalculationDisplayKind::StereospecificNumbers123,
                             percent: self.settings.percent,
                         })
                 });
@@ -665,24 +654,47 @@ impl TableDelegate for TableView<'_> {
 
 /// Extension methods for [`Response`]
 trait ResponseExt: Sized {
+    fn alternative(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
+
     fn calculation(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
 
     fn standard_deviation(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
 
     fn repetitions(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
+
+    fn theoretical(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
 }
 
 impl ResponseExt for Response {
+    fn alternative(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
+        if let Some(alternative) = data_frame["Alternative"].f64()?.get(row) {
+            self = self.on_hover_ui(|ui| {
+                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                ui.heading(ui.localize("Alternative"));
+                ui.label(alternative.to_string());
+            });
+        }
+        Ok(self)
+    }
+
     fn calculation(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
         if let Some(calculation) = data_frame["Calculation"].str()?.get(row) {
-            self = self.on_hover_text(calculation);
+            self = self.on_hover_ui(|ui| {
+                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                ui.heading(ui.localize("Calculation"));
+                ui.label(calculation);
+            });
         }
         Ok(self)
     }
 
     fn standard_deviation(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
         if let Some(standard_deviation) = data_frame["StandardDeviation"].f64()?.get(row) {
-            self = self.on_hover_text(format!("± {standard_deviation}"));
+            self = self.on_hover_ui(|ui| {
+                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                ui.heading(ui.localize("StandardDeviation"));
+                ui.label(format!("± {standard_deviation}"));
+            });
         }
         Ok(self)
     }
@@ -697,7 +709,22 @@ impl ResponseExt for Response {
                 }
                 Ok(())
             });
-            self = self.on_hover_text(format!("[{formated}]"));
+            self = self.on_hover_ui(|ui| {
+                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                ui.heading(ui.localize("Repetitions"));
+                ui.label(format!("[{formated}]"));
+            });
+        }
+        Ok(self)
+    }
+
+    fn theoretical(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
+        if let Some(theoretical) = data_frame["Theoretical"].f64()?.get(row) {
+            self = self.on_hover_ui(|ui| {
+                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                ui.heading(ui.localize("Theoretical"));
+                ui.label(theoretical.to_string());
+            });
         }
         Ok(self)
     }

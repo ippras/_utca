@@ -19,36 +19,40 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     pub(super) fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let lazy_frame = match key.index {
-            Some(index) => {
-                let frame = &key.frames[index];
-                let mut lazy_frame = frame.data.clone().lazy();
-                lazy_frame = compute(lazy_frame, key.settings())?;
-                lazy_frame
-            }
-            None => {
-                let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
-                    Ok(compute(frame.data.clone().lazy(), key.settings())?.select([
-                        hash(as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL)])),
-                        col(LABEL),
-                        col(TRIACYLGLYCEROL),
-                        col("Value").alias(frame.meta.format(".").to_string()),
-                    ]))
-                };
-                let mut lazy_frame = compute(&key.frames[0])?;
-                for frame in &key.frames[1..] {
-                    lazy_frame = lazy_frame.join(
-                        compute(frame)?,
-                        [col("Hash"), col(LABEL), col(TRIACYLGLYCEROL)],
-                        [col("Hash"), col(LABEL), col(TRIACYLGLYCEROL)],
-                        JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
-                    );
-                }
-                lazy_frame = lazy_frame.drop(by_name(["Hash"], true));
-                lazy_frame = lazy_frame.select(mean_and_standard_deviation(key.ddof)?);
-                lazy_frame
-            }
+        // |Label|FattyAcid|StereospecificNumbers123|StereospecificNumbers13|StereospecificNumbers2|
+        let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
+            Ok(
+                compute(frame.data.clone().lazy(), key.parameters())?.select([
+                    hash(as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL)])),
+                    col(LABEL),
+                    col(TRIACYLGLYCEROL),
+                    col("Value").alias(frame.meta.format(".").to_string()),
+                ]),
+            )
         };
+        let frames = match key.index {
+            Some(index) => &key.frames[index..=index],
+            None => &key.frames[..],
+        };
+        let mut lazy_frame = compute(&frames[0])?;
+        for frame in &frames[1..] {
+            lazy_frame = lazy_frame.join(
+                compute(frame)?,
+                [col("Hash"), col(LABEL), col(TRIACYLGLYCEROL)],
+                [col("Hash"), col(LABEL), col(TRIACYLGLYCEROL)],
+                JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
+            );
+        }
+        lazy_frame = lazy_frame.drop(by_name(["Hash"], true));
+        println!(
+            "mean_and_standard_deviation 0: {}",
+            lazy_frame.clone().collect().unwrap()
+        );
+        lazy_frame = lazy_frame.select(mean_and_standard_deviation(key.ddof)?);
+        println!(
+            "mean_and_standard_deviation 1: {}",
+            lazy_frame.clone().collect().unwrap()
+        );
         let mut data_frame = lazy_frame.collect()?;
         let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
         Ok(Hashed {
@@ -74,17 +78,16 @@ pub(crate) struct Key<'a> {
     pub(crate) method: Method,
 }
 
+/// Parameters
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
-struct Settings<'a> {
-    pub(crate) ddof: u8,
+struct Parameters<'a> {
     pub(crate) discriminants: &'a Discriminants,
     pub(crate) method: Method,
 }
 
 impl Key<'_> {
-    fn settings(&self) -> Settings<'_> {
-        Settings {
-            ddof: self.ddof,
+    fn parameters(&self) -> Parameters<'_> {
+        Parameters {
             discriminants: self.discriminants,
             method: self.method,
         }
@@ -94,13 +97,16 @@ impl Key<'_> {
 /// Composition value
 type Value = Hashed<DataFrame>;
 
-fn compute(lazy_frame: LazyFrame, settings: Settings) -> PolarsResult<LazyFrame> {
-    match settings.method {
-        Method::Gunstone => gunstone(lazy_frame, settings.discriminants),
+fn compute(lazy_frame: LazyFrame, parameters: Parameters) -> PolarsResult<LazyFrame> {
+    match parameters.method {
+        Method::Gunstone => gunstone(lazy_frame, parameters.discriminants),
         Method::MartinezForce => martinez_force::compute(lazy_frame),
         Method::VanderWal => vander_wal(lazy_frame),
     }
 }
+
+// [Oleic; Linoleic; Linoleic] 4.4797253361117946
+// [Linoleic; Oleic; Linoleic] 4.4797253361117946
 
 // 0.0 + 0.048672 + 0.000623 + 0.950705 = 1.0
 // let u = 1.0 - s;

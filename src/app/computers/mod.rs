@@ -1,18 +1,21 @@
 pub(super) use self::{
     calculation::{
         Computed as CalculationComputed, Key as CalculationKey,
+        display::{
+            Computed as CalculationDisplayComputed, Key as CalculationDisplayKey,
+            Kind as CalculationDisplayKind,
+        },
         indices::{Computed as CalculationIndicesComputed, Key as CalculationIndicesKey},
     },
     composition::{
         Computed as CompositionComputed, Key as CompositionKey,
+        display::{
+            Computed as DisplayCompositionComputed, Key as DisplayCompositionKey,
+            Kind as DisplayCompositionKind,
+        },
         filtered::{Computed as FilteredCompositionComputed, Key as FilteredCompositionKey},
-        indices::{Computed as CompositionIndicesComputed, Key as CompositionIndicesKey},
         species::{Computed as CompositionSpeciesComputed, Key as CompositionSpeciesKey},
         unique::{Computed as UniqueCompositionComputed, Key as UniqueCompositionKey},
-    },
-    display::{
-        factor::{Computed as DisplayFactorComputed, Factor, Key as DisplayFactorKey},
-        value::{Computed as DisplayValueComputed, Key as DisplayValueKey},
     },
 };
 
@@ -24,4 +27,3 @@ enum Mode {
 
 pub(super) mod calculation;
 pub(super) mod composition;
-pub(super) mod display;

@@ -6,17 +6,14 @@ use self::{
 };
 use super::PaneDelegate;
 use crate::{
-    app::{
-        computers::{
-            CompositionComputed, CompositionIndicesComputed, CompositionIndicesKey, CompositionKey,
-            CompositionSpeciesComputed, CompositionSpeciesKey, FilteredCompositionComputed,
-            FilteredCompositionKey, UniqueCompositionComputed, UniqueCompositionKey,
-        },
-        widgets::IndicesWidget,
+    app::computers::{
+        CompositionComputed, CompositionKey, CompositionSpeciesComputed, CompositionSpeciesKey,
+        FilteredCompositionComputed, FilteredCompositionKey, UniqueCompositionComputed,
+        UniqueCompositionKey,
     },
     export::{parquet, xlsx},
     text::Text,
-    utils::Hashed,
+    utils::{Hashed, egui::UiExt as _},
 };
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -60,6 +57,14 @@ impl Pane {
     pub(crate) fn title(&self) -> String {
         self.title_with_separator(" ")
     }
+
+    // fn hash(&self) -> u64 {
+    //     self.source
+    //         .iter()
+    //         .map(|frame| frame.data.hash)
+    //         .reduce(|(left, right)| left ^ right)
+    //         .unwrap_or_default()
+    // }
 
     fn title_with_separator(&self, separator: &str) -> String {
         match self.settings.index {
@@ -109,32 +114,12 @@ impl Pane {
         });
         ui.separator();
         // Reset
-        if ui
-            .button(RichText::new(ARROWS_CLOCKWISE).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("ResetTable"));
-            })
-            .clicked()
-        {
-            self.state.reset_table_state = true;
-        }
+        ui.reset(&mut self.state.reset_table_state);
         // Resize
-        ui.toggle_value(
-            &mut self.settings.resizable,
-            RichText::new(ARROWS_HORIZONTAL).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("ResizeTable"));
-        });
+        ui.resize(&mut self.settings.resizable);
         ui.separator();
-        // Settings
-        ui.toggle_value(
-            &mut self.state.open_settings_window,
-            RichText::new(GEAR).heading(),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("Settings"));
-        });
+        // Settings Parameters
+        ui.parameters(&mut self.state.open_settings_window);
         ui.separator();
         // Save
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
@@ -157,7 +142,8 @@ impl Pane {
                         },
                     )
                 });
-                data_frame = data_frame
+                let mut data = data_frame
+                    .value
                     .lazy()
                     .select([col("Species").explode()])
                     .unnest(by_name(["Species"], true))
@@ -167,16 +153,13 @@ impl Pane {
                     )
                     .collect()
                     .unwrap();
-                println!(
-                    "data_frame unnest: {}",
-                    data_frame
-                        .clone()
-                        .unnest(["FattyAcid"])
-                        .unwrap()
-                        .unnest(["StereospecificNumber1"])
-                        .unwrap()
-                );
-                let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
+                println!("data_frame unnest: {}", data.clone());
+                // let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
+                let mut meta = self.source[0].meta.clone();
+                meta.retain(|key, _| key != "ARROW:schema");
+                println!("meta: {meta:?}");
+                let mut frame = MetaDataFrame::new(meta, data);
+                let _ = parquet::save(&mut frame, &format!("{title}.utca.parquet"));
             }
             if ui
                 .button("XLSX")
@@ -188,7 +171,7 @@ impl Pane {
                 })
                 .clicked()
             {
-                let mut data_frame = ui.memory_mut(|memory| {
+                let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<FilteredCompositionComputed>().get(
                         FilteredCompositionKey {
                             data_frame: &self.target,
@@ -196,7 +179,7 @@ impl Pane {
                         },
                     )
                 });
-                data_frame = data_frame.unnest(["Keys"]).unwrap();
+                let data_frame = data_frame.value.unnest(["Keys"]).unwrap();
                 let _ = xlsx::save(&data_frame, &format!("{title}.utca.xlsx"));
             }
         });
@@ -233,6 +216,7 @@ impl Pane {
                     discriminants: &self.settings.special.discriminants,
                 })
         });
+        // Composition
         self.target = ui.memory_mut(|memory| {
             let key = CompositionKey {
                 data_frame: &data_frame,
@@ -243,6 +227,7 @@ impl Pane {
                 hash: hash(key),
             }
         });
+        // Filtered
         let filtered_data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
