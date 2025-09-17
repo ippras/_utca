@@ -142,7 +142,7 @@ impl Pane {
                         },
                     )
                 });
-                let mut data_frame = data_frame
+                let mut data = data_frame
                     .value
                     .lazy()
                     .select([col("Species").explode()])
@@ -153,16 +153,13 @@ impl Pane {
                     )
                     .collect()
                     .unwrap();
-                println!(
-                    "data_frame unnest: {}",
-                    data_frame
-                        .clone()
-                        .unnest(["FattyAcid"])
-                        .unwrap()
-                        .unnest(["StereospecificNumber1"])
-                        .unwrap()
-                );
-                let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
+                println!("data_frame unnest: {}", data.clone());
+                // let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
+                let mut meta = self.source[0].meta.clone();
+                meta.retain(|key, _| key != "ARROW:schema");
+                println!("meta: {meta:?}");
+                let mut frame = MetaDataFrame::new(meta, data);
+                let _ = parquet::save(&mut frame, &format!("{title}.utca.parquet"));
             }
             if ui
                 .button("XLSX")
