@@ -53,10 +53,6 @@ polars = { version = "0.51.0", default-features = false, features = [
     "serde-lazy",
     "sign",
     "strings",
-    # "row_hash",
-    # "concat_str",
-    # "strings",
-    #
     # "diagonal_concat",
     # "list_drop_nulls",
     # "semi_anti_join",
