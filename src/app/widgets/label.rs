@@ -80,7 +80,10 @@ impl LabelWidget<'_> {
                     if ui.button("Common name").clicked() {
                         let label = self.fatty_acid.id()?.apply(|id| {
                             let id = id?;
-                            let name = ui.try_localize(&format!("{id}.common")).unwrap_or_default();
+                            let name = ui
+                                .try_localize(&format!("{id}.common"))
+                                .or_else(|| ui.try_localize(&format!("{id}.systematic")))
+                                .unwrap_or_default();
                             Some(Cow::Owned(name))
                         });
                         inner = Ok(Some(Inner::Column(label)));
