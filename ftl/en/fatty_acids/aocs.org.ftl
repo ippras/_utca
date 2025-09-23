@@ -28,10 +28,12 @@ c4t2 =
 
 c5 =
     .common = Valeric
+    .synonyms = Valerianic
     .systematic = pentanoic
 
 c6 =
     .common = Caproic
+    .synonyms = Capronic
     .systematic = hexanoic
 
 c6t3 =
@@ -44,6 +46,7 @@ c6t2t4 =
 
 c7 =
     .common = Oenanthic
+    .synonyms = Enanthic; Enanthoic
     .systematic = heptanoic
 
 c8 =
@@ -52,10 +55,12 @@ c8 =
 
 c9 =
     .common = Pelargonic
+    .synonyms = Nonylic
     .systematic = nonanoic
 
 c10 =
     .common = Capric
+    .synonyms = Caprinic
     .systematic = decanoic
 
 c10c4 =
@@ -92,9 +97,12 @@ c10t2a4a6t8 =
 
 c11 =
     .common = Undecylic
+    .synonyms = Hendecanoic
     .systematic = undecanoic
+
 c11e10 =
     .common = Undecylenic
+    .synonyms = Hendecenoic
     .systematic = undec-10-enoic
 
 c11c3a5a7a10 =
@@ -107,6 +115,7 @@ c11c3a5a7e9e10 =
 
 c12 =
     .common = Lauric
+    .synonyms = Laurostearic
     .systematic = dodecanoic
 
 c12t4 =
@@ -115,6 +124,7 @@ c12t4 =
 
 c12c5 =
     .common = Lauroleinic
+    .synonyms = Denticetic
     .systematic = (5Z)-dodec-5-enoic
 
 c12c9 =
@@ -147,6 +157,7 @@ c14 =
 
 c14c4 =
     .common = Tsuzuic
+    .synonyms = Tsuduic
     .systematic = (4Z)-tetradec-4-enoic
 
 c14c5 =
@@ -176,14 +187,17 @@ c14t2t4a8a10 =
 
 c16 =
     .common = Palmitic
+    .synonyms = Aethalic
     .systematic = hexadecanoic
 
 c16c11 =
     .common = Palmitvaccenic
+    .synonyms = Tanacetumoleic
     .systematic = (11Z)-hexadec-11-enoic
 
 c16t11 =
     .common = Lycopodic
+    .synonyms = Lycopodiumoleic
     .systematic = (11E)-hexadec-11-enoic
 
 c16t2 =
@@ -197,12 +211,14 @@ c16c6 =
 c16a7 =
     .common = Palmitolic
     .systematic = hexadec-7-ynoic
+
 c16c7 =
     .common = Hypogeic
     .systematic = (7Z)-hexadec-7-enoic
 
 c16c9 =
     .common = Palmitoleic
+    .synonyms = Physetoleic; Zoomaric
     .systematic = (9Z)-hexadec-9-enoic
 
 c16t9 =
@@ -219,6 +235,7 @@ c16c7c10c13 =
 
 c17 =
     .common = Margaric
+    .synonyms = Daturic; Daturinic; Heptadecylic
     .systematic = heptadecanoic
 
 c17c8 =
@@ -227,6 +244,7 @@ c17c8 =
 
 c17a8t10 =
     .common = Pyrulic
+    .synonyms = Leptomeric
     .systematic = (10E)-heptadec-10-en-8-ynoic
 
 c17c8c11 =
@@ -239,6 +257,7 @@ c17c8c11c14 =
 
 c18 =
     .common = Stearic
+    .synonyms = Bassinic; Lactaric; Stearophanic; Talgic
     .systematic = octadecanoic
 
 c18c10 =
@@ -261,8 +280,10 @@ c18t5 =
 c18a6 =
     .common = Tariric
     .systematic = octadec-6-ynoic
+
 c18c6 =
     .common = Petroselinic
+    .synonyms = Petroselic
     .systematic = (6Z)-octadec-6-enoic
 
 c18t6 =
@@ -275,6 +296,7 @@ c18a9 =
 
 c18c9 =
     .common = Oleic
+    .synonyms = Rapinic
     .systematic = (9Z)-octadec-9-enoic
 
 c18t9 =
@@ -291,6 +313,7 @@ c18t11c15 =
 
 c18c5c11 =
     .common = Ephedrenic
+    .synonyms = Ephedric
     .systematic = (5Z,11Z)-octadeca-5,11-dienoic
 
 c18c5c8 =
@@ -323,7 +346,7 @@ c18a8e17 =
 
 c18a9t11 =
     .common = Agonandoic
-    .synonyms = Ximenynic
+    .synonyms = Santalbic; Ximenynic
     .systematic = (11E)-octadec-11-en-9-ynoic
 
 c18c9c11 =
@@ -336,10 +359,12 @@ c18c9t11 =
 
 c18c9a12 =
     .common = Crepenynic
+    .synonyms = Crepeninic
     .systematic = (9Z)-octadec-9-en-12-ynoic
 
 c18c9c12 =
     .common = Linoleic
+    .synonyms = Leinolic; Linolic
     .systematic = (9Z,12Z)-octadeca-9,12-dienoic
 
 c18t9t11 =
@@ -348,6 +373,7 @@ c18t9t11 =
 
 c18t9t12 =
     .common = Linelaidic
+    .synonyms = Linolelaidic
     .systematic = (9E,12E)-octadeca-9,12-dienoic
 
 c18t10t12t14 =
@@ -372,14 +398,18 @@ c18s5e6c16 =
 
 c18t5c9c12 =
     .common = Columbinic
+    .synonyms = Aquilegic; Isolinolenic; Ranunculeic
     .systematic = (5E,9Z,12Z)-octadeca-5,9,12-trienoic
 
 c18c6c9c12 =
-    .common = GLA
+    .abbreviation = GLA
+    .common = γ-Linolenic
+    .synonyms = Gamolenic
     .systematic = (6Z,9Z,12Z)-octadeca-6,9,12-trienoic
 
 c18c8c10c12 =
     .common = β-Calendic
+    .synonyms = Calendulic
     .systematic = (8Z,10Z,12Z)-octadeca-8,10,12-trienoic
 
 c18c8c10t12 =
@@ -388,6 +418,7 @@ c18c8c10t12 =
 
 c18c8t10c12 =
     .common = Jacaranda
+    .synonyms = Jacaric
     .systematic = (8Z,10E,12Z)-octadeca-8,10,12-trienoic
 
 c18a9a11c13 =
@@ -400,14 +431,17 @@ c18a9a11t13 =
 
 c18a9a11e17 =
     .common = Isanic
+    .synonyms = Erythrogenic
     .systematic = 17-octadecene-9,11-diynoic
 
 c18c9t11c13 =
     .common = Punicic
+    .synonyms = Punicinic; Trichosanoic
     .systematic = (9Z,11E,13Z)-octadeca-9,11,13-trienoic
 
 c18c9t11t13 =
     .common = α-Eleostearic
+    .synonyms = Eleostearinic; Margarolic
     .systematic = (9Z,11E,13E)-octadeca-9,11,13-trienoic
 
 c18c9t11c15 =
@@ -419,6 +453,7 @@ c18c9a12c14 =
     .systematic = (9Z,14Z)-octadeca-9,14-dien-12-ynoic
 
 c18c9c12c15 =
+    .abbreviation = ALA
     .common = α-Linolenic
     .systematic = (9Z,12Z,-15Z)-octadeca-9,12,15-trienoic
 
@@ -436,6 +471,7 @@ c18t9t11t13 =
 
 c18t9t12t15 =
     .common = Linolenelaidic
+    .synonyms = Elaidolinolenic
     .systematic = (9E,12E,15E)-octadeca-9,12,15-trienoic
 
 c18c5c9c12c15 =
@@ -464,6 +500,7 @@ c18t9t11t13t15 =
 
 c20 =
     .common = Arachidic
+    .synonyms = Eicosanoic
     .systematic = icosanoic
 
 c20c11 =
@@ -501,11 +538,12 @@ c20e7e8 =
 
 c20c11c14c17 =
     .common = Dihomolinolenic
+    .synonyms = Bishomo-α-linolenic
     .systematic = (11Z,14Z,17Z)-icosa-11,14,17-trienoic
 
 c20c5c11c14 =
     .common = Sciadonic
-    .synonyms = Sciadopinolenic; Podocarpic
+    .synonyms = Calthic; Podocarpic; Sciadopinolenic
     .systematic = (5Z,11Z,14Z)-icosa-5,11,14-trienoic
 
 c20c5c8c11 =
@@ -528,6 +566,7 @@ c20c8c11c14 =
 
 c20c4c8c12c15 =
     .common = Moroctic
+    .synonyms = Morotic
     .systematic = (4Z,8Z,12Z,15Z)-icosa-4,7,12,15-tetraenoic
 
 c20c5c11c14c17 =
@@ -544,6 +583,7 @@ c20c5c8t10t12c14 =
 
 c20c5c8c11c14c17 =
     .common = EPA
+    .synonyms = Timnodonic
     .systematic = (5Z,8Z,11Z,14Z,17Z)-icosa-5,8,11,14,17-pentaenoic
 
 c22 =
@@ -556,6 +596,7 @@ c22c11 =
 
 c22t11 =
     .common = Cetelaidic
+    .synonyms = Catelaidic
     .systematic = (11E)-docos-11-enoic
 
 c22a13 =
@@ -588,14 +629,17 @@ c22c4c8c12c15c19 =
 
 c22c7c10c13c16c19 =
     .common = DPA
+    .synonyms = Osbond's
     .systematic = (7Z,10Z,13Z,16Z,19Z)-docosa-7,10,13,16,19-pentaenoic
 
 c22c4c7c10c13c16c19 =
     .common = DHA
+    .synonyms = Cervonic; Clupanodonic
     .systematic = (4Z,7Z,10Z,13Z,16Z,19Z)-docosa-4,7,10,13,16,19-hexaenoic
 
 c24 =
     .common = Lignoceric
+    .synonyms = Carnaubic
     .systematic = tetracosanoic
 
 c24c15 =
@@ -608,6 +652,7 @@ c24t15 =
 
 c24c6c9c12c15c18c21 =
     .common = Nisinic
+    .synonyms = Tetracosahexaenylic
     .systematic = (6Z,9Z,12Z,15Z,18Z,21Z)-tetracosa- 6,9,12,15,18,21-hexaenoic
 
 c25 =
@@ -616,6 +661,7 @@ c25 =
 
 c26 =
     .common = Cerotic
+    .synonyms = Ceratinic; Ceric; Cerinic
     .systematic = hexacosanoic
 
 c26c17 =
@@ -626,7 +672,7 @@ c26c11c14c17c20c23 =
     .common = Shibic
     .systematic = (11Z,14Z,17Z,20Z,23Z)-hexacosa-11,14,17,20,23-pentaenoic
 
-c26e0e0e0e0e0e0 =
+c26e8e11e14e17e20e23 =
     .common = Thynnic
     .systematic = hexacosahexaenoic
 
@@ -644,18 +690,22 @@ c30 =
 
 c30c21 =
     .common = Lumequeic
+    .synonyms = Lumequic
     .systematic = (21Z)-triacont-21-enoic
 
 c32 =
     .common = Lacceric
+    .synonyms = Lacceroic
     .systematic = dotriacontanoic
 
 c33 =
     .common = Psyllic
+    .synonyms = Ceromelissic
     .systematic = tritriacontanoic
 
 c34 =
     .common = Gheddic
+    .synonyms = Geddic; Ghedoic
     .systematic = tetratriacontanoic
 
 c35 =
