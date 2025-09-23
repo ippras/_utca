@@ -33,7 +33,8 @@ mod sources {
     pub(super) const EN: &[&str] = &[
         // asset!("/ftl/en/fatty_acids/byrdwell.com.ftl"),
         asset!("/ftl/en/main.ftl"),
-        asset!("/ftl/en/fatty_acids/ippras.ftl"),
+        asset!("/ftl/en/fatty_acids/aocs.org.ftl"),
+        asset!("/ftl/en/fatty_acids/aocs.org.ext.ftl"),
         asset!("/ftl/en/headers.ftl"),
         asset!("/ftl/en/indices.ftl"),
         asset!("/ftl/en/menu.ftl"),
@@ -43,7 +44,8 @@ mod sources {
 
     pub(super) const RU: &[&str] = &[
         // asset!("/ftl/en/fatty_acids/byrdwell.com.ftl"),
-        asset!("/ftl/en/fatty_acids/ippras.ftl"),
+        // asset!("/ftl/en/fatty_acids/ippras.ftl"),
+        asset!("/ftl/en/fatty_acids/aocs.org.ftl"),
         asset!("/ftl/ru/headers.ftl"),
         asset!("/ftl/ru/menu.ftl"),
         asset!("/ftl/ru/names.ftl"),
