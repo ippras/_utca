@@ -206,7 +206,7 @@ fn calculation(key: Key) -> PolarsResult<Expr> {
         Kind::EnrichmentFactor => ternary_expr(
             predicate,
             format_str(
-                "{} / {}",
+                "{} / (3 * {})",
                 [
                     mean(STEREOSPECIFIC_NUMBERS2).percent_if(key.percent),
                     mean(STEREOSPECIFIC_NUMBERS123).percent_if(key.percent),
@@ -217,15 +217,15 @@ fn calculation(key: Key) -> PolarsResult<Expr> {
         Kind::SelectivityFactor => ternary_expr(
             predicate,
             format_str(
-                "({} / {}) / ({} / {})",
+                "({} * {}) / ({} * {})",
                 [
                     mean(STEREOSPECIFIC_NUMBERS2).percent_if(key.percent),
-                    mean(STEREOSPECIFIC_NUMBERS123).percent_if(key.percent),
-                    mean(STEREOSPECIFIC_NUMBERS2)
+                    mean(STEREOSPECIFIC_NUMBERS123)
                         .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
                         .sum()
                         .percent_if(key.percent),
-                    mean(STEREOSPECIFIC_NUMBERS123)
+                    mean(STEREOSPECIFIC_NUMBERS123).percent_if(key.percent),
+                    mean(STEREOSPECIFIC_NUMBERS2)
                         .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
                         .sum()
                         .percent_if(key.percent),

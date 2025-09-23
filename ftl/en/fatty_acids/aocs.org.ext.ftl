@@ -4,3 +4,7 @@ c16c7c10 =
     .systematic = (7Z,10Z)-hexadeca-7,10-dienoic
 c16c4c7c10c13 =
     .systematic = (4Z,7Z,10Z,13Z)-hexadeca-4,7,10,13-tetraenoic
+c22c15 =
+    .systematic = (15Z)-docos-15-enoic
+c22c13c16 =
+    .systematic = (13Z,16Z)-docos-13,16-dienoic
