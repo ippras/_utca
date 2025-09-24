@@ -180,14 +180,23 @@ impl Widget for NamesWidget<'_> {
         Grid::new(ui.next_auto_id())
             .show(ui, |ui| {
                 let id = fatty_acid.id();
-                if let Some(common_name) = ui.try_localize(&format!("{id}.common")) {
-                    ui.label(ui.localize("common_name"));
-                    ui.label(common_name);
+                if let Some(abbreviation) = ui.try_localize(&format!("{id}.abbreviation")) {
+                    ui.label(ui.localize("abbreviation"));
+                    ui.label(abbreviation);
                     ui.end_row();
                 }
-                if let Some(systematic_name) = ui.try_localize(&format!("{id}.systematic")) {
-                    ui.label(ui.localize("systematic_name"));
-                    ui.label(systematic_name);
+                if let Some(common) = ui.try_localize(&format!("{id}.common")) {
+                    ui.label(ui.localize("common"));
+                    if let Some(synonyms) = ui.try_localize(&format!("{id}.synonyms")) {
+                        ui.label(format!("{common}; {synonyms}"));
+                    } else {
+                        ui.label(common);
+                    }
+                    ui.end_row();
+                }
+                if let Some(systematic) = ui.try_localize(&format!("{id}.systematic")) {
+                    ui.label(ui.localize("systematic"));
+                    ui.label(systematic);
                     ui.end_row();
                 }
             })
