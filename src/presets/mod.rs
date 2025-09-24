@@ -44,18 +44,18 @@ mod ippras {
     pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_2: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.3.2.utca.parquet");
     pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_3: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.3.3.utca.parquet");
 
-    pub(crate) static C108_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/C108-N.2025-04-23.0.0.1.utca.parquet");
-    pub(crate) static C108_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/C108-N.2025-04-23.0.0.2.utca.parquet");
-    pub(crate) static C108_2025_04_23_3: LazyLock<MetaDataFrame> = preset!("Microalgae/C108-N.2025-04-23.0.0.3.utca.parquet");
-    pub(crate) static C519_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/519-N.2025-04-23.0.0.1.utca.parquet");
-    pub(crate) static C519_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/519-N.2025-04-23.0.0.2.utca.parquet");
-    pub(crate) static C1210_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/C1210-N.2025-04-24.0.0.1.utca.parquet");
-    pub(crate) static C1210_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/C1210-N.2025-04-24.0.0.2.utca.parquet");
-    pub(crate) static C1210_2025_04_23_3: LazyLock<MetaDataFrame> = preset!("Microalgae/C1210-N.2025-04-24.0.0.3.utca.parquet");
-    pub(crate) static H626_2025_04_24: LazyLock<MetaDataFrame> = preset!("Microalgae/H626-N.2025-04-24.utca.parquet");
-    pub(crate) static LOBOSPHERA_2025_04_24_1: LazyLock<MetaDataFrame> = preset!("Microalgae/Lobosphera-N.2025-04-24.0.0.1.utca.parquet");
-    pub(crate) static LOBOSPHERA_2025_04_24_2: LazyLock<MetaDataFrame> = preset!("Microalgae/Lobosphera-N.2025-04-24.0.0.2.utca.parquet");
-    pub(crate) static LOBOSPHERA_2025_04_24_3: LazyLock<MetaDataFrame> = preset!("Microalgae/Lobosphera-N.2025-04-24.0.0.3.utca.parquet");
+    pub(crate) static C108_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.1.utca.parquet");
+    pub(crate) static C108_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.2.utca.parquet");
+    pub(crate) static C108_2025_04_23_3: LazyLock<MetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.3.utca.parquet");
+    pub(crate) static C1210_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.1.utca.parquet");
+    pub(crate) static C1210_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.2.utca.parquet");
+    pub(crate) static C1210_2025_04_23_3: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.3.utca.parquet");
+    pub(crate) static C1540_2025_04_24_1: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.1.utca.parquet");
+    pub(crate) static C1540_2025_04_24_2: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.2.utca.parquet");
+    pub(crate) static C1540_2025_04_24_3: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.3.utca.parquet");
+    pub(crate) static P519_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/P-519(-N).2025-04-23.0.0.1.utca.parquet");
+    pub(crate) static P519_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/P-519(-N).2025-04-23.0.0.2.utca.parquet");
+    pub(crate) static H626_2025_04_24: LazyLock<MetaDataFrame> = preset!("Microalgae/H-626(-N).2025-04-24.utca.parquet");
 }
 
 // Third party

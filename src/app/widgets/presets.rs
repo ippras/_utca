@@ -64,23 +64,24 @@ impl Presets {
         SubMenuButton::new("Microalgae")
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
             .ui(ui, |ui| {
-                ui.labeled_separator(RichText::new("519").heading());
-                preset(ui, &C519_2025_04_23_1);
-                preset(ui, &C519_2025_04_23_2);
-                ui.labeled_separator(RichText::new("C108").heading());
+                ui.labeled_separator(RichText::new("C-108 (Chromochloris zofingiensis)").heading());
                 preset(ui, &C108_2025_04_23_1);
                 preset(ui, &C108_2025_04_23_2);
                 preset(ui, &C108_2025_04_23_3);
-                ui.labeled_separator(RichText::new("C1210").heading());
+                ui.labeled_separator(RichText::new("C-1210 (Neochlorella semenenkoi)").heading());
                 preset(ui, &C1210_2025_04_23_1);
                 preset(ui, &C1210_2025_04_23_2);
                 preset(ui, &C1210_2025_04_23_3);
-                ui.labeled_separator(RichText::new("H626").heading());
+                ui.labeled_separator(RichText::new("C-1540 (Lobosphaera sp.)").heading());
+                preset(ui, &C1540_2025_04_24_1);
+                preset(ui, &C1540_2025_04_24_2);
+                preset(ui, &C1540_2025_04_24_3);
+                ui.labeled_separator(RichText::new("H-242 (Vischeria punctata)").heading());
+                ui.labeled_separator(RichText::new("H-626 (Coelastrella affinis)").heading());
                 preset(ui, &H626_2025_04_24);
-                ui.labeled_separator(RichText::new("Lobosphera").heading());
-                preset(ui, &LOBOSPHERA_2025_04_24_1);
-                preset(ui, &LOBOSPHERA_2025_04_24_2);
-                preset(ui, &LOBOSPHERA_2025_04_24_3);
+                ui.labeled_separator(RichText::new("P-519 (Porphyridium purpureum)").heading());
+                preset(ui, &P519_2025_04_23_1);
+                preset(ui, &P519_2025_04_23_2);
             });
         ui.separator();
         // Third party
