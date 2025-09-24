@@ -1,7 +1,8 @@
 names = Names
 abbreviation = Abbreviation
-common_name = Common name
-systematic_name = Systematic name
+common = Common
+synonyms = Synonyms
+systematic = Systematic
 
 carbon = Carbon
     .hover = The number of carbon atoms.

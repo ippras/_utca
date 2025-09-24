@@ -537,7 +537,8 @@ c20e7e8 =
     .systematic = (7Ra)-icosa-7,8-dienoic
 
 c20c11c14c17 =
-    .common = Dihomolinolenic
+    .abbreviation = DALA
+    .common = Dihomo-α-linolenic
     .synonyms = Bishomo-α-linolenic
     .systematic = (11Z,14Z,17Z)-icosa-11,14,17-trienoic
 
@@ -551,8 +552,8 @@ c20c5c8c11 =
     .systematic = (5Z,8Z,11Z)-icosa-5,8,11-trienoic
 
 c20c7c11c14 =
-    .common = Bishomopinolenic
-    .synonyms = Dihomopinolenic
+    .common = Dihomopinolenic
+    .synonyms = Bishomopinolenic
     .systematic = (7Z,11Z,14Z)-icosa-7,11,14-trienoic
 
 c20c7c11t14 =
@@ -560,8 +561,9 @@ c20c7c11t14 =
     .systematic = (7Z,11Z,14E)-icosa-7,11,14-trienoic
 
 c20c8c11c14 =
-    .common = Bishomo-γ-linolenic
-    .synonyms = Dihomo-γ-linolenic
+    .abbreviation = DGLA
+    .common = Dihomo-γ-linolenic
+    .synonyms = Bishomo-γ-linolenic
     .systematic = (8Z,11Z,14Z)-icosa-8,11,14-trienoic
 
 c20c4c8c12c15 =
@@ -582,7 +584,8 @@ c20c5c8t10t12c14 =
     .systematic = (5Z,8Z,10E,12E,14Z)-icosa-5,8,10,12,14-pentaenoic
 
 c20c5c8c11c14c17 =
-    .common = EPA
+    .abbreviation = EPA
+    .common = Eicosapentaenoic
     .synonyms = Timnodonic
     .systematic = (5Z,8Z,11Z,14Z,17Z)-icosa-5,8,11,14,17-pentaenoic
 
@@ -628,12 +631,14 @@ c22c4c8c12c15c19 =
     .systematic = (4Z,8Z,12Z,15Z,19Z)-docosa-4,8,12,15,19-pentaenoic
 
 c22c7c10c13c16c19 =
-    .common = DPA
+    .abbreviation = DPA
+    .common = Docosapentaenoic
     .synonyms = Osbond's
     .systematic = (7Z,10Z,13Z,16Z,19Z)-docosa-7,10,13,16,19-pentaenoic
 
 c22c4c7c10c13c16c19 =
-    .common = DHA
+    .abbreviation = DHA
+    .common = Docosahexaenoic
     .synonyms = Cervonic; Clupanodonic
     .systematic = (4Z,7Z,10Z,13Z,16Z,19Z)-docosa-4,7,10,13,16,19-hexaenoic
 
