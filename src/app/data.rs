@@ -1,305 +1,141 @@
-use crate::app::{identifiers::CONFIGURE, panes::configuration::Pane as ConfigurationPane};
-use egui::{Color32, Frame, Grid, Id, Label, MenuBar, RichText, Sense, Sides, Stroke, Ui};
+use crate::{
+    app::{identifiers::CONFIGURE, panes::configuration::Pane as ConfigurationPane},
+    utils::{HashedDataFrame, HashedMetaDataFrame},
+};
+use egui::{
+    CentralPanel, Color32, Grid, Id, Label, MenuBar, RichText, ScrollArea, TopBottomPanel, Ui,
+};
 use egui_dnd::dnd;
-use egui_extras::{Column, TableBuilder};
 use egui_l20n::{ResponseExt, UiExt as _};
-use egui_phosphor::regular::{ARROWS_OUT_CARDINAL, CHECK, DOTS_SIX_VERTICAL, TRASH};
+use egui_phosphor::regular::{CHECK, DOTS_SIX_VERTICAL, TRASH};
 use metadata::{MetaDataFrame, egui::MetadataWidget};
+use polars::prelude::PolarsResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 /// Data
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub(crate) struct Data {
-    pub(crate) frames: Vec<MetaDataFrame>,
-    pub(crate) selected: HashSet<MetaDataFrame>,
+pub struct Data {
+    pub frames: Vec<HashedMetaDataFrame>,
+    pub selected: HashSet<HashedMetaDataFrame>,
 }
 
 impl Data {
-    pub(crate) fn selected(&self) -> Vec<MetaDataFrame> {
+    pub fn selected(&self) -> Vec<HashedMetaDataFrame> {
         self.frames
             .iter()
             .filter_map(|frame| self.selected.contains(frame).then_some(frame.clone()))
             .collect()
     }
 
-    pub(crate) fn add(&mut self, frame: MetaDataFrame) {
-        self.frames.push(frame);
+    pub fn add(&mut self, frame: HashedMetaDataFrame) {
+        if !self.frames.contains(&frame) {
+            self.frames.push(frame);
+        }
+    }
+
+    pub fn try_add(&mut self, frame: MetaDataFrame) -> PolarsResult<()> {
+        self.add(MetaDataFrame {
+            meta: frame.meta,
+            data: HashedDataFrame::new(frame.data)?,
+        });
+        Ok(())
     }
 }
 
 impl Data {
-    pub(crate) fn show(&mut self, ui: &mut Ui) {
-        // Header
-        MenuBar::new().ui(ui, |ui| {
-            ui.heading(ui.localize("loaded-files"))
-                .on_hover_localized("loaded-files.hover");
-            ui.separator();
-            // Toggle all
-            if ui
-                .button(RichText::new(CHECK).heading())
-                .on_hover_localized("toggle-all")
-                .on_hover_localized("toggle-all.hover")
-                .clicked()
-            {
-                if self.selected.is_empty() {
-                    self.selected = self.frames.iter().cloned().collect();
-                } else {
-                    self.selected.clear();
-                }
+    pub fn show(&mut self, ui: &mut Ui) {
+        TopBottomPanel::top(ui.auto_id_with("LeftPane").with("TopPane")).show_inside(ui, |ui| {
+            MenuBar::new().ui(ui, |ui| {
+                self.top(ui);
+            });
+        });
+        CentralPanel::default().show_inside(ui, |ui| {
+            ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
+                self.central(ui);
+            });
+        });
+    }
+
+    fn top(&mut self, ui: &mut Ui) {
+        ui.heading(ui.localize("loaded-files"))
+            .on_hover_localized("loaded-files.hover");
+        ui.separator();
+        // Toggle
+        if ui
+            .button(RichText::new(CHECK).heading())
+            .on_hover_localized("toggle-all")
+            .on_hover_localized("toggle-all.hover")
+            .clicked()
+        {
+            if self.selected.is_empty() {
+                self.selected = self.frames.iter().cloned().collect();
+            } else {
+                self.selected.clear();
             }
-            ui.separator();
-            // Delete all
+        }
+        ui.separator();
+        let enabled = !self.selected.is_empty();
+        // Delete
+        ui.add_enabled_ui(enabled, |ui| {
             if ui
                 .button(RichText::new(TRASH).heading())
-                .on_hover_localized("delete-all")
+                .on_hover_localized("DeleteSelected.hover")
                 .clicked()
             {
-                *self = Default::default();
+                self.frames.retain(|frame| !self.selected.remove(frame));
             }
-            ui.separator();
-            // Configuration
-            let frames = self.selected();
-            ui.add_enabled_ui(!frames.is_empty(), |ui| {
-                if ui
-                    .button(RichText::new(ConfigurationPane::icon()).heading())
-                    .on_hover_localized("configuration")
-                    .clicked()
-                {
-                    ui.data_mut(|data| data.insert_temp(Id::new(CONFIGURE), frames));
+        });
+        ui.separator();
+        // Configuration
+        ui.add_enabled_ui(enabled, |ui| {
+            if ui
+                .button(RichText::new(ConfigurationPane::icon()).heading())
+                .on_hover_localized("configuration")
+                .clicked()
+            {
+                ui.data_mut(|data| data.insert_temp(Id::new(CONFIGURE), self.selected()));
+            }
+        });
+        ui.separator();
+    }
+
+    fn central(&mut self, ui: &mut Ui) {
+        ui.visuals_mut().widgets.inactive.bg_fill = Color32::TRANSPARENT;
+        dnd(ui, ui.next_auto_id()).show_vec(&mut self.frames, |ui, frame, handle, _state| {
+            ui.horizontal(|ui| {
+                handle.ui(ui, |ui| {
+                    let _ = ui.label(DOTS_SIX_VERTICAL);
+                });
+                let mut changed = false;
+                // Checkbox
+                let mut checked = self.selected.contains(frame);
+                changed |= ui.checkbox(&mut checked, "").changed();
+                // Label
+                let text = frame.meta.format(" ").to_string();
+                changed |= ui
+                    .add(Label::new(text).truncate())
+                    .on_hover_ui(|ui| {
+                        MetadataWidget::new(&frame.meta).show(ui);
+                        ui.separator();
+                        Grid::new(ui.next_auto_id()).show(ui, |ui| {
+                            ui.label("Rows");
+                            ui.label(frame.data.height().to_string());
+                            ui.end_row();
+                            ui.label("Columns");
+                            ui.label(frame.data.width().to_string());
+                            ui.end_row();
+                        });
+                    })
+                    .clicked();
+                if changed {
+                    if self.selected.contains(frame) {
+                        self.selected.remove(frame);
+                    } else {
+                        self.selected.insert(frame.clone());
+                    }
                 }
             });
-            ui.separator();
         });
-        // Body
-        ui.separator();
-        ui.visuals_mut().widgets.inactive.bg_fill = Color32::TRANSPARENT;
-        let mut delete = None;
-        // let mut swap = None;
-        // let height = ui.spacing().interact_size.y;
-        // ui.dnd_drop_zone::<usize, ()>(Frame::new(), |ui| {
-        //     TableBuilder::new(ui)
-        //         .columns(Column::exact(height), 2)
-        //         .column(Column::auto().resizable(true))
-        //         .column(Column::exact(height))
-        //         .body(|mut body| {
-        //             for (index, frame) in self.frames.iter().enumerate() {
-        //                 let mut changed = false;
-        //                 body.row(height, |mut row| {
-        //                     row.col(|ui| {
-        //                         let response = ui
-        //                             .dnd_drag_source(ui.auto_id_with(index), index, |ui| {
-        //                                 ui.label(index.to_string())
-        //                             })
-        //                             .response;
-        //                         // Detect drops onto this item
-        //                         if let (Some(pointer), Some(hovered_payload)) = (
-        //                             ui.input(|input| input.pointer.interact_pos()),
-        //                             response.dnd_hover_payload::<usize>(),
-        //                         ) {
-        //                             let rect = response.rect;
-        //                             // Preview insertion:
-        //                             let stroke = Stroke::new(1.0, Color32::WHITE);
-        //                             let to = if *hovered_payload == index {
-        //                                 // We are dragged onto ourselves
-        //                                 ui.painter().hline(rect.x_range(), rect.center().y, stroke);
-        //                                 index
-        //                             } else if pointer.y < rect.center().y {
-        //                                 // Above us
-        //                                 ui.painter().hline(rect.x_range(), rect.top(), stroke);
-        //                                 index
-        //                             } else {
-        //                                 // Below us
-        //                                 ui.painter().hline(rect.x_range(), rect.bottom(), stroke);
-        //                                 index + 1
-        //                             };
-        //                             if let Some(from) = response.dnd_release_payload() {
-        //                                 // The user dropped onto this item.
-        //                                 swap = Some((*from, to));
-        //                             }
-        //                         }
-        //                     });
-        //                     // Checkbox
-        //                     row.col(|ui| {
-        //                         let mut checked = self.selected.contains(frame);
-        //                         let response = ui.checkbox(&mut checked, "");
-        //                         changed |= response.changed();
-        //                     });
-        //                     // Label
-        //                     row.col(|ui| {
-        //                         let text = frame.meta.format(" ").to_string();
-        //                         let response = ui
-        //                             .add(Label::new(text).sense(Sense::click()).truncate())
-        //                             .on_hover_ui(|ui| {
-        //                                 MetadataWidget::new(&frame.meta).show(ui);
-        //                             })
-        //                             .on_hover_ui(|ui| {
-        //                                 Grid::new(ui.next_auto_id()).show(ui, |ui| {
-        //                                     ui.label("Rows");
-        //                                     ui.label(frame.data.height().to_string());
-        //                                     ui.end_row();
-        //                                     ui.label("Columns");
-        //                                     ui.label(frame.data.width().to_string());
-        //                                     ui.end_row();
-        //                                 });
-        //                             });
-        //                         changed |= response.clicked();
-        //                     });
-        //                     // Delete
-        //                     row.col(|ui| {
-        //                         if ui.button(TRASH).clicked() {
-        //                             delete = Some(index);
-        //                         }
-        //                     });
-        //                 });
-        //                 if changed {
-        //                     if body.ui_mut().input(|input| input.modifiers.command) {
-        //                         if self.selected.contains(frame) {
-        //                             self.selected.remove(frame);
-        //                         } else {
-        //                             self.selected.insert(frame.clone());
-        //                         }
-        //                     } else {
-        //                         if self.selected.contains(frame) {
-        //                             self.selected.remove(&frame);
-        //                         } else {
-        //                             self.selected.insert(frame.clone());
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //             // body.rows(height, self.frames.len(), |mut row| {
-        //             //     let index = row.index();
-        //             //     // ui.horizontal(|ui| {
-        //             //     //     Sides::new().show(
-        //             //     //         ui,
-        //             //     //         |ui| {
-        //             //     //             handle.ui(ui, |ui| {
-        //             //     //                 let _ = ui.label(ARROWS_OUT_CARDINAL);
-        //             //     //             });
-        //             //     //             ui.checkbox(&mut self.checked[state.index], "");
-        //             //     //             let text = if let Some(version) = &frame.meta.version {
-        //             //     //                 &format!("{} {version}", frame.meta.name)
-        //             //     //             } else {
-        //             //     //                 &frame.meta.name
-        //             //     //             };
-        //             //     //             ui.add(Label::new(text).truncate()).on_hover_ui(|ui| {
-        //             //     //                 Grid::new(ui.next_auto_id()).show(ui, |ui| {
-        //             //     //                     ui.label("Rows");
-        //             //     //                     ui.label(frame.data.height().to_string());
-        //             //     //                 });
-        //             //     //             });
-        //             //     //         },
-        //             //     //         |ui| {
-        //             //     //             if ui.button(TRASH).clicked() {
-        //             //     //                 delete = Some(state.index);
-        //             //     //             }
-        //             //     //         },
-        //             //     //     );
-        //             //     // });
-        //             // });
-        //             // let ui = body.ui_mut();
-        //             // dnd(ui, ui.next_auto_id()).show_vec(
-        //             //     &mut self.frames,
-        //             //     |ui, frame, handle, state| {
-        //             //         ui.horizontal(|ui| {
-        //             //             Sides::new().show(
-        //             //                 ui,
-        //             //                 |ui| {
-        //             //                     handle.ui(ui, |ui| {
-        //             //                         let _ = ui.label(ARROWS_OUT_CARDINAL);
-        //             //                     });
-        //             //                     ui.checkbox(&mut self.checked[state.index], "");
-        //             //                     let text = if let Some(version) = &frame.meta.version {
-        //             //                         &format!("{} {version}", frame.meta.name)
-        //             //                     } else {
-        //             //                         &frame.meta.name
-        //             //                     };
-        //             //                     ui.add(Label::new(text).truncate()).on_hover_ui(|ui| {
-        //             //                         Grid::new(ui.next_auto_id()).show(ui, |ui| {
-        //             //                             ui.label("Rows");
-        //             //                             ui.label(frame.data.height().to_string());
-        //             //                         });
-        //             //                     });
-        //             //                 },
-        //             //                 |ui| {
-        //             //                     if ui.button(TRASH).clicked() {
-        //             //                         delete = Some(state.index);
-        //             //                     }
-        //             //                 },
-        //             //             );
-        //             //         });
-        //             //     },
-        //             // );
-        //         });
-        // });
-
-        // if let Some((from, to)) = swap {
-        //     if from != to {
-        //         let frame = self.frames.remove(from);
-        //         if from < to {
-        //             self.frames.insert(to - 1, frame);
-        //         } else {
-        //             self.frames.insert(to, frame);
-        //         }
-        //     }
-        // }
-        let response =
-            dnd(ui, ui.next_auto_id()).show_vec(&mut self.frames, |ui, frame, handle, state| {
-                ui.horizontal(|ui| {
-                    Sides::new().show(
-                        ui,
-                        |ui| {
-                            handle.ui(ui, |ui| {
-                                let _ = ui.label(DOTS_SIX_VERTICAL);
-                            });
-                            let mut changed = false;
-                            // Checkbox
-                            let mut checked = self.selected.contains(frame);
-                            changed |= ui.checkbox(&mut checked, "").changed();
-                            // Label
-                            let text = frame.meta.format(" ").to_string();
-                            changed |= ui
-                                .add(Label::new(text).truncate())
-                                .on_hover_ui(|ui| {
-                                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                                        Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                                            ui.label("Rows");
-                                            ui.label(frame.data.height().to_string());
-                                            ui.end_row();
-                                            ui.label("Columns");
-                                            ui.label(frame.data.width().to_string());
-                                            ui.end_row();
-                                        });
-                                    });
-                                })
-                                .clicked();
-                            if changed {
-                                if ui.input(|input| input.modifiers.command) {
-                                    if self.selected.contains(frame) {
-                                        self.selected.remove(frame);
-                                    } else {
-                                        self.selected.insert(frame.clone());
-                                    }
-                                } else {
-                                    if self.selected.contains(frame) {
-                                        self.selected.remove(&frame);
-                                    } else {
-                                        self.selected.insert(frame.clone());
-                                    }
-                                }
-                            }
-                        },
-                        |ui| {
-                            if ui.button(TRASH).clicked() {
-                                delete = Some(state.index);
-                            }
-                        },
-                    );
-                });
-            });
-        if let Some(index) = delete {
-            self.selected.remove(&self.frames.remove(index));
-        }
     }
 }

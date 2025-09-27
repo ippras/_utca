@@ -4,8 +4,9 @@ pub use self::native::{save, save_data};
 pub use self::web::{save, save_data};
 
 use anyhow::Result;
-use metadata::MetaDataFrame;
+use metadata::{MetaDataFrame, Metadata};
 use polars::prelude::*;
+use std::{borrow::BorrowMut, fmt::Debug};
 use tracing::instrument;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -14,9 +15,12 @@ mod native {
     use std::fs::File;
 
     #[instrument(err)]
-    pub fn save(frame: &mut MetaDataFrame, name: &str) -> Result<()> {
+    pub fn save(
+        frame: &mut MetaDataFrame<Metadata, impl BorrowMut<DataFrame> + Debug>,
+        name: &str,
+    ) -> Result<()> {
         let file = File::create(name)?;
-        MetaDataFrame::new(frame.meta.clone(), &mut frame.data).write_parquet(file)?;
+        frame.write_parquet(file)?;
         Ok(())
     }
 

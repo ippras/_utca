@@ -1,4 +1,4 @@
-use crate::{app::panes::calculation::parameters::From, utils::Hashed};
+use crate::utils::HashedDataFrame;
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
@@ -43,7 +43,7 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        compute(key, length(&key.data_frame)?)
+        compute(key, length(&key.frame)?)
     }
 }
 
@@ -56,8 +56,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Calculation indices key
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub(crate) struct Key<'a> {
-    pub(crate) data_frame: &'a Hashed<DataFrame>,
-    pub(crate) from: From,
+    pub(crate) frame: &'a HashedDataFrame,
     pub(crate) ddof: u8,
 }
 
@@ -77,40 +76,26 @@ fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
     let DataType::Struct(fields) = data_type else {
         polars_bail!(SchemaMismatch: r#"Invalid "{STEREOSPECIFIC_NUMBERS123}" data type: expected `Struct`, got = `{data_type}`"#);
     };
-    let Some(triacylglycerol) = fields.iter().find(|field| field.name() == "Experimental") else {
-        polars_bail!(SchemaMismatch: r#"The "{STEREOSPECIFIC_NUMBERS123}.Experimental" field was not found in the scheme"#);
+    let Some(array) = fields.iter().find(|field| field.name() == "Array") else {
+        polars_bail!(SchemaMismatch: r#"The "STEREOSPECIFIC_NUMBERS123.Array" field was not found in the scheme"#);
     };
-    match triacylglycerol.dtype() {
-        DataType::Float64 => {
-            return Ok(1);
-        }
-        DataType::Struct(fields) => {
-            let Some(repetitions) = fields.iter().find(|field| field.name() == "Repetitions")
-            else {
-                polars_bail!(SchemaMismatch: r#"The "Experimental.STEREOSPECIFIC_NUMBERS123.Repetitions" field was not found in the scheme"#);
-            };
-            let data_type = repetitions.dtype();
-            let &DataType::Array(box DataType::Float64, length) = data_type else {
-                polars_bail!(SchemaMismatch: r#"Invalid "Experimental.STEREOSPECIFIC_NUMBERS123.Repetitions" data type: expected `Array(Float64)`, got = `{data_type}`"#);
-            };
-            return Ok(length as _);
-        }
-        data_type => {
-            polars_bail!(SchemaMismatch: r#"Invalid "Experimental.STEREOSPECIFIC_NUMBERS123" data type: expected [`Float64`, `Struct`], got = `{data_type}`"#);
-        }
-    }
+    let data_type = array.dtype();
+    let &DataType::Array(box DataType::Float64, length) = data_type else {
+        polars_bail!(SchemaMismatch: r#"Invalid "STEREOSPECIFIC_NUMBERS123.Array" data type: expected `Array(Float64)`, got = `{data_type}`"#);
+    };
+    return Ok(length as _);
 }
 
 fn compute(key: Key, length: u64) -> PolarsResult<Value> {
-    let mut lazy_frame = key.data_frame.value.clone().lazy();
+    let mut lazy_frame = key.frame.data_frame.clone().lazy();
     let fatty_acid = || col(FATTY_ACID).fatty_acid();
     let values = |expr: Expr| {
         (0..length).map(move |index| {
             expr.clone()
                 .struct_()
-                .field_by_name("Repetitions")
+                .field_by_name("Array")
                 .arr()
-                .get(index.into(), false)
+                .get(lit(index), false)
         })
     };
     let stereospecific_numbers = |expr: Expr| -> PolarsResult<Expr> {
@@ -213,25 +198,9 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         ]))
     };
     lazy_frame = lazy_frame.select([
-        stereospecific_numbers(
-            col(STEREOSPECIFIC_NUMBERS123)
-                .struct_()
-                .field_by_name("Experimental"),
-        )?
-        .alias(STEREOSPECIFIC_NUMBERS123),
-        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS13).struct_().field_by_name(
-            match key.from {
-                From::StereospecificNumbers12_23 => STEREOSPECIFIC_NUMBERS12_23,
-                From::StereospecificNumbers2 => STEREOSPECIFIC_NUMBERS2,
-            },
-        ))?
-        .alias(STEREOSPECIFIC_NUMBERS13),
-        stereospecific_numbers(
-            col(STEREOSPECIFIC_NUMBERS2)
-                .struct_()
-                .field_by_name("Experimental"),
-        )?
-        .alias(STEREOSPECIFIC_NUMBERS2),
+        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS123))?.alias(STEREOSPECIFIC_NUMBERS123),
+        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS13))?.alias(STEREOSPECIFIC_NUMBERS13),
+        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS2))?.alias(STEREOSPECIFIC_NUMBERS2),
     ]);
     // Mean and standard deviation
     let exprs = STEREOSPECIFIC_NUMBERS
@@ -259,7 +228,7 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
                             col(stereospecific_numbers)
                                 .struct_()
                                 .field_by_name(name)
-                                .alias("Repetitions"),
+                                .alias("Array"),
                         ])
                         .alias(name)
                     })

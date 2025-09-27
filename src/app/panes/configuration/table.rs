@@ -1,7 +1,11 @@
 use super::{ID_SOURCE, state::Settings};
-use crate::app::{
-    panes::MARGIN,
-    widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
+use crate::{
+    app::{
+        computers::{ConfigurationDisplayComputed, ConfigurationDisplayKey},
+        panes::MARGIN,
+        widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
+    },
+    utils::{HashedDataFrame, hash_data_frame},
 };
 use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
 use egui_l20n::UiExt as _;
@@ -16,21 +20,20 @@ use tracing::instrument;
 const INDEX: Range<usize> = 0..1;
 const LABEL: Range<usize> = INDEX.end..INDEX.end + 1;
 const FA: Range<usize> = LABEL.end..LABEL.end + 1;
-const TAG: Range<usize> = FA.end..FA.end + 1;
-const DAG1223: Range<usize> = TAG.end..TAG.end + 1;
-const MAG2: Range<usize> = DAG1223.end..DAG1223.end + 1;
-const LEN: usize = MAG2.end;
+const SN123: Range<usize> = FA.end..FA.end + 1;
+const SN2_OR_SN1223: Range<usize> = SN123.end..SN123.end + 1;
+const LEN: usize = SN2_OR_SN1223.end;
 
 /// Table view
 pub(super) struct TableView<'a> {
-    data_frame: &'a mut DataFrame,
+    data: &'a mut HashedDataFrame,
     settings: &'a mut Settings,
 }
 
 impl<'a> TableView<'a> {
-    pub(super) fn new(data_frame: &'a mut DataFrame, settings: &'a mut Settings) -> Self {
+    pub(super) fn new(data_frame: &'a mut HashedDataFrame, settings: &'a mut Settings) -> Self {
         Self {
-            data_frame,
+            data: data_frame,
             settings,
         }
     }
@@ -45,7 +48,7 @@ impl TableView<'_> {
             self.settings.reset_state = false;
         }
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
-        let num_rows = self.data_frame.height() as u64 + 1;
+        let num_rows = self.data.height() as u64 + 1;
         let num_columns = LEN;
         Table::new()
             .id_salt(id_salt)
@@ -57,14 +60,22 @@ impl TableView<'_> {
             .num_sticky_cols(self.settings.sticky_columns)
             .headers([HeaderRow::new(height)])
             .show(ui, self);
+        let _ = self.change();
+    }
+
+    #[instrument(skip(self), err)]
+    fn change(&mut self) -> PolarsResult<()> {
         if self.settings.add_row {
-            self.data_frame.add_row().unwrap();
+            self.data.add_row()?;
+            self.data.update()?;
             self.settings.add_row = false;
         }
         if let Some(index) = self.settings.delete_row {
-            self.data_frame.delete_row(index).unwrap();
+            self.data.delete_row(index)?;
+            self.data.update()?;
             self.settings.delete_row = None;
         }
+        Ok(())
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
@@ -86,22 +97,24 @@ impl TableView<'_> {
                         ui.label(ui.localize("FattyAcid"));
                     });
             }
-            (0, TAG) => {
+            (0, SN2_OR_SN1223) => {
+                let name = self.data.get_columns()[3].name();
+                if name == STEREOSPECIFIC_NUMBERS2 {
+                    ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("StereospecificNumber?number=2"));
+                        });
+                } else if name == STEREOSPECIFIC_NUMBERS12_23 {
+                    ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("StereospecificNumber?number=1223"));
+                        });
+                }
+            }
+            (0, SN123) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=123"));
-                    });
-            }
-            (0, DAG1223) => {
-                ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=1223"));
-                    });
-            }
-            (0, MAG2) => {
-                ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=2"));
                     });
             }
             _ => {}
@@ -115,7 +128,7 @@ impl TableView<'_> {
         row: usize,
         column: Range<usize>,
     ) -> PolarsResult<()> {
-        if row != self.data_frame.height() {
+        if row != self.data.height() {
             self.body_cell_content_ui(ui, row, column)?;
         } else {
             self.footer_cell_content_ui(ui, column)?;
@@ -139,8 +152,8 @@ impl TableView<'_> {
                 ui.label(row.to_string());
             }
             (row, LABEL) => {
-                let fatty_acid = self.data_frame.try_fatty_acid()?;
-                let label = self.data_frame["Label"].str()?;
+                let fatty_acid = self.data.try_fatty_acid()?;
+                let label = self.data["Label"].str()?;
                 let inner_response = LabelWidget::new(label, fatty_acid, row)
                     .editable(self.settings.edit_table)
                     .hover_names(self.settings.hover_names)
@@ -148,35 +161,68 @@ impl TableView<'_> {
                 if inner_response.response.changed() {
                     match inner_response.inner? {
                         Some(Inner::Cell(new)) => {
-                            self.data_frame
-                                .try_apply("Label", change_label(row, &new))?;
+                            self.data.try_apply("Label", change_label(row, &new))?;
+                            self.data.update()?;
                         }
                         Some(Inner::Column(new_col)) => {
-                            self.data_frame.replace("Label", new_col)?;
+                            self.data.replace("Label", new_col)?;
+                            self.data.update()?;
                         }
                         None => todo!(),
                     }
                 }
             }
             (row, FA) => {
-                let fatty_acid = self.data_frame.try_fatty_acid()?.get(row)?;
+                let fatty_acid = self.data.try_fatty_acid()?.get(row)?;
                 let inner_response = FattyAcidWidget::new(fatty_acid.as_ref())
                     .editable(self.settings.edit_table)
                     .hover(true)
                     .show(ui);
                 if inner_response.response.changed() {
-                    self.data_frame
+                    self.data
                         .try_apply("FattyAcid", change_fatty_acid(row, inner_response.inner))?;
+                    self.data.update()?;
                 }
             }
-            (row, TAG) => {
-                self.f64_cell(ui, row, "Triacylglycerol")?;
+            (row, SN123) => {
+                let data_frame = ui.memory_mut(|memory| -> PolarsResult<_> {
+                    Ok(memory
+                        .caches
+                        .cache::<ConfigurationDisplayComputed>()
+                        .get(ConfigurationDisplayKey { frame: &self.data }))
+                })?;
+                let value = data_frame[STEREOSPECIFIC_NUMBERS123].f64()?.get(row);
+                let inner_response = FloatWidget::new(value)
+                    .editable(self.settings.edit_table)
+                    .precision(Some(self.settings.precision))
+                    .hover(true)
+                    .show(ui);
+                if let Some(value) = inner_response.inner {
+                    self.data
+                        .try_apply(STEREOSPECIFIC_NUMBERS123, change_f64(row, value))?;
+                    self.data.update()?;
+                }
+                // self.f64_cell(ui, row, "Triacylglycerol")?;
             }
-            (row, DAG1223) => {
-                self.f64_cell(ui, row, "Diacylglycerol1223")?;
-            }
-            (row, MAG2) => {
-                self.f64_cell(ui, row, "Monoacylglycerol2")?;
+            (row, SN2_OR_SN1223) => {
+                let data_frame = ui.memory_mut(|memory| -> PolarsResult<_> {
+                    Ok(memory
+                        .caches
+                        .cache::<ConfigurationDisplayComputed>()
+                        .get(ConfigurationDisplayKey { frame: &self.data }))
+                })?;
+                let name = data_frame.get_columns()[3].name().as_str();
+                let value = data_frame[name].f64()?.get(row);
+                let inner_response = FloatWidget::new(value)
+                    .editable(self.settings.edit_table)
+                    .precision(Some(self.settings.precision))
+                    .hover(true)
+                    .show(ui);
+                if let Some(value) = inner_response.inner {
+                    self.data.try_apply(name, change_f64(row, value))?;
+                    self.data.update()?;
+                }
+                // self.f64_cell(ui, row, "Monoacylglycerol2")?;
             }
             _ => {}
         }
@@ -192,44 +238,47 @@ impl TableView<'_> {
                     }
                 }
             }
-            TAG => {
-                FloatWidget::new(self.data_frame["Triacylglycerol"].f64()?.sum())
-                    .precision(Some(self.settings.precision))
-                    .hover(true)
-                    .show(ui)
-                    .response
-                    .on_hover_text("∑ TAG");
-            }
-            DAG1223 => {
-                FloatWidget::new(self.data_frame["Diacylglycerol1223"].f64()?.sum())
-                    .precision(Some(self.settings.precision))
-                    .hover(true)
-                    .show(ui)
-                    .response
-                    .on_hover_text("∑ DAG1223");
-            }
-            MAG2 => {
-                FloatWidget::new(self.data_frame["Monoacylglycerol2"].f64()?.sum())
-                    .precision(Some(self.settings.precision))
-                    .hover(true)
-                    .show(ui)
-                    .response
-                    .on_hover_text("∑ MAG");
-            }
+            // TAG => {
+            //     FloatWidget::new(self.data_frame["Triacylglycerol"].f64()?.sum())
+            //         .precision(Some(self.settings.precision))
+            //         .hover(true)
+            //         .show(ui)
+            //         .response
+            //         .on_hover_text("∑ TAG");
+            // }
+            // DAG1223 => {
+            //     FloatWidget::new(self.data_frame["Diacylglycerol1223"].f64()?.sum())
+            //         .precision(Some(self.settings.precision))
+            //         .hover(true)
+            //         .show(ui)
+            //         .response
+            //         .on_hover_text("∑ DAG1223");
+            // }
+            // MAG2 => {
+            //     FloatWidget::new(self.data_frame["Monoacylglycerol2"].f64()?.sum())
+            //         .precision(Some(self.settings.precision))
+            //         .hover(true)
+            //         .show(ui)
+            //         .response
+            //         .on_hover_text("∑ MAG");
+            // }
             _ => {}
         }
         Ok(())
     }
 
     fn f64_cell(&mut self, ui: &mut Ui, row: usize, column: &str) -> PolarsResult<Response> {
-        let value = self.data_frame[column].f64()?.get(row);
+        let value = self.data[column].f64()?.get(row);
         let inner_response = FloatWidget::new(value)
             .editable(self.settings.edit_table)
             .precision(Some(self.settings.precision))
             .hover(true)
             .show(ui);
         if let Some(value) = inner_response.inner {
-            self.data_frame.try_apply(column, change_f64(row, value))?;
+            self.data
+                .data_frame
+                .try_apply(column, change_f64(row, value))?;
+            self.data.hash = hash_data_frame(&mut self.data.data_frame)?;
         }
         Ok(inner_response.response)
     }

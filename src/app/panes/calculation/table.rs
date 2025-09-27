@@ -1,35 +1,34 @@
-use super::{
-    ID_SOURCE,
-    parameters::{From, Parameters},
-    state::Settings,
-};
+use super::{ID_SOURCE, parameters::Parameters, state::Settings};
 use crate::{
     app::{
-        computers::{CalculationDisplayComputed, CalculationDisplayKey, CalculationDisplayKind},
+        computers::{
+            CalculationDisplayComputed, CalculationDisplayKey, CalculationDisplaySettings,
+        },
         panes::MARGIN,
     },
-    utils::Hashed,
+    asset,
+    utils::HashedDataFrame,
 };
-use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
+use egui::{Context, Frame, Id, Label, Margin, Response, TextStyle, TextWrapMode, Ui, Widget};
+use egui_ext::Markdown as _;
 use egui_l20n::UiExt;
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
-use itertools::Itertools;
 use lipid::prelude::*;
 use polars::prelude::*;
 use std::ops::Range;
 use tracing::instrument;
 
-const IDENTIFIER: Range<usize> = 0..3;
-const STEREOSPECIFIC_NUMBERS: Range<usize> = IDENTIFIER.end..IDENTIFIER.end + 4;
-const FACTORS: Range<usize> = STEREOSPECIFIC_NUMBERS.end..STEREOSPECIFIC_NUMBERS.end + 2;
+const ID: Range<usize> = 0..3;
+const SN: Range<usize> = ID.end..ID.end + 3;
+const FACTORS: Range<usize> = SN.end..SN.end + 2;
 const LEN: usize = FACTORS.end;
 
-const TOP: &[Range<usize>] = &[IDENTIFIER, STEREOSPECIFIC_NUMBERS, FACTORS];
+const TOP: &[Range<usize>] = &[ID, SN, FACTORS];
 
 /// Calculation table
 pub(crate) struct TableView<'a> {
-    data_frame: &'a Hashed<DataFrame>,
+    data_frame: &'a HashedDataFrame,
     parameters: &'a Parameters,
     settings: Settings,
 }
@@ -37,7 +36,7 @@ pub(crate) struct TableView<'a> {
 impl<'a> TableView<'a> {
     pub(crate) fn new(
         ctx: &Context,
-        data_frame: &'a Hashed<DataFrame>,
+        data_frame: &'a HashedDataFrame,
         parameters: &'a Parameters,
     ) -> Self {
         Self {
@@ -86,13 +85,13 @@ impl TableView<'_> {
         }
         match (row, column) {
             // Top
-            (0, IDENTIFIER) => {
+            (0, ID) => {
                 ui.heading(ui.localize("Identifier.abbreviation"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("Identifier"));
                     });
             }
-            (0, STEREOSPECIFIC_NUMBERS) => {
+            (0, SN) => {
                 ui.heading(ui.localize("StereospecificNumber?number=many"));
             }
             (0, FACTORS) => {
@@ -113,25 +112,19 @@ impl TableView<'_> {
                         ui.label(ui.localize("FattyAcid"));
                     });
             }
-            (1, stereospecific_numbers::TAG) => {
+            (1, stereospecific_numbers::SN123) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=123"));
                     });
             }
-            (1, stereospecific_numbers::DAG1223) => {
-                ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=1223"));
-                    });
-            }
-            (1, stereospecific_numbers::MAG2) => {
+            (1, stereospecific_numbers::SN2) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=2"));
                     });
             }
-            (1, stereospecific_numbers::MAG1_3) => {
+            (1, stereospecific_numbers::SN13) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=13"));
@@ -140,13 +133,13 @@ impl TableView<'_> {
             (1, factors::EF) => {
                 ui.heading(ui.localize("EnrichmentFactor.abbreviation"))
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize("EnrichmentFactor"));
+                        ui.markdown(asset!("/doc/en/Factors/EnrichmentFactor.md"));
                     });
             }
             (1, factors::SF) => {
                 ui.heading(ui.localize("SelectivityFactor.abbreviation"))
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize("SelectivityFactor"));
+                        ui.markdown(asset!("/doc/en/Factors/SelectivityFactor.md"));
                     });
             }
             _ => {}
@@ -181,186 +174,73 @@ impl TableView<'_> {
             (row, identifier::LABEL) => {
                 let labels = self.data_frame[LABEL].str()?;
                 let label = labels.get(row).unwrap();
-                ui.label(label);
+                Label::new(label).truncate().ui(ui);
             }
             (row, identifier::FA) => {
                 if let Some(fatty_acid) = self.data_frame.try_fatty_acid()?.delta()?.get(row) {
-                    ui.label(fatty_acid);
+                    Label::new(fatty_acid).truncate().ui(ui);
                 }
             }
-            (row, stereospecific_numbers::TAG) => {
+            (row, stereospecific_numbers::SN123) => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
                         .cache::<CalculationDisplayComputed>()
                         .get(CalculationDisplayKey {
-                            data_frame: self.data_frame,
-                            kind: CalculationDisplayKind::StereospecificNumbers123,
-                            percent: self.settings.percent,
-                        })
-                });
-                if let Some(value) = data_frame["Mean"].f64()?.get(row) {
-                    let response = ui
-                        .label(format!("{value:.0$}", self.settings.precision))
-                        .on_hover_text(value.to_string());
-                    if response.hovered() {
-                        response
-                            .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?
-                            .theoretical(&data_frame, row)?;
-                    }
-                }
-            }
-            (row, stereospecific_numbers::DAG1223) => {
-                let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            data_frame: self.data_frame,
-                            kind: CalculationDisplayKind::StereospecificNumbers12_23,
-                            percent: self.settings.percent,
-                        })
-                });
-                if let Some(value) = data_frame["Mean"].f64()?.get(row) {
-                    let response = ui
-                        .label(format!("{value:.0$}", self.settings.precision))
-                        .on_hover_text(value.to_string());
-                    if response.hovered() {
-                        response
-                            .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?
-                            .theoretical(&data_frame, row)?;
-                    }
-                }
-                // let experimental = self.data_frame[STEREOSPECIFIC_NUMBERS12_23]
-                //     .struct_()?
-                //     .field_by_name("Experimental")?;
-                // let value = value_or_mean(&experimental, row)?;
-                // FloatWidget::new(value)
-                //     .percent(self.settings.percent)
-                //     .precision(Some(self.settings.precision))
-                //     .disable(self.parameters.from != From::Sn12_23)
-                //     .hover(true)
-                //     .show(ui)
-                //     .response
-                //     .try_on_hover_ui(|ui| -> PolarsResult<()> {
-                //         let theoretical = self.data_frame[STEREOSPECIFIC_NUMBERS12_23]
-                //             .struct_()?
-                //             .field_by_name("Theoretical")?;
-                //         let value = value_or_mean(&theoretical, row)?;
-                //         ui.horizontal(|ui| {
-                //             ui.label(ui.localize("Theoretical"));
-                //             FloatWidget::new(value)
-                //                 .percent(self.settings.percent)
-                //                 .precision(Some(self.settings.precision))
-                //                 .show(ui);
-                //         });
-                //         Ok(())
-                //     })?;
-            }
-            (row, stereospecific_numbers::MAG2) => {
-                let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            data_frame: self.data_frame,
-                            kind: CalculationDisplayKind::StereospecificNumbers2,
-                            percent: self.settings.percent,
-                        })
-                });
-                if let Some(value) = data_frame["Mean"].f64()?.get(row) {
-                    let response = ui
-                        .label(format!("{value:.0$}", self.settings.precision))
-                        .on_hover_text(value.to_string());
-                    if response.hovered() {
-                        response
-                            .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?
-                            .theoretical(&data_frame, row)?;
-                    }
-                }
-                // let experimental = self.data_frame[STEREOSPECIFIC_NUMBERS2]
-                //     .struct_()?
-                //     .field_by_name("Experimental")?;
-                // let value = value_or_mean(&experimental, row)?;
-                // FloatWidget::new(value)
-                //     .percent(self.settings.percent)
-                //     .precision(Some(self.settings.precision))
-                //     .disable(self.parameters.from != From::Sn2)
-                //     .hover(true)
-                //     .show(ui)
-                //     .response
-                //     .try_on_hover_ui(|ui| -> PolarsResult<()> {
-                //         let theoretical = self.data_frame[STEREOSPECIFIC_NUMBERS2]
-                //             .struct_()?
-                //             .field_by_name("Theoretical")?;
-                //         let value = value_or_mean(&theoretical, row)?;
-                //         ui.horizontal(|ui| {
-                //             ui.label(ui.localize("Theoretical"));
-                //             FloatWidget::new(value)
-                //                 .percent(self.settings.percent)
-                //                 .precision(Some(self.settings.precision))
-                //                 .show(ui);
-                //         });
-                //         Ok(())
-                //     })?;
-            }
-            (row, stereospecific_numbers::MAG1_3) => {
-                let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            data_frame: self.data_frame,
-                            kind: CalculationDisplayKind::StereospecificNumbers13(
-                                self.parameters.from,
+                            frame: self.data_frame,
+                            settings: CalculationDisplaySettings::stereospecific_numbers123(
+                                &self.settings,
                             ),
-                            percent: self.settings.percent,
                         })
                 });
-                if let Some(value) = data_frame["Mean"].f64()?.get(row) {
-                    let response = ui
-                        .label(format!("{value:.0$}", self.settings.precision))
-                        .on_hover_text(value.to_string());
-                    if response.hovered() {
-                        response
-                            .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?
-                            .alternative(&data_frame, row)?;
-                    }
+                let mean = data_frame["Mean"].get(row)?.str_value();
+                let response = ui.label(mean);
+                if response.hovered() {
+                    response
+                        .standard_deviation(&data_frame, row)?
+                        .array(&data_frame, row)?;
                 }
-                // let value = self.data_frame[STEREOSPECIFIC_NUMBERS13]
-                //     .struct_()?
-                //     .fields_as_series()[0]
-                //     .f64()?
-                //     .get(row);
-                // FloatWidget::new(value)
-                //     .percent(self.settings.percent)
-                //     .precision(Some(self.settings.precision))
-                //     .hover(true)
-                //     .show(ui)
-                //     .response
-                //     .try_on_enabled_hover_ui(|ui| -> PolarsResult<()> {
-                //         let value = self.data_frame[STEREOSPECIFIC_NUMBERS13]
-                //             .struct_()?
-                //             .fields_as_series()[1]
-                //             .f64()?
-                //             .get(row);
-                //         ui.horizontal(|ui| {
-                //             let text = match self.parameters.from {
-                //                 From::Sn12_23 => "FromSn2",
-                //                 From::Sn2 => "FromSn12_23",
-                //             };
-                //             ui.label(text);
-                //             FloatWidget::new(value)
-                //                 .percent(self.settings.percent)
-                //                 .precision(Some(self.settings.precision))
-                //                 .show(ui);
-                //         });
-                //         Ok(())
-                //     })?;
+            }
+            (row, stereospecific_numbers::SN2) => {
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
+                            frame: self.data_frame,
+                            settings: CalculationDisplaySettings::stereospecific_numbers2(
+                                &self.settings,
+                            ),
+                        })
+                });
+                let mean = data_frame["Mean"].get(row)?.str_value();
+                let response = ui.label(mean);
+                if response.hovered() {
+                    response
+                        .standard_deviation(&data_frame, row)?
+                        .array(&data_frame, row)?;
+                }
+            }
+            (row, stereospecific_numbers::SN13) => {
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
+                            frame: self.data_frame,
+                            settings: CalculationDisplaySettings::stereospecific_numbers13(
+                                &self.settings,
+                            ),
+                        })
+                });
+                let mean = data_frame["Mean"].get(row)?.str_value();
+                let response = ui.label(mean);
+                if response.hovered() {
+                    response
+                        .standard_deviation(&data_frame, row)?
+                        .array(&data_frame, row)?
+                        .calculation(&data_frame, row)?;
+                }
             }
             (row, factors::EF) => {
                 let data_frame = ui.memory_mut(|memory| {
@@ -368,21 +248,17 @@ impl TableView<'_> {
                         .caches
                         .cache::<CalculationDisplayComputed>()
                         .get(CalculationDisplayKey {
-                            data_frame: self.data_frame,
-                            kind: CalculationDisplayKind::EnrichmentFactor,
-                            percent: self.settings.percent,
+                            frame: self.data_frame,
+                            settings: CalculationDisplaySettings::enrichment_factor(&self.settings),
                         })
                 });
-                if let Some(value) = data_frame["Mean"].f64()?.get(row) {
-                    let response = ui
-                        .label(format!("{value:.0$}", self.settings.precision))
-                        .on_hover_text(value.to_string());
-                    if response.hovered() {
-                        response
-                            .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?
-                            .calculation(&data_frame, row)?;
-                    }
+                let mean = data_frame["Mean"].get(row)?.str_value();
+                let response = ui.label(mean);
+                if response.hovered() {
+                    response
+                        .standard_deviation(&data_frame, row)?
+                        .array(&data_frame, row)?
+                        .calculation(&data_frame, row)?;
                 }
             }
             (row, factors::SF) => {
@@ -391,21 +267,19 @@ impl TableView<'_> {
                         .caches
                         .cache::<CalculationDisplayComputed>()
                         .get(CalculationDisplayKey {
-                            data_frame: self.data_frame,
-                            kind: CalculationDisplayKind::SelectivityFactor,
-                            percent: self.settings.percent,
+                            frame: self.data_frame,
+                            settings: CalculationDisplaySettings::selectivity_factor(
+                                &self.settings,
+                            ),
                         })
                 });
-                if let Some(value) = data_frame["Mean"].f64()?.get(row) {
-                    let response = ui
-                        .label(format!("{value:.0$}", self.settings.precision))
-                        .on_hover_text(value.to_string());
-                    if response.hovered() {
-                        response
-                            .standard_deviation(&data_frame, row)?
-                            .repetitions(&data_frame, row)?
-                            .calculation(&data_frame, row)?;
-                    }
+                let mean = data_frame["Mean"].get(row)?.str_value();
+                let response = ui.label(mean);
+                if response.hovered() {
+                    response
+                        .standard_deviation(&data_frame, row)?
+                        .array(&data_frame, row)?
+                        .calculation(&data_frame, row)?;
                 }
             }
             _ => {}
@@ -415,219 +289,88 @@ impl TableView<'_> {
 
     fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         match column {
-            stereospecific_numbers::TAG => {
+            stereospecific_numbers::SN123 => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
                         .cache::<CalculationDisplayComputed>()
                         .get(CalculationDisplayKey {
-                            data_frame: self.data_frame,
-                            kind: CalculationDisplayKind::StereospecificNumbers123,
-                            percent: self.settings.percent,
+                            frame: self.data_frame,
+                            settings: CalculationDisplaySettings::stereospecific_numbers123(
+                                &self.settings,
+                            ),
                         })
                 });
-                if let Some(mean) = data_frame["Mean"].f64()?.sum() {
-                    let response = ui
-                        .label(format!("{mean:.0$}", self.settings.precision))
-                        .on_hover_text(mean.to_string());
+                let row = data_frame.height() - 1;
+                if let Some(mean) = data_frame["Mean"].str()?.get(row) {
+                    let response = ui.label(mean);
                     if response.hovered() {
-                        // response
-                        //     .try_on_enabled_hover_ui(|ui| -> PolarsResult<()> {
-                        //         // Theoretical
-                        //         let theoretical = self.data_frame[STEREOSPECIFIC_NUMBERS123]
-                        //             .struct_()?
-                        //             .field_by_name("Theoretical")?
-                        //             .struct_()?
-                        //             .field_by_name("Mean")?
-                        //             .f64()?
-                        //             .sum();
-                        //         ui.horizontal(|ui| {
-                        //             ui.label("Theoretical");
-                        //             FloatWidget::new(theoretical)
-                        //                 .percent(self.settings.percent)
-                        //                 .precision(Some(self.settings.precision))
-                        //                 .show(ui);
-                        //         });
-                        //         Ok(())
-                        //     })?
-                        //     .on_hover_text("∑ TAG");
+                        response
+                            .on_hover_text(format!(
+                                "∑ {}",
+                                ui.localize("StereospecificNumber.abbreviation?number=123")
+                            ))
+                            .standard_deviation(&data_frame, row)?
+                            .array(&data_frame, row)?;
                     }
                 }
-                // FloatWidget::new(experimental)
-                //     .percent(self.settings.percent)
-                //     .precision(Some(self.settings.precision))
-                //     .hover(true)
-                //     .show(ui)
-                //     .response
-                //     .try_on_enabled_hover_ui(|ui| -> PolarsResult<()> {
-                //         let theoretical = self.data_frame[STEREOSPECIFIC_NUMBERS123]
-                //             .struct_()?
-                //             .field_by_name("Theoretical")?
-                //             .f64()?
-                //             .sum();
-                //         ui.horizontal(|ui| {
-                //             ui.label("Theoretical");
-                //             FloatWidget::new(theoretical)
-                //                 .percent(self.settings.percent)
-                //                 .precision(Some(self.settings.precision))
-                //                 .show(ui);
-                //         });
-                //         Ok(())
-                //     })?
-                //     .on_hover_text("∑ TAG");
             }
-            // stereospecific_numbers::DAG1223 => {
-            //     let experimental = self.data_frame[STEREOSPECIFIC_NUMBERS12_23]
-            //         .struct_()?
-            //         .field_by_name("Experimental")?
-            //         .f64()?
-            //         .sum();
-            //     FloatWidget::new(experimental)
-            //         .percent(self.settings.percent)
-            //         .precision(Some(self.settings.precision))
-            //         .disable(self.parameters.from != From::Sn12_23)
-            //         .hover(true)
-            //         .show(ui)
-            //         .response
-            //         .try_on_hover_ui(|ui| -> PolarsResult<()> {
-            //             let theoretical = self.data_frame[STEREOSPECIFIC_NUMBERS12_23]
-            //                 .struct_()?
-            //                 .field_by_name("Theoretical")?
-            //                 .f64()?
-            //                 .sum();
-            //             ui.horizontal(|ui| {
-            //                 ui.label("Theoretical");
-            //                 FloatWidget::new(theoretical)
-            //                     .percent(self.settings.percent)
-            //                     .precision(Some(self.settings.precision))
-            //                     .show(ui);
-            //             });
-            //             Ok(())
-            //         })?
-            //         .on_hover_text("∑ DAG1223");
-            // }
-            // stereospecific_numbers::MAG2 => {
-            //     let experimental = self.data_frame[STEREOSPECIFIC_NUMBERS2]
-            //         .struct_()?
-            //         .field_by_name("Experimental")?
-            //         .f64()?
-            //         .sum();
-            //     FloatWidget::new(experimental)
-            //         .percent(self.settings.percent)
-            //         .precision(Some(self.settings.precision))
-            //         .disable(self.parameters.from != From::Sn2)
-            //         .hover(true)
-            //         .show(ui)
-            //         .response
-            //         .try_on_hover_ui(|ui| -> PolarsResult<()> {
-            //             let theoretical = self.data_frame[STEREOSPECIFIC_NUMBERS2]
-            //                 .struct_()?
-            //                 .field_by_name("Theoretical")?
-            //                 .f64()?
-            //                 .sum();
-            //             ui.horizontal(|ui| {
-            //                 ui.label("Theoretical");
-            //                 FloatWidget::new(theoretical)
-            //                     .percent(self.settings.percent)
-            //                     .precision(Some(self.settings.precision))
-            //                     .show(ui);
-            //             });
-            //             Ok(())
-            //         })?
-            //         .on_hover_text("∑ MAG2");
-            // }
-            // stereospecific_numbers::MAG1_3 => {
-            //     let value = self.data_frame[STEREOSPECIFIC_NUMBERS13]
-            //         .struct_()?
-            //         .fields_as_series()[0]
-            //         .f64()?
-            //         .sum();
-            //     FloatWidget::new(value)
-            //         .percent(self.settings.percent)
-            //         .precision(Some(self.settings.precision))
-            //         .hover(true)
-            //         .show(ui)
-            //         .response
-            //         .try_on_enabled_hover_ui(|ui| -> PolarsResult<()> {
-            //             let value = self.data_frame[STEREOSPECIFIC_NUMBERS13]
-            //                 .struct_()?
-            //                 .fields_as_series()[1]
-            //                 .f64()?
-            //                 .sum();
-            //             ui.horizontal(|ui| {
-            //                 let text = match self.parameters.from {
-            //                     From::Sn12_23 => "FromSn2",
-            //                     From::Sn2 => "FromSn12_23",
-            //                 };
-            //                 ui.label(text);
-            //                 FloatWidget::new(value)
-            //                     .percent(self.settings.percent)
-            //                     .precision(Some(self.settings.precision))
-            //                     .show(ui);
-            //             });
-            //             Ok(())
-            //         })?
-            //         .on_hover_text("∑ MAG1(3)");
-            // }
+            stereospecific_numbers::SN2 => {
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
+                            frame: self.data_frame,
+                            settings: CalculationDisplaySettings::stereospecific_numbers2(
+                                &self.settings,
+                            ),
+                        })
+                });
+                let row = data_frame.height() - 1;
+                if let Some(mean) = data_frame["Mean"].str()?.get(row) {
+                    let response = ui.label(mean);
+                    if response.hovered() {
+                        response
+                            .on_hover_text(format!(
+                                "∑ {}",
+                                ui.localize("StereospecificNumber.abbreviation?number=2")
+                            ))
+                            .standard_deviation(&data_frame, row)?
+                            .array(&data_frame, row)?;
+                    }
+                }
+            }
+            stereospecific_numbers::SN13 => {
+                let data_frame = ui.memory_mut(|memory| {
+                    memory
+                        .caches
+                        .cache::<CalculationDisplayComputed>()
+                        .get(CalculationDisplayKey {
+                            frame: self.data_frame,
+                            settings: CalculationDisplaySettings::stereospecific_numbers13(
+                                &self.settings,
+                            ),
+                        })
+                });
+                let row = data_frame.height() - 1;
+                if let Some(mean) = data_frame["Mean"].str()?.get(row) {
+                    let response = ui.label(mean);
+                    if response.hovered() {
+                        response
+                            .on_hover_text(format!(
+                                "∑ {}",
+                                ui.localize("StereospecificNumber.abbreviation?number=13")
+                            ))
+                            .standard_deviation(&data_frame, row)?
+                            .array(&data_frame, row)?;
+                    }
+                }
+            }
             _ => {}
         }
         Ok(())
     }
-
-    // fn value(
-    //     &self,
-    //     ui: &mut Ui,
-    //     series: &Series,
-    //     row: Option<usize>,
-    //     percent: bool,
-    //     disable: bool,
-    // ) -> PolarsResult<Response> {
-    //     let experimental = series.struct_()?.field_by_name("Experimental")?;
-    //     Ok(if let Some(r#struct) = experimental.try_struct() {
-    //         let mean = if let Some(row) = row {
-    //             r#struct.field_by_name("Mean")?.f64()?.get(row)
-    //         } else {
-    //             r#struct.field_by_name("Mean")?.f64()?.sum()
-    //         };
-    //         let response = FloatWidget::new(mean)
-    //             .percent(percent)
-    //             .precision(Some(self.settings.precision))
-    //             .disable(disable)
-    //             .hover(true)
-    //             .show(ui)
-    //             .response;
-    //         if let Some(row) = row {
-    //             response.on_hover_text(r#struct.field_by_name("Values")?.str_value(row)?);
-    //         }
-    //         ui.label("±");
-    //         let standard_deviation = if let Some(row) = row {
-    //             r#struct.field_by_name("StandardDeviation")?.f64()?.get(row)
-    //         } else {
-    //             r#struct.field_by_name("StandardDeviation")?.f64()?.sum()
-    //         };
-    //         FloatWidget::new(standard_deviation)
-    //             .percent(percent)
-    //             .precision(Some(self.settings.precision))
-    //             .disable(disable)
-    //             .hover(true)
-    //             .show(ui)
-    //             .response
-    //     } else {
-    //         let values = experimental.f64()?;
-    //         let value = if let Some(row) = row {
-    //             values.get(row)
-    //         } else {
-    //             values.sum()
-    //         };
-    //         FloatWidget::new(value)
-    //             .percent(percent)
-    //             .precision(Some(self.settings.precision))
-    //             .disable(disable)
-    //             .hover(true)
-    //             .show(ui)
-    //             .response
-    //     })
-    // }
 }
 
 impl TableDelegate for TableView<'_> {
@@ -654,29 +397,14 @@ impl TableDelegate for TableView<'_> {
 
 /// Extension methods for [`Response`]
 trait ResponseExt: Sized {
-    fn alternative(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
-
     fn calculation(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
 
     fn standard_deviation(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
 
-    fn repetitions(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
-
-    fn theoretical(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
+    fn array(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
 }
 
 impl ResponseExt for Response {
-    fn alternative(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
-        if let Some(alternative) = data_frame["Alternative"].f64()?.get(row) {
-            self = self.on_hover_ui(|ui| {
-                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                ui.heading(ui.localize("Alternative"));
-                ui.label(alternative.to_string());
-            });
-        }
-        Ok(self)
-    }
-
     fn calculation(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
         if let Some(calculation) = data_frame["Calculation"].str()?.get(row) {
             self = self.on_hover_ui(|ui| {
@@ -689,51 +417,45 @@ impl ResponseExt for Response {
     }
 
     fn standard_deviation(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
-        if let Some(standard_deviation) = data_frame["StandardDeviation"].f64()?.get(row) {
+        if let Some(text) = data_frame["StandardDeviation"].str()?.get(row) {
             self = self.on_hover_ui(|ui| {
                 ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
                 ui.heading(ui.localize("StandardDeviation"));
-                ui.label(format!("± {standard_deviation}"));
+                ui.label(text);
             });
         }
         Ok(self)
     }
 
-    fn repetitions(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
-        if let Some(repetitions) = data_frame["Repetitions"].array()?.get_as_series(row)
-            && repetitions.len() > 1
-        {
-            let formated = repetitions.f64()?.iter().format_with(", ", |value, f| {
-                if let Some(value) = value {
-                    f(&value)?;
-                }
-                Ok(())
-            });
+    fn array(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
+        if let Some(text) = data_frame["Array"].str()?.get(row) {
             self = self.on_hover_ui(|ui| {
                 ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                ui.heading(ui.localize("Repetitions"));
-                ui.label(format!("[{formated}]"));
-            });
-        }
-        Ok(self)
-    }
-
-    fn theoretical(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
-        if let Some(theoretical) = data_frame["Theoretical"].f64()?.get(row) {
-            self = self.on_hover_ui(|ui| {
-                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                ui.heading(ui.localize("Theoretical"));
-                ui.label(theoretical.to_string());
+                ui.heading(ui.localize("Array"));
+                ui.label(text);
             });
         }
         Ok(self)
     }
 }
 
+// mod columns {
+//     use super::*;
+
+//     const ID: Range<usize> = 0..3;
+//     const SN: Range<usize> = ID.end..ID.end + 3;
+//     pub(super) const SN123: Range<usize> = SN.start..SN.start + 1;
+//     pub(super) const SN2: Range<usize> = SN123.end..SN123.end + 1;
+//     pub(super) const SN13: Range<usize> = SN2.end..SN2.end + 1;
+
+//     const FACTORS: Range<usize> = SN.end..SN.end + 2;
+//     const LEN: usize = FACTORS.end;
+// }
+
 mod identifier {
     use super::*;
 
-    pub(super) const INDEX: Range<usize> = IDENTIFIER.start..IDENTIFIER.start + 1;
+    pub(super) const INDEX: Range<usize> = ID.start..ID.start + 1;
     pub(super) const LABEL: Range<usize> = INDEX.end..INDEX.end + 1;
     pub(super) const FA: Range<usize> = LABEL.end..LABEL.end + 1;
 }
@@ -741,11 +463,9 @@ mod identifier {
 mod stereospecific_numbers {
     use super::*;
 
-    pub(super) const TAG: Range<usize> =
-        STEREOSPECIFIC_NUMBERS.start..STEREOSPECIFIC_NUMBERS.start + 1;
-    pub(super) const DAG1223: Range<usize> = TAG.end..TAG.end + 1;
-    pub(super) const MAG2: Range<usize> = DAG1223.end..DAG1223.end + 1;
-    pub(super) const MAG1_3: Range<usize> = MAG2.end..MAG2.end + 1;
+    pub(super) const SN123: Range<usize> = SN.start..SN.start + 1;
+    pub(super) const SN2: Range<usize> = SN123.end..SN123.end + 1;
+    pub(super) const SN13: Range<usize> = SN2.end..SN2.end + 1;
 }
 
 mod factors {

@@ -5,7 +5,11 @@ use self::{
     widgets::Presets,
     windows::{About, GithubWindow},
 };
-use crate::{localization::ContextExt as _, utils::Hashed};
+use crate::{
+    export::parquet::{self, save},
+    localization::ContextExt as _,
+    utils::{HashedDataFrame, HashedMetaDataFrame, hash_data_frame},
+};
 use anyhow::Result;
 use chrono::Local;
 use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
@@ -31,7 +35,7 @@ use panes::configuration::SCHEMA;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str, sync::LazyLock};
-use tracing::{info, instrument, trace};
+use tracing::{error, info, instrument, trace};
 use windows::SettingsWindow;
 
 /// IEEE 754-2008
@@ -326,7 +330,13 @@ impl App {
                         let mut meta = Metadata::default();
                         meta.insert(NAME.to_owned(), "Untitled".to_owned());
                         meta.insert(DATE.to_owned(), Local::now().date_naive().to_string());
-                        self.data.add(MetaDataFrame::new(meta, data));
+                        self.data.add(MetaDataFrame::new(
+                            meta,
+                            HashedDataFrame {
+                                data_frame: data,
+                                hash: 0,
+                            },
+                        ));
                     }
                     // Load
                     ui.add(Presets);
@@ -376,14 +386,44 @@ impl App {
 // Copy/Paste, Drag&Drop
 impl App {
     fn data(&mut self, ctx: &Context) {
-        if let Some(frame) = ctx.data_mut(|data| data.remove_temp::<MetaDataFrame>(Id::new(DATA))) {
+        if let Some(frame) =
+            ctx.data_mut(|data| data.remove_temp::<HashedMetaDataFrame>(Id::new(DATA)))
+        {
+            println!("frame: {frame:?}");
+            // let name = frame.meta.format(".");
+            // let mut meta = frame.meta.clone();
+            // meta.retain(|key, _| key != "ARROW:schema");
+            // let mut frame = MetaDataFrame::new(
+            //     meta,
+            //     frame
+            //         .data
+            //         .data_frame
+            //         .clone()
+            //         .lazy()
+            //         .select([
+            //             col(LABEL),
+            //             col(FATTY_ACID),
+            //             // //
+            //             // col(STEREOSPECIFIC_NUMBERS123),
+            //             // // col(STEREOSPECIFIC_NUMBERS2),
+            //             // col(STEREOSPECIFIC_NUMBERS12_23),
+            //             // 
+            //             col("Triacylglycerol").alias(STEREOSPECIFIC_NUMBERS123),
+            //             col("Monoacylglycerol2").alias(STEREOSPECIFIC_NUMBERS2),
+            //             // col("Diacylglycerol1223").alias(STEREOSPECIFIC_NUMBERS12_23),
+            //         ])
+            //         .collect()
+            //         .unwrap(),
+            // );
+            // let _ = parquet::save(&mut frame, &format!("{name}.utca.parquet"));
             self.data.add(frame);
+            self.left_panel = true;
         }
     }
 
     fn configure(&mut self, ctx: &Context) {
         if let Some(frames) =
-            ctx.data_mut(|data| data.remove_temp::<Vec<MetaDataFrame>>(Id::new(CONFIGURE)))
+            ctx.data_mut(|data| data.remove_temp::<Vec<HashedMetaDataFrame>>(Id::new(CONFIGURE)))
         {
             self.tree
                 .insert_pane::<VERTICAL>(Pane::configuration(frames));
@@ -391,9 +431,9 @@ impl App {
     }
 
     fn calculate(&mut self, ctx: &Context) {
-        if let Some((frames, index)) =
-            ctx.data_mut(|data| data.remove_temp::<(Vec<MetaDataFrame>, usize)>(Id::new(CALCULATE)))
-        {
+        if let Some((frames, index)) = ctx.data_mut(|data| {
+            data.remove_temp::<(Vec<HashedMetaDataFrame>, usize)>(Id::new(CALCULATE))
+        }) {
             self.tree
                 .insert_pane::<VERTICAL>(Pane::calculation(frames, index));
         }
@@ -401,7 +441,7 @@ impl App {
 
     fn compose(&mut self, ctx: &Context) {
         if let Some((frames, index)) = ctx.data_mut(|data| {
-            data.remove_temp::<(Vec<MetaDataFrame>, Option<usize>)>(Id::new(COMPOSE))
+            data.remove_temp::<(Vec<HashedMetaDataFrame>, Option<usize>)>(Id::new(COMPOSE))
         }) {
             self.tree
                 .insert_pane::<HORIZONTAL>(Pane::composition(frames, index));
@@ -477,16 +517,55 @@ impl App {
             ]))
         });
 
+        /// Monoacylglycerol
+        const MAG: LazyLock<SchemaRef> = LazyLock::new(|| {
+            Arc::new(Schema::from_iter([
+                Field::new(PlSmallStr::from_static(LABEL), DataType::String),
+                field!(FATTY_ACID),
+                Field::new(
+                    PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS123),
+                    DataType::Float64,
+                ),
+                Field::new(
+                    PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS2),
+                    DataType::Float64,
+                ),
+            ]))
+        });
+
+        /// Diacylglycerol
+        const DAG: LazyLock<SchemaRef> = LazyLock::new(|| {
+            Arc::new(Schema::from_iter([
+                Field::new(PlSmallStr::from_static(LABEL), DataType::String),
+                field!(FATTY_ACID),
+                Field::new(
+                    PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS123),
+                    DataType::Float64,
+                ),
+                Field::new(
+                    PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS12_23),
+                    DataType::Float64,
+                ),
+            ]))
+        });
+
         let bytes = dropped_file.bytes()?;
         trace!(?bytes);
         let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
         let schema = frame.data.schema();
+        frame.data.fields();
         if CONFIGURATION.matches_schema(schema).is_ok_and(|cast| !cast) {
             info!("CONFIGURATION");
-            self.data.add(frame);
+            self.data.try_add(frame)?;
         } else if COMPOSITION.matches_schema(schema).is_ok_and(|cast| !cast) {
             info!("COMPOSITION");
             ctx.data_mut(|data| data.insert_temp(Id::new(COMPOSE), frame));
+        } else if MAG.ensure_is_exact_match(schema).is_ok() {
+            info!(STEREOSPECIFIC_NUMBERS2);
+            self.data.try_add(frame)?;
+        } else if DAG.ensure_is_exact_match(schema).is_ok() {
+            info!(STEREOSPECIFIC_NUMBERS2);
+            self.data.try_add(frame)?;
         } else {
             return Err(
                 polars_err!(SchemaMismatch: r#"Invalid dropped file schema: expected [`CONFIGURATION`, `COMPOSITION`], got = `{schema:?}`"#),

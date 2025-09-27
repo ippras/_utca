@@ -1,13 +1,11 @@
 use crate::{
     app::{panes::calculation::parameters::Parameters, presets::CHRISTIE},
-    utils::{Hashed, hash},
+    utils::{HashedDataFrame, HashedMetaDataFrame, hash_expr},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
-use metadata::MetaDataFrame;
 use polars::prelude::*;
 use polars_ext::expr::{ExprExt as _, ExprIfExt as _};
-use std::hash::{Hash, Hasher};
 
 /// Calculation computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -21,35 +19,22 @@ impl Computer {
         let mut lazy_frame = match key.parameters.index {
             Some(index) => {
                 let frame = &key.frames[index];
-                let mut lazy_frame = frame.data.clone().lazy();
-                lazy_frame = compute(lazy_frame, key.parameters)?.select([
+                // let mut lazy_frame = frame.data.data_frame.clone().lazy();
+                compute(&frame.data.data_frame, key.parameters)?.select([
                     col(LABEL),
                     col(FATTY_ACID),
-                    as_struct(vec![
-                        col(STEREOSPECIFIC_NUMBERS123),
-                        col(STEREOSPECIFIC_NUMBERS12_23),
-                        col(STEREOSPECIFIC_NUMBERS2),
-                        col(STEREOSPECIFIC_NUMBERS13),
-                        col("Factors"),
-                    ])
-                    .alias(frame.meta.format(".").to_string()),
-                ]);
-                lazy_frame
+                    as_struct(vec![all().exclude_cols([LABEL, FATTY_ACID]).as_expr()])
+                        .alias(frame.meta.format(".").to_string()),
+                ])
             }
             None => {
-                let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
-                    Ok(compute(frame.data.clone().lazy(), key.parameters)?.select([
-                        hash(as_struct(vec![col(LABEL), col(FATTY_ACID)])),
+                let compute = |frame: &HashedMetaDataFrame| -> PolarsResult<LazyFrame> {
+                    Ok(compute(&frame.data.data_frame, key.parameters)?.select([
+                        hash_expr(as_struct(vec![col(LABEL), col(FATTY_ACID)])),
                         col(LABEL),
                         col(FATTY_ACID),
-                        as_struct(vec![
-                            col(STEREOSPECIFIC_NUMBERS123),
-                            col(STEREOSPECIFIC_NUMBERS12_23),
-                            col(STEREOSPECIFIC_NUMBERS2),
-                            col(STEREOSPECIFIC_NUMBERS13),
-                            col("Factors"),
-                        ])
-                        .alias(frame.meta.format(".").to_string()),
+                        as_struct(vec![all().exclude_cols([LABEL, FATTY_ACID]).as_expr()])
+                            .alias(frame.meta.format(".").to_string()),
                     ]))
                 };
                 let mut lazy_frame = compute(&key.frames[0])?;
@@ -66,12 +51,7 @@ impl Computer {
             }
         };
         lazy_frame = mean_and_standard_deviations(lazy_frame, key.parameters.ddof)?;
-        let mut data_frame = lazy_frame.collect()?;
-        let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
-        Ok(Hashed {
-            value: data_frame,
-            hash,
-        })
+        HashedDataFrame::new(lazy_frame.collect()?)
     }
 }
 
@@ -82,63 +62,94 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 }
 
 /// Calculation key
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub(crate) struct Key<'a> {
-    pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
+    pub(crate) frames: &'a Vec<HashedMetaDataFrame>,
     pub(crate) parameters: &'a Parameters,
 }
 
-impl Hash for Key<'_> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.frames.hash(state);
-        self.parameters.index.hash(state);
-        self.parameters.weighted.hash(state);
-        self.parameters.from.hash(state);
-        self.parameters.normalize.hash(state);
-        self.parameters.unsigned.hash(state);
-        self.parameters.christie.hash(state);
-        self.parameters.ddof.hash(state);
-    }
-}
-
 /// Calculation value
-type Value = Hashed<DataFrame>;
+type Value = HashedDataFrame;
 
-fn compute(mut lazy_frame: LazyFrame, parameters: &Parameters) -> PolarsResult<LazyFrame> {
+fn compute(data_frame: &DataFrame, parameters: &Parameters) -> PolarsResult<LazyFrame> {
+    let mut lazy_frame = data_frame.clone().lazy();
     // Christie
     if parameters.christie {
         lazy_frame = christie(lazy_frame);
     }
-    lazy_frame = lazy_frame.select([
-        col(LABEL),
-        col(FATTY_ACID),
-        col("Triacylglycerol").alias(STEREOSPECIFIC_NUMBERS123),
-        col("Diacylglycerol1223").alias(STEREOSPECIFIC_NUMBERS12_23),
-        col("Monoacylglycerol2").alias(STEREOSPECIFIC_NUMBERS2),
-    ]);
+    println!("compute 0: {}", lazy_frame.clone().collect().unwrap());
+    let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, parameters);
+    // let sn2 = experimental(STEREOSPECIFIC_NUMBERS2, parameters);
+    let sn2 = match data_frame[3].name().as_str() {
+        STEREOSPECIFIC_NUMBERS2 => experimental(STEREOSPECIFIC_NUMBERS2, parameters),
+        STEREOSPECIFIC_NUMBERS12_23 => {
+            let sn_1223 = experimental(STEREOSPECIFIC_NUMBERS12_23, parameters);
+            sn1223(sn123.clone(), sn_1223, parameters)
+        }
+        _ => lit(NULL),
+    };
+    let sn13 = sn13(sn123.clone(), sn2.clone(), parameters);
     // Stereospecific numbers
-    lazy_frame = lazy_frame.with_columns(compute_sn(
-        col(FATTY_ACID),
-        col(STEREOSPECIFIC_NUMBERS123),
-        col(STEREOSPECIFIC_NUMBERS12_23),
-        col(STEREOSPECIFIC_NUMBERS2),
-        parameters,
-    ));
+    lazy_frame = lazy_frame.with_columns([sn123, sn2, sn13]);
     // Factors
-    lazy_frame = lazy_frame.with_column(factors(
-        col(FATTY_ACID),
-        col(STEREOSPECIFIC_NUMBERS123),
-        col(STEREOSPECIFIC_NUMBERS2),
-    ));
+    lazy_frame = lazy_frame.with_column(factors());
     Ok(lazy_frame)
+}
+
+fn experimental(name: &str, parameters: &Parameters) -> Expr {
+    let mut expr = col(name);
+    if parameters.weighted {
+        expr = col(name) / (col(name) * col(FATTY_ACID).fatty_acid().mass(None)).sum()
+    };
+    expr.normalize_if(parameters.normalize.experimental)
+}
+
+/// MAG2 = 4 * DAG1223 - 3 * TAG
+fn sn1223(sn123: Expr, sn1223: Expr, parameters: &Parameters) -> Expr {
+    (lit(4) * sn1223 - lit(3) * sn123)
+        .clip_min_if(parameters.unsigned)
+        .normalize_if(parameters.normalize.theoretical)
+        .alias(STEREOSPECIFIC_NUMBERS2)
+}
+
+/// 2 * DAG1(3) = 3 * TAG - MAG2 (стр. 116)
+/// $x_{1 => i} = x_{3 => i} = x_{1|3 => i} / 2 = (3 * x_{1|2|3 => i} - x_{2 => i}) / 2$ (Sovová2008)
+fn sn13(sn123: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+    // // DAG1(3) = 3 * TAG - 2 * DAG1223
+    // let sn12_23 = (lit(3) * sn123.clone() - lit(2) * sn12_23)
+    //     .clip_min_if(parameters.unsigned)
+    //     .normalize_if(parameters.normalize.theoretical)
+    //     .alias(STEREOSPECIFIC_NUMBERS13);
+    // DAG1(3) = (3 * TAG - MAG2) / 2
+    // $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$
+    ((lit(3) * sn123 - sn2) / lit(2))
+        .clip_min_if(parameters.unsigned)
+        .normalize_if(parameters.normalize.theoretical)
+        .alias(STEREOSPECIFIC_NUMBERS13)
+    // as_struct(vec![sn12_23, sn2]).alias(STEREOSPECIFIC_NUMBERS13)
+}
+
+fn factors() -> Expr {
+    as_struct(vec![
+        FattyAcidExpr::enrichment_factor(
+            col(STEREOSPECIFIC_NUMBERS2),
+            col(STEREOSPECIFIC_NUMBERS123),
+        )
+        .alias("Enrichment"),
+        col(FATTY_ACID)
+            .fatty_acid()
+            .selectivity_factor(col(STEREOSPECIFIC_NUMBERS2), col(STEREOSPECIFIC_NUMBERS123))
+            .alias("Selectivity"),
+    ])
+    .alias("Factors")
 }
 
 fn christie(lazy_frame: LazyFrame) -> LazyFrame {
     lazy_frame
-        .with_column(hash(col(FATTY_ACID)))
+        .with_column(hash_expr(col(FATTY_ACID)))
         .join(
             CHRISTIE.data.clone().lazy().select([
-                hash(col(FATTY_ACID)),
+                hash_expr(col(FATTY_ACID)),
                 col(FATTY_ACID),
                 col("Christie"),
             ]),
@@ -196,29 +207,9 @@ fn mean_and_standard_deviations(lazy_frame: LazyFrame, ddof: u8) -> PolarsResult
     Ok(lazy_frame.select([
         col(LABEL),
         col(FATTY_ACID),
-        as_struct(vec![
-            mean(&[STEREOSPECIFIC_NUMBERS123, "Experimental"], ddof)?,
-            mean(&[STEREOSPECIFIC_NUMBERS123, "Theoretical"], ddof)?,
-        ])
-        .alias(STEREOSPECIFIC_NUMBERS123),
-        as_struct(vec![
-            mean(&[STEREOSPECIFIC_NUMBERS12_23, "Experimental"], ddof)?,
-            mean(&[STEREOSPECIFIC_NUMBERS12_23, "Theoretical"], ddof)?,
-        ])
-        .alias(STEREOSPECIFIC_NUMBERS12_23),
-        as_struct(vec![
-            mean(&[STEREOSPECIFIC_NUMBERS2, "Experimental"], ddof)?,
-            mean(&[STEREOSPECIFIC_NUMBERS2, "Theoretical"], ddof)?,
-        ])
-        .alias(STEREOSPECIFIC_NUMBERS2),
-        as_struct(vec![
-            mean(
-                &[STEREOSPECIFIC_NUMBERS13, STEREOSPECIFIC_NUMBERS12_23],
-                ddof,
-            )?,
-            mean(&[STEREOSPECIFIC_NUMBERS13, STEREOSPECIFIC_NUMBERS2], ddof)?,
-        ])
-        .alias(STEREOSPECIFIC_NUMBERS13),
+        mean(&[STEREOSPECIFIC_NUMBERS123], ddof)?,
+        mean(&[STEREOSPECIFIC_NUMBERS2], ddof)?,
+        mean(&[STEREOSPECIFIC_NUMBERS13], ddof)?,
         as_struct(vec![
             mean(&["Factors", "Enrichment"], ddof)?,
             mean(&["Factors", "Selectivity"], ddof)?,
@@ -239,7 +230,7 @@ fn mean(names: &[&str], ddof: u8) -> PolarsResult<Expr> {
     Ok(as_struct(vec![
         array()?.arr().mean().alias("Mean"),
         array()?.arr().std(ddof).alias("StandardDeviation"),
-        array()?.alias("Repetitions"),
+        array()?.alias("Array"),
     ])
     .alias(names[names.len() - 1]))
 }
@@ -329,7 +320,7 @@ fn compute_sn13(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) 
     as_struct(vec![sn12_23, sn2]).alias(STEREOSPECIFIC_NUMBERS13)
 }
 
-fn factors(fatty_acid: Expr, sn123: Expr, sn2: Expr) -> Expr {
+fn _factors(fatty_acid: Expr, sn123: Expr, sn2: Expr) -> Expr {
     let sn123 = sn123
         .clone()
         .struct_()

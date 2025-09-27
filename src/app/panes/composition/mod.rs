@@ -13,7 +13,7 @@ use crate::{
     },
     export::{parquet, xlsx},
     text::Text,
-    utils::{Hashed, egui::UiExt as _},
+    utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
 };
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
@@ -31,18 +31,18 @@ const ID_SOURCE: &str = "Composition";
 /// Composition pane
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
-    source: Hashed<Vec<MetaDataFrame>>,
-    target: Hashed<DataFrame>,
+    source: Vec<HashedMetaDataFrame>,
+    target: HashedDataFrame,
     settings: Settings,
     state: State,
 }
 
 impl Pane {
-    pub(crate) fn new(frames: Vec<MetaDataFrame>, index: Option<usize>) -> Self {
+    pub(crate) fn new(frames: Vec<HashedMetaDataFrame>, index: Option<usize>) -> Self {
         Self {
-            source: Hashed::new(frames),
-            target: Hashed {
-                value: DataFrame::empty(),
+            source: frames,
+            target: HashedDataFrame {
+                data_frame: DataFrame::empty(),
                 hash: 0,
             },
             settings: Settings::new(index),
@@ -58,13 +58,9 @@ impl Pane {
         self.title_with_separator(" ")
     }
 
-    // fn hash(&self) -> u64 {
-    //     self.source
-    //         .iter()
-    //         .map(|frame| frame.data.hash)
-    //         .reduce(|(left, right)| left ^ right)
-    //         .unwrap_or_default()
-    // }
+    pub(super) fn hash(&self) -> u64 {
+        hash(&self.source)
+    }
 
     fn title_with_separator(&self, separator: &str) -> String {
         match self.settings.index {
@@ -86,7 +82,7 @@ impl Pane {
         });
         response |= ui.heading(self.title());
         response = response
-            .on_hover_text(format!("{:x}/{:x}", self.source.hash, self.target.hash))
+            .on_hover_text(format!("{:x}/{:x}", self.hash(), self.target.hash))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         // List
@@ -130,7 +126,7 @@ impl Pane {
                     ui.label(ui.localize("Save"));
                 })
                 .on_hover_ui(|ui| {
-                    ui.label(&format!("{title}.utca.parquet"));
+                    ui.label(&format!("{title}.tag.utca.parquet"));
                 })
                 .clicked()
             {
@@ -143,7 +139,7 @@ impl Pane {
                     )
                 });
                 let mut data = data_frame
-                    .value
+                    .data_frame
                     .lazy()
                     .select([col("Species").explode()])
                     .unnest(by_name(["Species"], true))
@@ -159,7 +155,7 @@ impl Pane {
                 meta.retain(|key, _| key != "ARROW:schema");
                 println!("meta: {meta:?}");
                 let mut frame = MetaDataFrame::new(meta, data);
-                let _ = parquet::save(&mut frame, &format!("{title}.utca.parquet"));
+                let _ = parquet::save(&mut frame, &format!("{title}.tag.utca.parquet"));
             }
             if ui
                 .button("XLSX")
@@ -167,7 +163,7 @@ impl Pane {
                     ui.label(ui.localize("Save"));
                 })
                 .on_hover_ui(|ui| {
-                    ui.label(&format!("{title}.utca.xlsx"));
+                    ui.label(&format!("{title}.tag.utca.xlsx"));
                 })
                 .clicked()
             {
@@ -179,7 +175,7 @@ impl Pane {
                         },
                     )
                 });
-                let data_frame = data_frame.value.unnest(["Keys"]).unwrap();
+                let data_frame = data_frame.data_frame.unnest(["Keys"]).unwrap();
                 let _ = xlsx::save(&data_frame, &format!("{title}.utca.xlsx"));
             }
         });
@@ -222,8 +218,8 @@ impl Pane {
                 data_frame: &data_frame,
                 settings: &self.settings,
             };
-            Hashed {
-                value: memory.caches.cache::<CompositionComputed>().get(key),
+            HashedDataFrame {
+                data_frame: memory.caches.cache::<CompositionComputed>().get(key),
                 hash: hash(key),
             }
         });

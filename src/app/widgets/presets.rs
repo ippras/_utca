@@ -1,6 +1,7 @@
 use crate::{
     app::{ICON_SIZE, identifiers::DATA},
     presets::*,
+    utils::HashedMetaDataFrame,
 };
 use egui::{
     Id, PopupCloseBehavior, Response, RichText, ScrollArea, Ui, Widget,
@@ -8,7 +9,7 @@ use egui::{
 };
 use egui_ext::LabeledSeparator;
 use egui_phosphor::regular::DATABASE;
-use metadata::MetaDataFrame;
+use metadata::egui::MetadataWidget;
 
 /// Presets
 #[derive(Clone, Copy, Debug, Default)]
@@ -47,19 +48,29 @@ impl Presets {
             .ui(ui, |ui| {
                 ui.labeled_separator(RichText::new("Cedrus").heading());
                 preset(ui, &CEDRUS_2023_05_19);
+                preset(ui, &CEDRUS_2023_05_19_1);
+                preset(ui, &CEDRUS_2023_05_19_2);
             });
         SubMenuButton::new("Lunaria")
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
             .ui(ui, |ui| {
                 ui.labeled_separator(RichText::new("Lunaria Rediviva").heading());
-                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_1);
-                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_2);
-                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_3);
-                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_2_1);
-                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_2_2);
-                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_1);
-                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_2);
-                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_3);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_1_1);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_1_2);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_2_1);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_2_2);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_3_1);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_3_2);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_2_1_1);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_2_1_2);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_2_2_1);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_2_2_2);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_1_1);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_1_2);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_2_1);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_2_2);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_3_1);
+                preset(ui, &LUNARIA_REDIVIVA_2024_01_24_3_3_2);
             });
         SubMenuButton::new("Microalgae")
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
@@ -77,16 +88,44 @@ impl Presets {
                 preset(ui, &C1540_2025_04_24_2);
                 preset(ui, &C1540_2025_04_24_3);
                 ui.labeled_separator(RichText::new("H-242 (Vischeria punctata)").heading());
+                preset(ui, &H242_2023_10_24_1);
+                preset(ui, &H242_2023_10_24_2);
                 ui.labeled_separator(RichText::new("H-626 (Coelastrella affinis)").heading());
                 preset(ui, &H626_2025_04_24);
                 ui.labeled_separator(RichText::new("P-519 (Porphyridium purpureum)").heading());
                 preset(ui, &P519_2025_04_23_1);
                 preset(ui, &P519_2025_04_23_2);
             });
+        SubMenuButton::new("Sidorov (2014)")
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+            .ui(ui, |ui| {
+                ui.hyperlink_to(
+                    RichText::new("10.1007/s11746-014-2553-8").heading(),
+                    "https://doi.org/10.1007/s11746-014-2553-8",
+                );
+                ui.labeled_separator(RichText::new("Subgenus Euonymus").heading());
+                ui.labeled_separator(RichText::new("Section Euonymus").heading());
+                preset(ui, &EUONYMUS_BUNGEANUS);
+                preset(ui, &EUONYMUS_EUROPAEUS);
+                preset(ui, &EUONYMUS_HAMILTONIANUS);
+                preset(ui, &EUONYMUS_PHELLOMANUS);
+                preset(ui, &EUONYMUS_SEMIEXSERTUS);
+                preset(ui, &EUONYMUS_SIEBOLDIANUS);
+                ui.labeled_separator(RichText::new("Section Melanocarya").heading());
+                preset(ui, &EUONYMUS_ALATUS);
+                preset(ui, &EUONYMUS_SACROSANCTUS);
+                ui.labeled_separator(RichText::new("Section Pseudovyenomus").heading());
+                preset(ui, &EUONYMUS_PAUCIFLORUS);
+                ui.labeled_separator(RichText::new("Subgenus Kalonymus").heading());
+                preset(ui, &EUONYMUS_LATIFOLIUS);
+                preset(ui, &EUONYMUS_MACROPTERUS);
+                preset(ui, &EUONYMUS_MAXIMOWICZIANUS);
+                preset(ui, &EUONYMUS_SACHALINENSIS);
+            });
         ui.separator();
         // Third party
         ui.heading("Third party");
-        SubMenuButton::new("Reske 1997")
+        SubMenuButton::new("Reske (1997)")
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
             .ui(ui, |ui| {
                 ui.hyperlink_to(
@@ -94,11 +133,16 @@ impl Presets {
                     "https://doi.org/10.1007/s11746-997-0016-1",
                 );
                 ui.labeled_separator(RichText::new("Soybean").heading());
-                preset(ui, &SOYBEAN_SEED_COMMODITY);
+                // preset(ui, &SOYBEAN_SEED_COMMODITY);
                 ui.labeled_separator(RichText::new("Sunflower").heading());
                 preset(ui, &SUNFLOWER_SEED_COMMODITY);
+                preset(ui, &SUNFLOWER_SEED_HIGH_LINOLEIC);
+                preset(ui, &SUNFLOWER_SEED_HIGH_OLEIC);
+                preset(ui, &SUNFLOWER_SEED_HIGH_PALMITIC_HIGH_LINOLEIC);
+                preset(ui, &SUNFLOWER_SEED_HIGH_PALMITIC_HIGH_OLEIC);
+                preset(ui, &SUNFLOWER_SEED_HIGH_STEARIC_HIGH_OLEIC);
             });
-        SubMenuButton::new("Martinez-Force 2004")
+        SubMenuButton::new("Martinez-Force (2004)")
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
             .ui(ui, |ui| {
                 ui.hyperlink_to(
@@ -131,9 +175,12 @@ impl Widget for Presets {
     }
 }
 
-fn preset(ui: &mut Ui, frame: &MetaDataFrame) {
+fn preset(ui: &mut Ui, frame: &HashedMetaDataFrame) {
     let title = frame.meta.format(" ");
-    if ui.button(format!("{DATABASE} {title}")).clicked() {
+    let response = ui.button(format!("{DATABASE} {title}")).on_hover_ui(|ui| {
+        MetadataWidget::new(&frame.meta).show(ui);
+    });
+    if response.clicked() {
         ui.data_mut(|data| data.insert_temp(Id::new(DATA), frame.clone()));
     }
 }

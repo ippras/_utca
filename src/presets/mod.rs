@@ -1,5 +1,7 @@
 pub(crate) use self::{ippras::*, martínez_force2004::*, reske1997::*};
 
+use crate::utils::{HashedDataFrame, HashedMetaDataFrame};
+use anyhow::Result;
 use metadata::MetaDataFrame;
 use std::{io::Cursor, sync::LazyLock};
 
@@ -7,9 +9,17 @@ macro_rules! preset {
     ($name:literal) => {
         LazyLock::new(|| {
             let bytes = include_bytes!($name);
-            MetaDataFrame::read_parquet(Cursor::new(bytes)).expect(concat!("deserialize ", $name))
+            read(bytes).expect(concat!("preset ", $name))
         })
     };
+}
+
+fn read(bytes: &[u8]) -> Result<HashedMetaDataFrame> {
+    let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
+    Ok(HashedMetaDataFrame {
+        meta: frame.meta,
+        data: HashedDataFrame::new(frame.data)?,
+    })
 }
 
 /// IPPRAS
@@ -17,45 +27,71 @@ macro_rules! preset {
 mod ippras {
     use super::*;
 
-    pub(crate) static ACER_GINNALA_2025_07_08_1: LazyLock<MetaDataFrame> = preset!("Acer/Acer Ginnala.2025-07-08.0.0.1.utca.parquet");
-    pub(crate) static ACER_GINNALA_2025_07_08_2: LazyLock<MetaDataFrame> = preset!("Acer/Acer Ginnala.2025-07-08.0.0.2.utca.parquet");
-    pub(crate) static ACER_GINNALA_2025_07_08_3: LazyLock<MetaDataFrame> = preset!("Acer/Acer Ginnala.2025-07-08.0.0.3.utca.parquet");
-    pub(crate) static ACER_PENSYLVANICUM_2025_07_08_1: LazyLock<MetaDataFrame> = preset!("Acer/Acer Pensylvanicum.2025-07-08.0.0.1.utca.parquet");
-    pub(crate) static ACER_PENSYLVANICUM_2025_07_08_2: LazyLock<MetaDataFrame> = preset!("Acer/Acer Pensylvanicum.2025-07-08.0.0.2.utca.parquet");
-    pub(crate) static ACER_PENSYLVANICUM_2025_07_08_3: LazyLock<MetaDataFrame> = preset!("Acer/Acer Pensylvanicum.2025-07-08.0.0.3.utca.parquet");
-    pub(crate) static ACER_RUBRUM_2025_07_09_1: LazyLock<MetaDataFrame> = preset!("Acer/Acer Rubrum.2025-07-09.0.0.1.utca.parquet");
-    pub(crate) static ACER_RUBRUM_2025_07_09_2: LazyLock<MetaDataFrame> = preset!("Acer/Acer Rubrum.2025-07-09.0.0.2.utca.parquet");
-    pub(crate) static ACER_RUBRUM_2025_07_09_3: LazyLock<MetaDataFrame> = preset!("Acer/Acer Rubrum.2025-07-09.0.0.3.utca.parquet");
-    pub(crate) static ACER_SPICATUM_2025_07_09_1: LazyLock<MetaDataFrame> = preset!("Acer/Acer Spicatum.2025-07-09.0.0.1.utca.parquet");
-    pub(crate) static ACER_SPICATUM_2025_07_09_2: LazyLock<MetaDataFrame> = preset!("Acer/Acer Spicatum.2025-07-09.0.0.2.utca.parquet");
-    pub(crate) static ACER_SPICATUM_2025_07_09_3: LazyLock<MetaDataFrame> = preset!("Acer/Acer Spicatum.2025-07-09.0.0.3.utca.parquet");
-    pub(crate) static ACER_UKURUNDUENSE_2025_07_08_1: LazyLock<MetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.1.utca.parquet");
-    pub(crate) static ACER_UKURUNDUENSE_2025_07_08_2: LazyLock<MetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.2.utca.parquet");
-    pub(crate) static ACER_UKURUNDUENSE_2025_07_08_3: LazyLock<MetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.3.utca.parquet");
+    pub(crate) static ACER_GINNALA_2025_07_08_1: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ginnala.2025-07-08.0.0.1.utca.parquet");
+    pub(crate) static ACER_GINNALA_2025_07_08_2: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ginnala.2025-07-08.0.0.2.utca.parquet");
+    pub(crate) static ACER_GINNALA_2025_07_08_3: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ginnala.2025-07-08.0.0.3.utca.parquet");
+    pub(crate) static ACER_PENSYLVANICUM_2025_07_08_1: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Pensylvanicum.2025-07-08.0.0.1.utca.parquet");
+    pub(crate) static ACER_PENSYLVANICUM_2025_07_08_2: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Pensylvanicum.2025-07-08.0.0.2.utca.parquet");
+    pub(crate) static ACER_PENSYLVANICUM_2025_07_08_3: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Pensylvanicum.2025-07-08.0.0.3.utca.parquet");
+    pub(crate) static ACER_RUBRUM_2025_07_09_1: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Rubrum.2025-07-09.0.0.1.utca.parquet");
+    pub(crate) static ACER_RUBRUM_2025_07_09_2: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Rubrum.2025-07-09.0.0.2.utca.parquet");
+    pub(crate) static ACER_RUBRUM_2025_07_09_3: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Rubrum.2025-07-09.0.0.3.utca.parquet");
+    pub(crate) static ACER_SPICATUM_2025_07_09_1: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Spicatum.2025-07-09.0.0.1.utca.parquet");
+    pub(crate) static ACER_SPICATUM_2025_07_09_2: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Spicatum.2025-07-09.0.0.2.utca.parquet");
+    pub(crate) static ACER_SPICATUM_2025_07_09_3: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Spicatum.2025-07-09.0.0.3.utca.parquet");
+    pub(crate) static ACER_UKURUNDUENSE_2025_07_08_1: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.1.utca.parquet");
+    pub(crate) static ACER_UKURUNDUENSE_2025_07_08_2: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.2.utca.parquet");
+    pub(crate) static ACER_UKURUNDUENSE_2025_07_08_3: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.3.utca.parquet");
 
-    pub(crate) static CEDRUS_2023_05_19: LazyLock<MetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.utca.parquet");
+    pub(crate) static CEDRUS_2023_05_19: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.utca.parquet");
+    pub(crate) static CEDRUS_2023_05_19_1: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.0.0.1.utca.parquet");
+    pub(crate) static CEDRUS_2023_05_19_2: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.0.0.2.utca.parquet");
 
-    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_1: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.1.1.utca.parquet");
-    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_2: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.1.2.utca.parquet");
-    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_3: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.1.3.utca.parquet");
-    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_2_1: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.2.1.utca.parquet");
-    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_2_2: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.2.2.utca.parquet");
-    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_1: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.3.1.utca.parquet");
-    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_2: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.3.2.utca.parquet");
-    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_3: LazyLock<MetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.0.3.3.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_1_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.1.1.1.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_1_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.1.1.2.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_2_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.1.2.1.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_2_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.1.2.2.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_3_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.1.3.1.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_3_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.1.3.2.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_2_1_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.2.1.1.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_2_1_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.2.1.2.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_2_2_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.2.2.1.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_2_2_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.2.2.2.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_1_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.3.1.1.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_1_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.3.1.2.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_2_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.3.2.1.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_2_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.3.2.2.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_3_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.3.3.1.utca.parquet");
+    pub(crate) static LUNARIA_REDIVIVA_2024_01_24_3_3_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.3.3.2.utca.parquet");
 
-    pub(crate) static C108_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.1.utca.parquet");
-    pub(crate) static C108_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.2.utca.parquet");
-    pub(crate) static C108_2025_04_23_3: LazyLock<MetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.3.utca.parquet");
-    pub(crate) static C1210_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.1.utca.parquet");
-    pub(crate) static C1210_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.2.utca.parquet");
-    pub(crate) static C1210_2025_04_23_3: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.3.utca.parquet");
-    pub(crate) static C1540_2025_04_24_1: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.1.utca.parquet");
-    pub(crate) static C1540_2025_04_24_2: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.2.utca.parquet");
-    pub(crate) static C1540_2025_04_24_3: LazyLock<MetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.3.utca.parquet");
-    pub(crate) static P519_2025_04_23_1: LazyLock<MetaDataFrame> = preset!("Microalgae/P-519(-N).2025-04-23.0.0.1.utca.parquet");
-    pub(crate) static P519_2025_04_23_2: LazyLock<MetaDataFrame> = preset!("Microalgae/P-519(-N).2025-04-23.0.0.2.utca.parquet");
-    pub(crate) static H626_2025_04_24: LazyLock<MetaDataFrame> = preset!("Microalgae/H-626(-N).2025-04-24.utca.parquet");
+    pub(crate) static C108_2025_04_23_1: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.1.utca.parquet");
+    pub(crate) static C108_2025_04_23_2: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.2.utca.parquet");
+    pub(crate) static C108_2025_04_23_3: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-108(-N).2025-04-23.0.0.3.utca.parquet");
+    pub(crate) static C1210_2025_04_23_1: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.1.utca.parquet");
+    pub(crate) static C1210_2025_04_23_2: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.2.utca.parquet");
+    pub(crate) static C1210_2025_04_23_3: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-1210(-N).2025-04-24.0.0.3.utca.parquet");
+    pub(crate) static C1540_2025_04_24_1: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.1.utca.parquet");
+    pub(crate) static C1540_2025_04_24_2: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.2.utca.parquet");
+    pub(crate) static C1540_2025_04_24_3: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/C-1540(-N).2025-04-24.0.0.3.utca.parquet");
+    pub(crate) static P519_2025_04_23_1: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/P-519(-N).2025-04-23.0.0.1.utca.parquet");
+    pub(crate) static P519_2025_04_23_2: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/P-519(-N).2025-04-23.0.0.2.utca.parquet");
+    pub(crate) static H242_2023_10_24_1: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/H-242(Control).2023-10-24.0.0.1.utca.parquet");
+    pub(crate) static H242_2023_10_24_2: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/H-242(Control).2023-10-24.0.0.2.utca.parquet");
+    pub(crate) static H626_2025_04_24: LazyLock<HashedMetaDataFrame> = preset!("Microalgae/H-626(-N).2025-04-24.utca.parquet");
+
+    pub(crate) static EUONYMUS_ALATUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Alatus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_BUNGEANUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Bungeanus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_EUROPAEUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Europaeus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_HAMILTONIANUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Hamiltonianus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_LATIFOLIUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Latifolius.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_MACROPTERUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Macropterus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_MAXIMOWICZIANUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Maximowiczianus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_PAUCIFLORUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Pauciflorus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_PHELLOMANUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Phellomanus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_SACHALINENSIS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Sachalinensis.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_SACROSANCTUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Sacrosanctus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_SEMIEXSERTUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Semiexsertus.2014-06-19.utca.parquet");
+    pub(crate) static EUONYMUS_SIEBOLDIANUS: LazyLock<HashedMetaDataFrame> = preset!("Euonymus/Euonymus Sieboldianus.2014-06-19.utca.parquet");
 }
 
 // Third party
@@ -65,13 +101,13 @@ mod ippras {
 mod martínez_force2004 {
     use super::*;
 
-    pub(crate) static HAZELNUT: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Hazelnut.2025-08-19.utca.parquet");
-    pub(crate) static OLIVE: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Olive.2025-08-19.utca.parquet");
-    pub(crate) static RICE: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Rice.2025-08-19.utca.parquet");
-    pub(crate) static SOYBEAN: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Soybean.2025-08-19.utca.parquet");
-    pub(crate) static SUNFLOWER_CAS3: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Sunflower CAS-3.2025-08-19.utca.parquet");
-    pub(crate) static SUNFLOWER_RHA274: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Sunflower RHA-274.2025-08-19.utca.parquet");
-    pub(crate) static WALNUT: LazyLock<MetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Walnut.2025-08-19.utca.parquet");
+    pub(crate) static HAZELNUT: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Hazelnut.2025-08-19.utca.parquet");
+    pub(crate) static OLIVE: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Olive.2025-08-19.utca.parquet");
+    pub(crate) static RICE: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Rice.2025-08-19.utca.parquet");
+    pub(crate) static SOYBEAN: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Soybean.2025-08-19.utca.parquet");
+    pub(crate) static SUNFLOWER_CAS3: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Sunflower CAS-3.2025-08-19.utca.parquet");
+    pub(crate) static SUNFLOWER_RHA274: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Sunflower RHA-274.2025-08-19.utca.parquet");
+    pub(crate) static WALNUT: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Martinez-Force2004/Walnut.2025-08-19.utca.parquet");
 }
 
 // [Reske1997](https://doi.org/10.1007/s11746-997-0016-1)
@@ -79,6 +115,12 @@ mod martínez_force2004 {
 mod reske1997 {
     use super::*;
 
-    pub(crate) static SOYBEAN_SEED_COMMODITY: LazyLock<MetaDataFrame> = preset!("ThirdParty/Reske1997/Soybean Seed Commodity.2025-08-11.utca.parquet");
-    pub(crate) static SUNFLOWER_SEED_COMMODITY: LazyLock<MetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed Commodity.2025-08-11.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_COMMODITY: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (Commodity).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_LINOLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High linoleic).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_OLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High oleic).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_PALMITIC_HIGH_LINOLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High palmitic, high linoleic).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_PALMITIC_HIGH_OLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High palmitic, high oleic).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_STEARIC_HIGH_OLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High stearic, high oleic).1997-08-01.utca.parquet");
+
+    // pub(crate) static SOYBEAN_SEED_COMMODITY: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Soybean Seed Commodity.2025-08-11.utca.parquet");
 }

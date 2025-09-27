@@ -1,5 +1,5 @@
+use crate::utils::HashedMetaDataFrame;
 use egui::{Response, Ui, Vec2, vec2};
-use metadata::MetaDataFrame;
 use serde::{Deserialize, Serialize};
 
 const MARGIN: Vec2 = vec2(4.0, 2.0);
@@ -13,15 +13,15 @@ pub(crate) enum Pane {
 }
 
 impl Pane {
-    pub(crate) fn configuration(frames: Vec<MetaDataFrame>) -> Self {
+    pub(crate) fn configuration(frames: Vec<HashedMetaDataFrame>) -> Self {
         Self::Configuration(configuration::Pane::new(frames))
     }
 
-    pub(crate) fn calculation(frames: Vec<MetaDataFrame>, index: usize) -> Self {
+    pub(crate) fn calculation(frames: Vec<HashedMetaDataFrame>, index: usize) -> Self {
         Self::Calculation(calculation::Pane::new(frames, index))
     }
 
-    pub(crate) fn composition(frames: Vec<MetaDataFrame>, index: Option<usize>) -> Self {
+    pub(crate) fn composition(frames: Vec<HashedMetaDataFrame>, index: Option<usize>) -> Self {
         Self::Composition(composition::Pane::new(frames, index))
     }
 

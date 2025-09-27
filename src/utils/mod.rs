@@ -1,8 +1,12 @@
-pub use self::{hashed::Hashed, polars::hash, spawn::spawn};
+pub use self::{
+    hash::{HashedDataFrame, HashedMetaDataFrame, hash_data_frame, hash_expr},
+    polars::SchemaExt,
+    spawn::spawn,
+};
 
 pub mod egui;
 pub mod polars;
 pub mod ui;
 
-mod hashed;
+mod hash;
 mod spawn;

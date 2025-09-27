@@ -1,3 +1,5 @@
+use std::convert::identity;
+
 use self::{
     parameters::{From, Parameters},
     state::{Settings, Windows},
@@ -13,17 +15,22 @@ use crate::{
         presets::CHRISTIE,
         widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
     },
-    utils::{Hashed, egui::UiExt as _},
+    export::parquet,
+    utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
 };
 use egui::{CursorIcon, Grid, Id, Response, RichText, ScrollArea, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
-    CALCULATOR, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS, SIGMA, SLIDERS_HORIZONTAL,
+    CALCULATOR, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS, SIGMA,
+    SLIDERS_HORIZONTAL,
 };
+use itertools::Itertools;
 use lipid::prelude::*;
-use metadata::MetaDataFrame;
+use metadata::{
+    AUTHORS, DATE, DEFAULT_DATE, DEFAULT_VERSION, MetaDataFrame, Metadata, NAME, VERSION,
+};
 use polars::prelude::*;
-use polars_utils::format_list_truncated;
+use polars_utils::{format_list, format_list_truncated};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -32,17 +39,17 @@ const ID_SOURCE: &str = "Calculation";
 /// Calculation pane
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Pane {
-    source: Hashed<Vec<MetaDataFrame>>,
-    target: Hashed<DataFrame>,
+    source: Vec<HashedMetaDataFrame>,
+    target: HashedDataFrame,
     parameters: Parameters,
 }
 
 impl Pane {
-    pub(crate) fn new(frames: Vec<MetaDataFrame>, index: usize) -> Self {
+    pub(crate) fn new(frames: Vec<HashedMetaDataFrame>, index: usize) -> Self {
         Self {
-            source: Hashed::new(frames),
-            target: Hashed {
-                value: DataFrame::empty(),
+            source: frames,
+            target: HashedDataFrame {
+                data_frame: DataFrame::empty(),
                 hash: 0,
             },
             parameters: Parameters::new(Some(index)),
@@ -54,13 +61,17 @@ impl Pane {
     }
 
     pub(crate) fn title(&self) -> String {
+        self.title_with_separator(" ")
+    }
+
+    fn title_with_separator(&self, separator: &str) -> String {
         match self.parameters.index {
-            Some(index) => self.source[index].meta.format(" ").to_string(),
+            Some(index) => self.source[index].meta.format(separator).to_string(),
             None => {
                 format_list_truncated!(
                     self.source
                         .iter()
-                        .map(|frame| frame.meta.format(" ").to_string()),
+                        .map(|frame| frame.meta.format(separator).to_string()),
                     2
                 )
             }
@@ -126,7 +137,19 @@ impl Pane {
         ui.parameters(&mut windows.open_parameters);
         ui.separator();
         // Indices
-        ui.indices(&mut windows.open_indices);
+        ui.menu_button(RichText::new(SIGMA).heading(), |ui| {
+            // ui.indices(&mut windows.open_indices);
+            ui.toggle_value(
+                &mut windows.open_indices,
+                (
+                    RichText::new(SIGMA).heading(),
+                    RichText::new(ui.localize("Indices")).heading(),
+                ),
+            )
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Indices"));
+            });
+        });
         ui.separator();
         // Composition
         if ui
@@ -139,9 +162,70 @@ impl Pane {
             let _ = self.composition(ui);
         }
         ui.separator();
+        // Save
+        ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
+            let title = self.title_with_separator(".");
+            if ui
+                .button("PARQUET")
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("Save"));
+                })
+                .on_hover_ui(|ui| {
+                    ui.label(&format!("{title}.fa.utca.parquet"));
+                })
+                .clicked()
+            {
+                let _ = self.save_parquet(&title);
+            }
+        });
+        ui.separator();
         settings.store(ui.ctx());
         windows.store(ui.ctx());
         response
+    }
+
+    #[instrument(skip_all, err)]
+    fn save_parquet(&mut self, title: &str) -> PolarsResult<()> {
+        let data = self
+            .target
+            .data_frame
+            .clone()
+            .lazy()
+            .select([
+                col(LABEL),
+                col(FATTY_ACID),
+                col(STEREOSPECIFIC_NUMBERS123),
+                col(STEREOSPECIFIC_NUMBERS13),
+                col(STEREOSPECIFIC_NUMBERS2),
+            ])
+            .collect()?;
+        let meta = match self.parameters.index {
+            Some(index) => {
+                let mut meta = self.source[index].meta.clone();
+                meta.retain(|key, _| key != "ARROW:schema");
+                meta
+            }
+            None => {
+                let mut meta = Metadata::default();
+                let name =
+                    format_list!(self.source.iter().filter_map(|frame| frame.meta.get(NAME)));
+                meta.insert(NAME.to_owned(), name);
+                let authors = self
+                    .source
+                    .iter()
+                    .flat_map(|frame| frame.meta.get(AUTHORS).map(|authors| authors.split(",")))
+                    .flatten()
+                    .unique()
+                    .join(",");
+                meta.insert(AUTHORS.to_owned(), authors);
+                meta.insert(DATE.to_owned(), DEFAULT_DATE.to_owned());
+                meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
+                meta
+            }
+        };
+        let mut frame = MetaDataFrame::new(meta, data);
+        let _ = parquet::save(&mut frame, &format!("{title}.fa.utca.parquet"));
+        Ok(())
     }
 
     #[instrument(skip_all, err)]
@@ -149,7 +233,7 @@ impl Pane {
         let mut frames = Vec::with_capacity(self.source.len());
         for index in 0..self.source.len() {
             let meta = self.source[index].meta.clone();
-            let data = ui.memory_mut(|memory| {
+            let HashedDataFrame { data_frame, hash } = ui.memory_mut(|memory| {
                 memory
                     .caches
                     .cache::<CalculationComputed>()
@@ -161,36 +245,29 @@ impl Pane {
                         },
                     })
             });
-            let data = data
-                .value
+            let data_frame = data_frame
                 .lazy()
                 .select([
                     col(LABEL),
                     col(FATTY_ACID),
                     col(STEREOSPECIFIC_NUMBERS123)
                         .struct_()
-                        .field_by_name("Experimental")
-                        .struct_()
                         .field_by_name("Mean")
                         .alias(STEREOSPECIFIC_NUMBERS123),
                     col(STEREOSPECIFIC_NUMBERS13)
-                        .struct_()
-                        .field_by_name(match self.parameters.from {
-                            From::StereospecificNumbers12_23 => STEREOSPECIFIC_NUMBERS12_23,
-                            From::StereospecificNumbers2 => STEREOSPECIFIC_NUMBERS2,
-                        })
                         .struct_()
                         .field_by_name("Mean")
                         .alias(STEREOSPECIFIC_NUMBERS13),
                     col(STEREOSPECIFIC_NUMBERS2)
                         .struct_()
-                        .field_by_name("Experimental")
-                        .struct_()
                         .field_by_name("Mean")
                         .alias(STEREOSPECIFIC_NUMBERS2),
                 ])
                 .collect()?;
-            frames.push(MetaDataFrame::new(meta, data));
+            frames.push(MetaDataFrame::new(
+                meta,
+                HashedDataFrame { data_frame, hash },
+            ));
         }
         ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), (frames, self.parameters.index)));
         Ok(())
@@ -259,8 +336,7 @@ impl Pane {
                 .caches
                 .cache::<CalculationIndicesComputed>()
                 .get(CalculationIndicesKey {
-                    data_frame: &self.target,
-                    from: self.parameters.from,
+                    frame: &self.target,
                     ddof: self.parameters.ddof,
                 })
         });
@@ -304,6 +380,6 @@ impl PaneDelegate for Pane {
 }
 
 pub(crate) mod parameters;
+pub(crate) mod state;
 
-mod state;
 mod table;

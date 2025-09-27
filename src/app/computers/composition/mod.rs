@@ -5,7 +5,7 @@ use crate::{
         SPECIES_POSITIONAL, SPECIES_STEREO, Selection, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL,
         TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
     },
-    utils::Hashed,
+    utils::HashedDataFrame,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -39,7 +39,7 @@ impl Computer {
                 filter: Filter::new(),
             });
         }
-        let mut lazy_frame = key.data_frame.value.clone().lazy();
+        let mut lazy_frame = key.data_frame.data_frame.clone().lazy();
         lazy_frame = compute(lazy_frame, mode, settings.special.ddof, &settings)?;
         lazy_frame.collect()
     }
@@ -54,7 +54,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Composition key
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Key<'a> {
-    pub(crate) data_frame: &'a Hashed<DataFrame>,
+    pub(crate) data_frame: &'a HashedDataFrame,
     pub(crate) settings: &'a Settings,
 }
 
@@ -90,7 +90,7 @@ fn length(data_frame: &DataFrame) -> PolarsResult<Mode> {
                         DataType::Float64,
                     ),
                     Field::new(
-                        PlSmallStr::from_static("Repetitions"),
+                        PlSmallStr::from_static("Array"),
                         DataType::Array(Box::new(DataType::Float64), 0),
                     ),
                 ]),
@@ -123,7 +123,7 @@ fn length(data_frame: &DataFrame) -> PolarsResult<Mode> {
             && field1.dtype == DataType::Float64
             && field2.name == "StandardDeviation"
             && field2.dtype == DataType::Float64
-            && field3.name == "Repetitions"
+            && field3.name == "Array"
             && let DataType::Array(box DataType::Float64, length) = field3.dtype
         {
             return Ok(Mode::Many(length as _));
@@ -218,7 +218,7 @@ fn compose(
                 // let array = || {
                 //     col("Value")
                 //         .struct_()
-                //         .field_by_name("Repetitions")
+                //         .field_by_name("Array")
                 //         .arr()
                 //         .to_list()
                 //         .list()
@@ -229,7 +229,7 @@ fn compose(
                 // as_struct(vec![
                 //     array().arr().mean().alias("Mean"),
                 //     array().arr().std(ddof).alias("StandardDeviation"),
-                //     array().alias("Repetitions"),
+                //     array().alias("Array"),
                 // ])
                 let array = || {
                     concat_arr(
@@ -237,7 +237,7 @@ fn compose(
                             .map(|index| {
                                 col("Value")
                                     .struct_()
-                                    .field_by_name("Repetitions")
+                                    .field_by_name("Array")
                                     .arr()
                                     .get(lit(index), false)
                                     .sum()
@@ -248,7 +248,7 @@ fn compose(
                 as_struct(vec![
                     array()?.arr().mean().alias("Mean"),
                     array()?.arr().std(ddof).alias("StandardDeviation"),
-                    array()?.alias("Repetitions"),
+                    array()?.alias("Array"),
                 ])
             }
         }

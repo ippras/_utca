@@ -3,7 +3,7 @@ pub(super) use self::{
         Computed as CalculationComputed, Key as CalculationKey,
         display::{
             Computed as CalculationDisplayComputed, Key as CalculationDisplayKey,
-            Kind as CalculationDisplayKind,
+            Kind as CalculationDisplayKind, Settings as CalculationDisplaySettings,
         },
         indices::{Computed as CalculationIndicesComputed, Key as CalculationIndicesKey},
     },
@@ -17,6 +17,9 @@ pub(super) use self::{
         species::{Computed as CompositionSpeciesComputed, Key as CompositionSpeciesKey},
         unique::{Computed as UniqueCompositionComputed, Key as UniqueCompositionKey},
     },
+    configuration::display::{
+        Computed as ConfigurationDisplayComputed, Key as ConfigurationDisplayKey,
+    },
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -27,3 +30,4 @@ enum Mode {
 
 pub(super) mod calculation;
 pub(super) mod composition;
+pub(super) mod configuration;

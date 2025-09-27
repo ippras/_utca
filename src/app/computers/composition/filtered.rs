@@ -1,6 +1,6 @@
 use crate::{
     app::panes::composition::settings::{ECN_MONO, MASS_MONO, Settings, TYPE_MONO, UNSATURATION_MONO},
-    utils::Hashed,
+    utils::HashedDataFrame,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -16,12 +16,12 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let mut lazy_frame = key.data_frame.value.clone().lazy();
+        let mut lazy_frame = key.data_frame.data_frame.clone().lazy();
         lazy_frame = filter(lazy_frame, key.settings);
         let mut data_frame = lazy_frame.collect()?;
         let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
-        Ok(Hashed {
-            value: data_frame,
+        Ok(HashedDataFrame {
+            data_frame,
             hash,
         })
     }
@@ -36,7 +36,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Filtered composition key
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Key<'a> {
-    pub(crate) data_frame: &'a Hashed<DataFrame>,
+    pub(crate) data_frame: &'a HashedDataFrame,
     pub(crate) settings: &'a Settings,
 }
 
@@ -48,7 +48,7 @@ impl Hash for Key<'_> {
 }
 
 /// Filtered composition value
-type Value = Hashed<DataFrame>;
+type Value = HashedDataFrame;
 
 fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     let mut predicate = lit(true);
