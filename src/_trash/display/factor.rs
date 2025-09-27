@@ -37,7 +37,7 @@ impl Computer {
             .select([
                 col("Mean"),
                 col("StandardDeviation"),
-                col("Repetitions"),
+                col("Array"),
                 col("Calculation"),
             ]);
         let data_frame = lazy_frame.collect()?;

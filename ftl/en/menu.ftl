@@ -2,7 +2,8 @@ loaded-files = Files
     .hover = Loaded files
 toggle-all = Toggle all
     .hover = Check all if all are unchecked. Uncheck all if any are checked. 
-delete-all = Delete all
+DeleteSelected = Delete
+    .hover = Delete selected
 
 about = About
 calculation = Calculation

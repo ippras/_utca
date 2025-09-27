@@ -1,6 +1,6 @@
 use crate::{
     app::panes::composition::settings::{Discriminants, Method},
-    utils::{Hashed, hash},
+    utils::{HashedDataFrame, HashedMetaDataFrame, hash_expr},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -20,10 +20,10 @@ impl Computer {
     #[instrument(skip(self), err)]
     pub(super) fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         // |Label|FattyAcid|StereospecificNumbers123|StereospecificNumbers13|StereospecificNumbers2|
-        let compute = |frame: &MetaDataFrame| -> PolarsResult<LazyFrame> {
+        let compute = |frame: &HashedMetaDataFrame| -> PolarsResult<LazyFrame> {
             Ok(
-                compute(frame.data.clone().lazy(), key.parameters())?.select([
-                    hash(as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL)])),
+                compute(frame.data.data_frame.clone().lazy(), key.parameters())?.select([
+                    hash_expr(as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL)])),
                     col(LABEL),
                     col(TRIACYLGLYCEROL),
                     col("Value").alias(frame.meta.format(".").to_string()),
@@ -55,8 +55,8 @@ impl Computer {
         );
         let mut data_frame = lazy_frame.collect()?;
         let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
-        Ok(Hashed {
-            value: data_frame,
+        Ok(HashedDataFrame {
+            data_frame: data_frame,
             hash,
         })
     }
@@ -71,7 +71,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Composition key
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub(crate) struct Key<'a> {
-    pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
+    pub(crate) frames: &'a Vec<HashedMetaDataFrame>,
     pub(crate) index: Option<usize>,
     pub(crate) ddof: u8,
     pub(crate) discriminants: &'a Discriminants,
@@ -95,7 +95,7 @@ impl Key<'_> {
 }
 
 /// Composition value
-type Value = Hashed<DataFrame>;
+type Value = HashedDataFrame;
 
 fn compute(lazy_frame: LazyFrame, parameters: Parameters) -> PolarsResult<LazyFrame> {
     match parameters.method {
@@ -392,7 +392,7 @@ fn mean_and_standard_deviation(ddof: u8) -> PolarsResult<[Expr; 3]> {
         as_struct(vec![
             array()?.arr().mean().alias("Mean"),
             array()?.arr().std(ddof).alias("StandardDeviation"),
-            array()?.alias("Repetitions"),
+            array()?.alias("Array"),
         ])
         .alias("Value"),
     ])

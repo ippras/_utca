@@ -13,7 +13,7 @@ use crate::{
         widgets::FloatWidget,
     },
     text::Text,
-    utils::{Hashed, egui::ResponseExt as _},
+    utils::{HashedDataFrame, egui::ResponseExt as _},
 };
 use egui::{
     Color32, Frame, Grid, Id, Margin, Response, RichText, ScrollArea, Stroke, TextStyle, Ui,
@@ -36,7 +36,7 @@ const INDEX: Range<usize> = 0..1;
 /// Composition table
 #[derive(Debug)]
 pub(super) struct TableView<'a> {
-    data_frame: &'a Hashed<DataFrame>,
+    data_frame: &'a HashedDataFrame,
     settings: &'a Settings,
     state: &'a mut State,
     // is_row_expanded: BTreeMap<u64, bool>,
@@ -45,7 +45,7 @@ pub(super) struct TableView<'a> {
 
 impl<'a> TableView<'a> {
     pub(crate) fn new(
-        data_frame: &'a Hashed<DataFrame>,
+        data_frame: &'a HashedDataFrame,
         settings: &'a Settings,
         state: &'a mut State,
     ) -> Self {
@@ -258,7 +258,7 @@ impl TableView<'_> {
                         if response.hovered() {
                             response
                                 .standard_deviation(&value, row)?
-                                .repetitions(&value, row)?;
+                                .array(&value, row)?;
                         }
                     }
                 }
@@ -307,7 +307,7 @@ impl TableView<'_> {
             });
         if let Some(row) = row {
             response.on_hover_ui(|ui| {
-                let _ = self.repetitions(series, row, index, ui);
+                let _ = self.array(series, row, index, ui);
             });
         }
         Ok(())
@@ -345,7 +345,7 @@ impl TableView<'_> {
         //             });
         //         if let Some(row) = row {
         //             response.on_hover_ui(|ui| {
-        //                 let _ = self.repetitions(series, row, index, ui);
+        //                 let _ = self.array(series, row, index, ui);
         //             });
         //         }
         //     }
@@ -444,25 +444,19 @@ impl TableView<'_> {
     }
 
     #[instrument(skip(self, series, ui), err)]
-    fn repetitions(
-        &self,
-        series: &Series,
-        row: usize,
-        index: usize,
-        ui: &mut Ui,
-    ) -> PolarsResult<()> {
+    fn array(&self, series: &Series, row: usize, index: usize, ui: &mut Ui) -> PolarsResult<()> {
         let Some(values) = series.array()?.get_as_series(row) else {
             polars_bail!(NoData: r#"no "Values" in row: {row}"#);
         };
-        let Some(repetitions) = values
+        let Some(array) = values
             .struct_()?
-            .field_by_name("Repetitions")?
+            .field_by_name("Array")?
             .array()?
             .get_as_series(index)
         else {
-            polars_bail!(NoData: r#"no "Repetitions" in index: {index}"#);
+            polars_bail!(NoData: r#"no "Array" in index: {index}"#);
         };
-        let text = format_list!(repetitions.f64()?.iter().map(|item| {
+        let text = format_list!(array.f64()?.iter().map(|item| {
             from_fn(move |f| match item {
                 Some(mut item) => {
                     if self.settings.percent {
@@ -534,7 +528,7 @@ trait ResponseExt: Sized {
 
     fn standard_deviation(self, value: &Series, row: usize) -> PolarsResult<Self>;
 
-    fn repetitions(self, value: &Series, row: usize) -> PolarsResult<Self>;
+    fn array(self, value: &Series, row: usize) -> PolarsResult<Self>;
 }
 
 impl ResponseExt for Response {
@@ -590,15 +584,15 @@ impl ResponseExt for Response {
         Ok(self)
     }
 
-    fn repetitions(mut self, value: &Series, row: usize) -> PolarsResult<Self> {
-        if let Some(repetitions) = value
+    fn array(mut self, value: &Series, row: usize) -> PolarsResult<Self> {
+        if let Some(array) = value
             .struct_()?
-            .field_by_name("Repetitions")?
+            .field_by_name("Array")?
             .array()?
             .get_as_series(row)
-            && repetitions.len() > 1
+            && array.len() > 1
         {
-            let formated = repetitions.f64()?.iter().format_with(", ", |value, f| {
+            let formated = array.f64()?.iter().format_with(", ", |value, f| {
                 if let Some(value) = value {
                     f(&value)?;
                 }

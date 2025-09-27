@@ -8,7 +8,8 @@ lazy_frame = lazy_frame
     .agg([as_struct(vec![
         col("Values").explode().struct_().field_by_name("Mean").percent_if(key.percent),
         col("Values").explode().struct_().field_by_name("StandardDeviation").percent_if(key.percent),
-        col("Values").explode().struct_().field_by_name("Repetitions").percent_if(key.percent),
+        col("Values").explode().struct_().field_by_name("Array").percent_if(key.percent),
+        // col("Values").explode().struct_().field_by_name("Repetitions").percent_if(key.percent),
     ])
     .implode()
     .alias("Values")]);

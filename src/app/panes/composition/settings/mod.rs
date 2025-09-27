@@ -9,7 +9,7 @@ use crate::{
     app::MAX_PRECISION,
     r#const::relative_atomic_mass::{H, LI, NA, NH4},
     text::Text,
-    utils::Hashed,
+    utils::HashedDataFrame,
 };
 use egui::{
     ComboBox, DragValue, Grid, Id, Key, KeyboardShortcut, Modifiers, PopupCloseBehavior, RichText,
@@ -51,7 +51,7 @@ impl Settings {
         }
     }
 
-    pub(crate) fn show(&mut self, ui: &mut Ui, target: &Hashed<DataFrame>) {
+    pub(crate) fn show(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
         ScrollArea::vertical().show(ui, |ui| {
             Grid::new("Composition").show(ui, |ui| {
                 // Percent

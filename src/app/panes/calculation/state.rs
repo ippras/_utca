@@ -17,6 +17,7 @@ static WINDOWS: LazyLock<Id> = LazyLock::new(|| Id::new(ID_SOURCE).with("Windows
 pub struct Settings {
     pub percent: bool,
     pub precision: usize,
+    pub significant: bool,
     pub table: TableSettings,
 }
 
@@ -25,6 +26,7 @@ impl Settings {
         Self {
             percent: true,
             precision: 1,
+            significant: false,
             table: TableSettings::new(),
         }
     }
@@ -39,7 +41,14 @@ impl Settings {
             ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
                 ui.label(ui.localize("Precision.hover"));
             });
-            ui.add(Slider::new(&mut self.precision, 0..=MAX_PRECISION));
+            ui.add(Slider::new(&mut self.precision, 1..=MAX_PRECISION));
+            ui.end_row();
+
+            // Significant
+            ui.label(ui.localize("Significant")).on_hover_ui(|ui| {
+                ui.label(ui.localize("Significant.hover"));
+            });
+            ui.checkbox(&mut self.significant, "");
             ui.end_row();
 
             // Percent

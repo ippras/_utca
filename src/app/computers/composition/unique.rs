@@ -1,8 +1,10 @@
 use crate::{
     app::panes::composition::settings::{
-        MASS_MONO, MASS_STEREO, ECN_MONO, ECN_STEREO, SPECIES_MONO, SPECIES_POSITIONAL, SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
+        ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
+        SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO,
+        UNSATURATION_STEREO,
     },
-    utils::Hashed,
+    utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -44,7 +46,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Unique composition key
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Key<'a> {
-    pub(crate) frames: &'a Hashed<Vec<MetaDataFrame>>,
+    pub(crate) frames: &'a Vec<HashedMetaDataFrame>,
 }
 
 impl Hash for Key<'_> {

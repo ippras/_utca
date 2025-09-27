@@ -19,7 +19,7 @@ impl Computer {
             .select([
                 col("Mean").percent_if(key.percent),
                 col("StandardDeviation").percent_if(key.percent),
-                col("Repetitions").percent_if(key.percent),
+                col("Array").percent_if(key.percent),
             ]);
         let data_frame = lazy_frame.collect()?;
         Ok(data_frame)

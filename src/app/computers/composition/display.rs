@@ -4,7 +4,7 @@ use crate::{
         SPECIES_POSITIONAL, SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
         UNSATURATION_MONO, UNSATURATION_STEREO,
     },
-    utils::Hashed,
+    utils::HashedDataFrame,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -25,24 +25,8 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let mut lazy_frame = key.data_frame.value.clone().lazy();
+        let mut lazy_frame = key.data_frame.data_frame.clone().lazy();
         // println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
-        // let percent = |name| {
-        //     col("Values")
-        //         .explode()
-        //         .struct_()
-        //         .field_by_name(name)
-        //         .percent_if(key.percent)
-        // };
-        // lazy_frame = lazy_frame
-        //     .group_by_stable([col("Keys"), col("Species")])
-        //     .agg([as_struct(vec![
-        //         percent("Mean"),
-        //         percent("StandardDeviation"),
-        //         percent("Repetitions"),
-        //     ])
-        //     .alias("Values")]);
-        // println!("Display 1: {}", lazy_frame.clone().collect().unwrap());
         // Restructure
         let exprs = key
             .compositions
@@ -128,7 +112,7 @@ impl Computer {
                     let value = as_struct(vec![
                         percent("Mean"),
                         percent("StandardDeviation"),
-                        percent("Repetitions"),
+                        percent("Array"),
                     ]);
                     // Key
                     let key = || col(index.to_string()).struct_().field_by_name("Key");
@@ -185,7 +169,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Display composition key
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Key<'a> {
-    pub(crate) data_frame: &'a Hashed<DataFrame>,
+    pub(crate) data_frame: &'a HashedDataFrame,
     pub(crate) kind: Kind,
     pub(crate) percent: bool,
     pub(crate) compositions: &'a [Composition],
@@ -301,36 +285,3 @@ fn calculation(key: Key) -> PolarsResult<Expr> {
         ),
     }
 }
-
-// fn percent(column: Column) -> PolarsResult<Option<Column>> {
-//     let array = column.array()?;
-//     let mut builder = AnonymousOwnedListBuilder::new(
-//         array.name().clone(),
-//         array.len(),
-//         array.dtype().inner_dtype().cloned(),
-//     );
-//     for series in array {
-//         let Some(series) = series else {
-//             builder.append_null();
-//             continue;
-//         };
-//         let r#struct = series.struct_()?;
-//         let mean = r#struct.field_by_name("Mean")? * 100;
-//         let standard_deviation = r#struct.field_by_name("StandardDeviation")? * 100;
-//         let repetitions = r#struct
-//             .field_by_name("Repetitions")?
-//             .array()?
-//             .amortized_iter()
-//             .map(|series| Some(series?.as_ref() * 100))
-//             .collect::<ChunkedArray<Float64Chunked>>();
-//         builder.append_series(
-//             &StructChunked::from_series(
-//                 PlSmallStr::EMPTY,
-//                 series.len(),
-//                 [mean, standard_deviation, repetitions].iter(),
-//             )?
-//             .into_series(),
-//         )?;
-//     }
-//     Ok(Some(builder.finish().into_column()))
-// }

@@ -38,7 +38,7 @@ StereospecificNumber = { $number ->
     *[one] Stereospecific number
     [123] Stereospecific numbers 1, 2, 3
     [1223] Stereospecific numbers 1, 2 or 2, 3
-    [13] Stereospecific numbers 1 or 3
+    [13] Stereospecific numbers 1, 3
     [many] Stereospecific numbers
 }
     .abbreviation = { $number ->
@@ -47,7 +47,7 @@ StereospecificNumber = { $number ->
         [3] SN-3
         [123] SN-1,2,3
         [1223] SN-1,2(2,3)
-        [13] SN-1(3)
+        [13] SN-1,3
         *[other] SN
     }
 
@@ -70,7 +70,9 @@ SelectivityFactor = Selectivity factor
 Percent = Percent
     .hover = Display of values in percent.
 Precision = Precision
-    .hover = Number of decimal pieces.
+    .hover = Round floating points to given decimal numbers.
+Significant = Significant
+    .hover = Round floating points to a number of significant figures.
 StickyColumns = Sticky
     .hover = Number of sticky columns.
 TruncateHeaders = Truncate
@@ -107,8 +109,8 @@ Normalize-Weighted = Weighted
     .hover = Use weighted sum for normalization.
 Normalize-Christie = Christie
     .hover = Use Christy coefficients for normalization.
-Repetitions = Repetitions
-    .hover = Show repetitions
+Array = Array
+    .hover = Show array values
 Show = Show
 Show-Factors = Factors
     .hover = Show factors columns

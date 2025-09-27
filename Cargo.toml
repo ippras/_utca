@@ -36,6 +36,7 @@ polars = { version = "0.51.0", default-features = false, features = [
     "cum_agg",
     "diagonal_concat",
     "dtype-array",
+    "dtype-decimal",
     "dtype-i8",
     "dtype-struct",
     "dtype-u8",
@@ -87,7 +88,8 @@ egui_ext = { git = "https://github.com/kgv/egui_ext", features = [
 egui_l20n = { git = "https://github.com/kgv/egui_l20n", features = ["macros"] }
 egui_tiles_ext = { git = "https://github.com/kgv/egui_tiles_ext" }
 lipid = { git = "https://github.com/ippras/lipid" }
-metadata = { git = "https://github.com/ippras/metadata", rev = "dd0199444cb4c42cadceeb4da13abce83186d96a" }
+# metadata = { git = "https://github.com/ippras/metadata", rev = "dd0199444cb4c42cadceeb4da13abce83186d96a" }
+metadata = { git = "https://github.com/ippras/metadata", branch = "map" }
 molecule = { git = "https://github.com/ippras/molecule" }
 polars_ext = { git = "https://github.com/kgv/polars_ext", features = [
     "temporal_conversions",

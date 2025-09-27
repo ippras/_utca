@@ -3,13 +3,16 @@ use self::{
     table::TableView,
 };
 use super::PaneDelegate;
-use crate::{app::identifiers::CALCULATE, export::parquet::save, utils::egui::UiExt as _};
+use crate::{
+    app::identifiers::CALCULATE,
+    export::parquet::save,
+    utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
+};
 use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
-    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, CALCULATOR, ERASER, FLOPPY_DISK, GEAR, LIST, NOTE_PENCIL,
-    PENCIL, SLIDERS_HORIZONTAL, TAG, TRASH,
+    CALCULATOR, ERASER, FLOPPY_DISK, LIST, NOTE_PENCIL, SLIDERS_HORIZONTAL, TAG, TRASH,
 };
 use lipid::prelude::*;
 use metadata::{MetaDataFrame, egui::MetadataWidget};
@@ -41,12 +44,12 @@ pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 /// Configuration pane
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
-    frames: Vec<MetaDataFrame>,
+    frames: Vec<HashedMetaDataFrame>,
     index: usize,
 }
 
 impl Pane {
-    pub(crate) fn new(frames: Vec<MetaDataFrame>) -> Self {
+    pub(crate) fn new(frames: Vec<HashedMetaDataFrame>) -> Self {
         Self { frames, index: 0 }
     }
 
@@ -117,7 +120,7 @@ impl Pane {
                     .clicked()
                 {
                     let data_frame = &mut self.frames[self.index].data;
-                    *data_frame = data_frame.clear();
+                    *data_frame = HashedDataFrame::EMPTY;
                 }
             },
         );

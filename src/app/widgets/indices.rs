@@ -40,20 +40,19 @@ impl<'a> IndicesWidget<'a> {
                             .first()
                         {
                             response = response.on_hover_text(format!("± {standard_deviation}"));
-                            if let Some(repetitions) = series
+                            if let Some(array) = series
                                 .struct_()?
-                                .field_by_name("Repetitions")?
+                                .field_by_name("Array")?
                                 .array()?
                                 .get_as_series(0)
-                                && repetitions.len() > 1
+                                && array.len() > 1
                             {
-                                let formated =
-                                    repetitions.f64()?.iter().format_with(", ", |value, f| {
-                                        if let Some(value) = value {
-                                            f(&value)?;
-                                        }
-                                        Ok(())
-                                    });
+                                let formated = array.f64()?.iter().format_with(", ", |value, f| {
+                                    if let Some(value) = value {
+                                        f(&value)?;
+                                    }
+                                    Ok(())
+                                });
                                 response.on_hover_text(format!("[{formated}]"));
                             }
                         }
