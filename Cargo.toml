@@ -28,7 +28,7 @@ ehttp = { version = "0.5.0", features = ["json", "native-async"] }
 indexmap = "2.10.0"
 itertools = "0.14.0"
 log = "0.4.27"
-polars = { version = "0.50.0", default-features = false, features = [
+polars = { version = "0.51.0", default-features = false, features = [
     "bitwise",
     "cross_join",
     "cum_agg",
