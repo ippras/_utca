@@ -133,13 +133,13 @@ impl TableView<'_> {
             (1, factors::EF) => {
                 ui.heading(ui.localize("EnrichmentFactor.abbreviation"))
                     .on_hover_ui(|ui| {
-                        ui.markdown(asset!("/doc/Factors/EnrichmentFactor.md"));
+                        ui.markdown(asset!("/doc/en/Factors/EnrichmentFactor.md"));
                     });
             }
             (1, factors::SF) => {
                 ui.heading(ui.localize("SelectivityFactor.abbreviation"))
                     .on_hover_ui(|ui| {
-                        ui.markdown(asset!("/doc/Factors/SelectivityFactor.md"));
+                        ui.markdown(asset!("/doc/en/Factors/SelectivityFactor.md"));
                     });
             }
             _ => {}

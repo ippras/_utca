@@ -102,71 +102,73 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "Unsaturated9")?;
             ui.end_row();
             ui.label(ui.localize("Trans")).on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/Indices/Trans.md"));
+                ui.markdown(asset!("/doc/en/Indices/Trans.md"));
             });
             value(ui, "Trans")?;
             ui.end_row();
             // Complex
             ui.label(ui.localize("EicosapentaenoicAndDocosahexaenoic"))
                 .on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/Indices/EicosapentaenoicAndDocosahexaenoic.md"));
+                    ui.markdown(asset!(
+                        "/doc/en/Indices/EicosapentaenoicAndDocosahexaenoic.md"
+                    ));
                 });
             value(ui, "EicosapentaenoicAndDocosahexaenoic")?;
             ui.end_row();
             ui.label(ui.localize("FishLipidQuality")).on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/Indices/FishLipidQuality.md"));
+                ui.markdown(asset!("/doc/en/Indices/FishLipidQuality.md"));
             });
             value(ui, "FishLipidQuality")?;
             ui.end_row();
             ui.label(ui.localize("HealthPromotingIndex"))
                 .on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/Indices/HealthPromotingIndex.md"));
+                    ui.markdown(asset!("/doc/en/Indices/HealthPromotingIndex.md"));
                 });
             value(ui, "HealthPromotingIndex")?;
             ui.end_row();
             ui.label(ui.localize("HypocholesterolemicToHypercholesterolemic"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!(
-                        "/doc/Indices/HypocholesterolemicToHypercholesterolemic.md"
+                        "/doc/en/Indices/HypocholesterolemicToHypercholesterolemic.md"
                     ));
                 });
             value(ui, "HypocholesterolemicToHypercholesterolemic")?;
             ui.end_row();
             ui.label(ui.localize("IndexOfAtherogenicity"))
                 .on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/Indices/IndexOfAtherogenicity.md"));
+                    ui.markdown(asset!("/doc/en/Indices/IndexOfAtherogenicity.md"));
                 });
             value(ui, "IndexOfAtherogenicity")?;
             ui.end_row();
             ui.label(ui.localize("IndexOfThrombogenicity"))
                 .on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/Indices/IndexOfThrombogenicity.md"));
+                    ui.markdown(asset!("/doc/en/Indices/IndexOfThrombogenicity.md"));
                 });
             value(ui, "IndexOfThrombogenicity")?;
             ui.end_row();
             ui.label(ui.localize("LinoleicToAlphaLinolenic"))
                 .on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/Indices/LinoleicToAlphaLinolenic.md"));
+                    ui.markdown(asset!("/doc/en/Indices/LinoleicToAlphaLinolenic.md"));
                 });
             value(ui, "LinoleicToAlphaLinolenic")?;
             ui.end_row();
             ui.label(ui.localize("Polyunsaturated-6ToPolyunsaturated-3"))
                 .on_hover_ui(|ui| {
                     ui.markdown(asset!(
-                        "/doc/Indices/Polyunsaturated-6ToPolyunsaturated-3.md"
+                        "/doc/en/Indices/Polyunsaturated-6ToPolyunsaturated-3.md"
                     ));
                 });
             value(ui, "Polyunsaturated-6ToPolyunsaturated-3")?;
             ui.end_row();
             ui.label(ui.localize("PolyunsaturatedToSaturated"))
                 .on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/Indices/PolyunsaturatedToSaturated.md"));
+                    ui.markdown(asset!("/doc/en/Indices/PolyunsaturatedToSaturated.md"));
                 });
             value(ui, "PolyunsaturatedToSaturated")?;
             ui.end_row();
             ui.label(ui.localize("UnsaturationIndex"))
                 .on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/Indices/UnsaturationIndex.md"));
+                    ui.markdown(asset!("/doc/en/Indices/UnsaturationIndex.md"));
                 });
             value(ui, "UnsaturationIndex")?;
             Ok(())
