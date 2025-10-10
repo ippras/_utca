@@ -48,6 +48,8 @@ impl Presets {
             .ui(ui, |ui| {
                 ui.labeled_separator(RichText::new("Cedrus").heading());
                 preset(ui, &CEDRUS_2023_05_19);
+                preset(ui, &CEDRUS_2023_05_19_1);
+                preset(ui, &CEDRUS_2023_05_19_2);
             });
         SubMenuButton::new("Lunaria")
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
@@ -131,9 +133,14 @@ impl Presets {
                     "https://doi.org/10.1007/s11746-997-0016-1",
                 );
                 ui.labeled_separator(RichText::new("Soybean").heading());
-                preset(ui, &SOYBEAN_SEED_COMMODITY);
+                // preset(ui, &SOYBEAN_SEED_COMMODITY);
                 ui.labeled_separator(RichText::new("Sunflower").heading());
                 preset(ui, &SUNFLOWER_SEED_COMMODITY);
+                preset(ui, &SUNFLOWER_SEED_HIGH_LINOLEIC);
+                preset(ui, &SUNFLOWER_SEED_HIGH_OLEIC);
+                preset(ui, &SUNFLOWER_SEED_HIGH_PALMITIC_HIGH_LINOLEIC);
+                preset(ui, &SUNFLOWER_SEED_HIGH_PALMITIC_HIGH_OLEIC);
+                preset(ui, &SUNFLOWER_SEED_HIGH_STEARIC_HIGH_OLEIC);
             });
         SubMenuButton::new("Martinez-Force (2004)")
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))

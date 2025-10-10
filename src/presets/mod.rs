@@ -44,6 +44,8 @@ mod ippras {
     pub(crate) static ACER_UKURUNDUENSE_2025_07_08_3: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.3.utca.parquet");
 
     pub(crate) static CEDRUS_2023_05_19: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.utca.parquet");
+    pub(crate) static CEDRUS_2023_05_19_1: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.0.0.1.utca.parquet");
+    pub(crate) static CEDRUS_2023_05_19_2: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.0.0.2.utca.parquet");
 
     pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_1_1: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.1.1.1.utca.parquet");
     pub(crate) static LUNARIA_REDIVIVA_2024_01_24_1_1_2: LazyLock<HashedMetaDataFrame> = preset!("Lunaria/Lunaria Rediviva.2024-01-24.1.1.2.utca.parquet");
@@ -113,6 +115,12 @@ mod martínez_force2004 {
 mod reske1997 {
     use super::*;
 
-    pub(crate) static SOYBEAN_SEED_COMMODITY: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Soybean Seed Commodity.2025-08-11.utca.parquet");
-    pub(crate) static SUNFLOWER_SEED_COMMODITY: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed Commodity.2025-08-11.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_COMMODITY: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (Commodity).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_LINOLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High linoleic).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_OLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High oleic).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_PALMITIC_HIGH_LINOLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High palmitic, high linoleic).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_PALMITIC_HIGH_OLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High palmitic, high oleic).1997-08-01.utca.parquet");
+    pub(crate) static SUNFLOWER_SEED_HIGH_STEARIC_HIGH_OLEIC: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Sunﬂower Seed (High stearic, high oleic).1997-08-01.utca.parquet");
+
+    // pub(crate) static SOYBEAN_SEED_COMMODITY: LazyLock<HashedMetaDataFrame> = preset!("ThirdParty/Reske1997/Soybean Seed Commodity.2025-08-11.utca.parquet");
 }
