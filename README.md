@@ -14,3 +14,9 @@ lazy_frame = lazy_frame
     .implode()
     .alias("Values")]);
 ```
+
+### `horizontal`
+
+```rust
+use polars::lazy::dsl::sum_horizontal,
+```
