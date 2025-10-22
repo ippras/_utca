@@ -11,16 +11,23 @@ use crate::{
         FilteredCompositionComputed, FilteredCompositionKey, UniqueCompositionComputed,
         UniqueCompositionKey,
     },
-    export::{parquet, xlsx},
+    export::{parquet, ron, xlsx},
     text::Text,
-    utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
+    utils::{
+        HashedDataFrame, HashedMetaDataFrame,
+        egui::UiExt as _,
+        metadata::{authors, date, description, name},
+    },
 };
+use anyhow::Result;
 use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, SIGMA,
 };
-use metadata::MetaDataFrame;
+use metadata::{
+    AUTHORS, DATE, DEFAULT_VERSION, DESCRIPTION, MetaDataFrame, Metadata, NAME, VERSION,
+};
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
@@ -121,6 +128,18 @@ impl Pane {
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             let title = self.title_with_separator(".");
             if ui
+                .button("RON")
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("Save"));
+                })
+                .on_hover_ui(|ui| {
+                    ui.label(&format!("{title}.tag.utca.ron"));
+                })
+                .clicked()
+            {
+                let _ = self.save_ron(ui, &title);
+            }
+            if ui
                 .button("PARQUET")
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("Save"));
@@ -196,6 +215,44 @@ impl Pane {
         // table_config.show(ui);
         // table_config.store(ui.ctx());
         response
+    }
+
+    #[instrument(skip_all, err)]
+    fn save_ron(&mut self, ui: &mut Ui, title: &str) -> Result<()> {
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<FilteredCompositionComputed>()
+                .get(FilteredCompositionKey {
+                    data_frame: &self.target,
+                    settings: &self.settings,
+                })
+        });
+        let data = data_frame
+            .data_frame
+            .lazy()
+            .select([col("Species").explode()])
+            .unnest(by_name(["Species"], true))
+            .sort(
+                ["Value"],
+                SortMultipleOptions::default().with_order_descending(true),
+            )
+            .collect()?;
+        let meta = match self.settings.index {
+            Some(index) => self.source[index].meta.clone(),
+            None => {
+                let mut meta = Metadata::default();
+                meta.insert(NAME.to_owned(), name(&self.source));
+                meta.insert(AUTHORS.to_owned(), authors(&self.source));
+                meta.insert(DATE.to_owned(), date(&self.source));
+                meta.insert(DESCRIPTION.to_owned(), description(&self.source));
+                meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
+                meta
+            }
+        };
+        let frame = MetaDataFrame::new(meta, data);
+        ron::save(&frame, &format!("{title}.tag.utca.ron"))?;
+        Ok(())
     }
 
     fn body_content(&mut self, ui: &mut Ui) {

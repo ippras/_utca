@@ -5,6 +5,7 @@ pub use self::{
 };
 
 pub mod egui;
+pub mod metadata;
 pub mod polars;
 pub mod ui;
 
