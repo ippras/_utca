@@ -1,7 +1,5 @@
-use std::convert::identity;
-
 use self::{
-    parameters::{From, Parameters},
+    parameters::Parameters,
     state::{Settings, Windows},
     table::TableView,
 };
@@ -15,9 +13,15 @@ use crate::{
         presets::CHRISTIE,
         widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
     },
-    export::parquet,
-    utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
+    export::{parquet, ron},
+    utils::{
+        HashedDataFrame, HashedMetaDataFrame,
+        egui::UiExt as _,
+        metadata::{authors, date, name},
+    },
 };
+use anyhow::{Result, bail};
+use chrono::NaiveDate;
 use egui::{CursorIcon, Grid, Id, Response, RichText, ScrollArea, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
@@ -166,6 +170,18 @@ impl Pane {
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             let title = self.title_with_separator(".");
             if ui
+                .button("RON")
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("Save"));
+                })
+                .on_hover_ui(|ui| {
+                    ui.label(&format!("{title}.fa.utca.ron"));
+                })
+                .clicked()
+            {
+                let _ = self.save_ron(&title);
+            }
+            if ui
                 .button("PARQUET")
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("Save"));
@@ -182,6 +198,43 @@ impl Pane {
         settings.store(ui.ctx());
         windows.store(ui.ctx());
         response
+    }
+
+    #[instrument(skip_all, err)]
+    fn save_ron(&mut self, title: &str) -> Result<()> {
+        let data = self
+            .target
+            .data_frame
+            .clone()
+            .lazy()
+            .select([
+                col(LABEL),
+                col(FATTY_ACID),
+                col(STEREOSPECIFIC_NUMBERS123),
+                col(STEREOSPECIFIC_NUMBERS13),
+                col(STEREOSPECIFIC_NUMBERS2),
+            ])
+            .collect()?;
+        let meta = match self.parameters.index {
+            Some(index) => {
+                let mut meta = self.source[index].meta.clone();
+                meta.retain(|key, _| key != "ARROW:schema");
+                meta
+            }
+            None => {
+                let mut meta = Metadata::default();
+                // let name =
+                //     format_list!(self.source.iter().filter_map(|frame| frame.meta.get(NAME)));
+                meta.insert(NAME.to_owned(), name(&self.source));
+                meta.insert(AUTHORS.to_owned(), authors(&self.source));
+                meta.insert(DATE.to_owned(), date(&self.source));
+                meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
+                meta
+            }
+        };
+        let frame = MetaDataFrame::new(meta, data);
+        ron::save(&frame, &format!("{title}.fa.utca.ron"))?;
+        Ok(())
     }
 
     #[instrument(skip_all, err)]
