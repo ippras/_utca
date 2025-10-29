@@ -140,10 +140,6 @@ impl Presets {
             use crate::presets::martínez_force2004::*;
 
             ui.doi("10.1016/j.ab.2004.07.019");
-            ui.hyperlink_to(
-                RichText::new("10.1016/j.ab.2004.07.019").heading(),
-                "https://doi.org/10.1016/j.ab.2004.07.019",
-            );
             ui.labeled_separator(RichText::new("Hazelnut").heading());
             preset(ui, &HAZELNUT);
             ui.labeled_separator(RichText::new("Olive").heading());
