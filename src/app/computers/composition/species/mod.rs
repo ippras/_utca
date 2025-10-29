@@ -4,7 +4,7 @@ use crate::{
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
-use metadata::MetaDataFrame;
+use metadata::polars::MetaDataFrame;
 use polars::prelude::*;
 use polars_ext::expr::ExprExt as _;
 use tracing::instrument;

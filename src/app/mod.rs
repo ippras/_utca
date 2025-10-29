@@ -6,7 +6,7 @@ use self::{
     windows::{About, GithubWindow},
 };
 use crate::{
-    export::parquet::{self, save},
+    export,
     localization::ContextExt as _,
     utils::{HashedDataFrame, HashedMetaDataFrame, hash_data_frame},
 };
@@ -29,10 +29,12 @@ use egui_phosphor::{
 };
 use egui_tiles::{ContainerKind, Tile, Tree};
 use egui_tiles_ext::{HORIZONTAL, TreeExt as _, VERTICAL};
+use heck::ToUpperCamelCase;
 use lipid::prelude::*;
-use metadata::{DATE, MetaDataFrame, Metadata, NAME};
+use metadata::{DATE, Metadata, NAME, polars::MetaDataFrame};
 use panes::configuration::SCHEMA;
 use polars::prelude::*;
+use polars_parquet_format::KeyValue;
 use serde::{Deserialize, Serialize};
 use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str, sync::LazyLock};
 use tracing::{error, info, instrument, trace};
@@ -407,7 +409,7 @@ impl App {
             //             // col(STEREOSPECIFIC_NUMBERS123),
             //             // // col(STEREOSPECIFIC_NUMBERS2),
             //             // col(STEREOSPECIFIC_NUMBERS12_23),
-            //             // 
+            //             //
             //             col("Triacylglycerol").alias(STEREOSPECIFIC_NUMBERS123),
             //             col("Monoacylglycerol2").alias(STEREOSPECIFIC_NUMBERS2),
             //             // col("Diacylglycerol1223").alias(STEREOSPECIFIC_NUMBERS12_23),
@@ -551,21 +553,52 @@ impl App {
 
         let bytes = dropped_file.bytes()?;
         trace!(?bytes);
-        let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
-        let schema = frame.data.schema();
-        frame.data.fields();
+        // let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
+        let reader = Cursor::new(bytes);
+        let mut reader = ParquetReader::new(reader).set_rechunk(true);
+        let meta: Metadata = reader
+            .get_metadata()?
+            .key_value_metadata()
+            .as_ref()
+            .map(|key_values| {
+                key_values
+                    .into_iter()
+                    .filter_map(|KeyValue { key, value }| {
+                        if key != "ARROW:schema" {
+                            Some((key.to_upper_camel_case(), value.clone()?))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        println!("meta: {meta:?}");
+        let data = reader.finish()?;
+        let frame = MetaDataFrame { meta, data };
+        let name = format!("{}.utca.ron", frame.meta.format("."));
+        println!("name: {name}");
+        let _ = export::ron::save(&frame, &name);
+        return Ok(());
+
+        let frame = ron::de::from_bytes::<MetaDataFrame>(&bytes)?;
+        let hashed_frame = MetaDataFrame {
+            meta: frame.meta,
+            data: HashedDataFrame::new(frame.data)?,
+        };
+        let schema = hashed_frame.data.schema();
         if CONFIGURATION.matches_schema(schema).is_ok_and(|cast| !cast) {
             info!("CONFIGURATION");
-            self.data.try_add(frame)?;
+            self.data.add(hashed_frame);
         } else if COMPOSITION.matches_schema(schema).is_ok_and(|cast| !cast) {
             info!("COMPOSITION");
-            ctx.data_mut(|data| data.insert_temp(Id::new(COMPOSE), frame));
+            ctx.data_mut(|data| data.insert_temp(Id::new(COMPOSE), hashed_frame));
         } else if MAG.ensure_is_exact_match(schema).is_ok() {
             info!(STEREOSPECIFIC_NUMBERS2);
-            self.data.try_add(frame)?;
+            self.data.add(hashed_frame);
         } else if DAG.ensure_is_exact_match(schema).is_ok() {
             info!(STEREOSPECIFIC_NUMBERS2);
-            self.data.try_add(frame)?;
+            self.data.add(hashed_frame);
         } else {
             return Err(
                 polars_err!(SchemaMismatch: r#"Invalid dropped file schema: expected [`CONFIGURATION`, `COMPOSITION`], got = `{schema:?}`"#),
@@ -678,6 +711,5 @@ mod computers;
 mod data;
 mod identifiers;
 mod panes;
-mod presets;
 mod widgets;
 mod windows;

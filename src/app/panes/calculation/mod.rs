@@ -10,10 +10,9 @@ use crate::{
             CalculationComputed, CalculationIndicesComputed, CalculationIndicesKey, CalculationKey,
         },
         identifiers::COMPOSE,
-        presets::CHRISTIE,
         widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
     },
-    export::{parquet, ron},
+    export::ron,
     utils::{
         HashedDataFrame, HashedMetaDataFrame,
         egui::UiExt as _,
@@ -31,7 +30,7 @@ use egui_phosphor::regular::{
 use itertools::Itertools;
 use lipid::prelude::*;
 use metadata::{
-    AUTHORS, DATE, DEFAULT_DATE, DEFAULT_VERSION, MetaDataFrame, Metadata, NAME, VERSION,
+    AUTHORS, DATE, DEFAULT_DATE, DEFAULT_VERSION, Metadata, NAME, VERSION, polars::MetaDataFrame,
 };
 use polars::prelude::*;
 use polars_utils::{format_list, format_list_truncated};
@@ -191,7 +190,7 @@ impl Pane {
                 })
                 .clicked()
             {
-                let _ = self.save_parquet(&title);
+                // let _ = self.save_parquet(&title);
             }
         });
         ui.separator();
@@ -237,49 +236,49 @@ impl Pane {
         Ok(())
     }
 
-    #[instrument(skip_all, err)]
-    fn save_parquet(&mut self, title: &str) -> PolarsResult<()> {
-        let data = self
-            .target
-            .data_frame
-            .clone()
-            .lazy()
-            .select([
-                col(LABEL),
-                col(FATTY_ACID),
-                col(STEREOSPECIFIC_NUMBERS123),
-                col(STEREOSPECIFIC_NUMBERS13),
-                col(STEREOSPECIFIC_NUMBERS2),
-            ])
-            .collect()?;
-        let meta = match self.parameters.index {
-            Some(index) => {
-                let mut meta = self.source[index].meta.clone();
-                meta.retain(|key, _| key != "ARROW:schema");
-                meta
-            }
-            None => {
-                let mut meta = Metadata::default();
-                let name =
-                    format_list!(self.source.iter().filter_map(|frame| frame.meta.get(NAME)));
-                meta.insert(NAME.to_owned(), name);
-                let authors = self
-                    .source
-                    .iter()
-                    .flat_map(|frame| frame.meta.get(AUTHORS).map(|authors| authors.split(",")))
-                    .flatten()
-                    .unique()
-                    .join(",");
-                meta.insert(AUTHORS.to_owned(), authors);
-                meta.insert(DATE.to_owned(), DEFAULT_DATE.to_owned());
-                meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
-                meta
-            }
-        };
-        let mut frame = MetaDataFrame::new(meta, data);
-        let _ = parquet::save(&mut frame, &format!("{title}.fa.utca.parquet"));
-        Ok(())
-    }
+    // #[instrument(skip_all, err)]
+    // fn save_parquet(&mut self, title: &str) -> PolarsResult<()> {
+    //     let data = self
+    //         .target
+    //         .data_frame
+    //         .clone()
+    //         .lazy()
+    //         .select([
+    //             col(LABEL),
+    //             col(FATTY_ACID),
+    //             col(STEREOSPECIFIC_NUMBERS123),
+    //             col(STEREOSPECIFIC_NUMBERS13),
+    //             col(STEREOSPECIFIC_NUMBERS2),
+    //         ])
+    //         .collect()?;
+    //     let meta = match self.parameters.index {
+    //         Some(index) => {
+    //             let mut meta = self.source[index].meta.clone();
+    //             meta.retain(|key, _| key != "ARROW:schema");
+    //             meta
+    //         }
+    //         None => {
+    //             let mut meta = Metadata::default();
+    //             let name =
+    //                 format_list!(self.source.iter().filter_map(|frame| frame.meta.get(NAME)));
+    //             meta.insert(NAME.to_owned(), name);
+    //             let authors = self
+    //                 .source
+    //                 .iter()
+    //                 .flat_map(|frame| frame.meta.get(AUTHORS).map(|authors| authors.split(",")))
+    //                 .flatten()
+    //                 .unique()
+    //                 .join(",");
+    //             meta.insert(AUTHORS.to_owned(), authors);
+    //             meta.insert(DATE.to_owned(), DEFAULT_DATE.to_owned());
+    //             meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
+    //             meta
+    //         }
+    //     };
+    //     let mut frame = MetaDataFrame::new(meta, data);
+    //     let _ = parquet::save(&mut frame, &format!("{title}.fa.utca.parquet"));
+    //     Ok(())
+    // }
 
     #[instrument(skip_all, err)]
     fn composition(&mut self, ui: &mut Ui) -> PolarsResult<()> {
@@ -356,22 +355,22 @@ impl Pane {
             .id(ui.auto_id_with("Christie"))
             .open(&mut windows.open_christie)
             .show(ui.ctx(), |ui| {
-                ScrollArea::vertical().show(ui, |ui| {
-                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                        ui.heading("Fatty Acid");
-                        ui.heading("Value");
-                        ui.end_row();
-                        for index in 0..CHRISTIE.data.height() {
-                            let fatty_acid = CHRISTIE.data.fatty_acid().get(index).unwrap();
-                            FattyAcidWidget::new(fatty_acid.as_ref())
-                                .hover(true)
-                                .show(ui);
-                            FloatWidget::new(CHRISTIE.data["Christie"].f64().unwrap().get(index))
-                                .show(ui);
-                            ui.end_row();
-                        }
-                    });
-                });
+                // ScrollArea::vertical().show(ui, |ui| {
+                //     Grid::new(ui.next_auto_id()).show(ui, |ui| {
+                //         ui.heading("Fatty Acid");
+                //         ui.heading("Value");
+                //         ui.end_row();
+                //         for index in 0..CHRISTIE.data.height() {
+                //             let fatty_acid = CHRISTIE.data.fatty_acid().get(index).unwrap();
+                //             FattyAcidWidget::new(fatty_acid.as_ref())
+                //                 .hover(true)
+                //                 .show(ui);
+                //             FloatWidget::new(CHRISTIE.data["Christie"].f64().unwrap().get(index))
+                //                 .show(ui);
+                //             ui.end_row();
+                //         }
+                //     });
+                // });
             });
     }
 

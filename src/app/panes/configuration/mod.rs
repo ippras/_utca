@@ -5,7 +5,7 @@ use self::{
 use super::PaneDelegate;
 use crate::{
     app::identifiers::CALCULATE,
-    export::parquet::save,
+    export,
     utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
 };
 use anyhow::Result;
@@ -15,7 +15,7 @@ use egui_phosphor::regular::{
     CALCULATOR, ERASER, FLOPPY_DISK, LIST, NOTE_PENCIL, SLIDERS_HORIZONTAL, TAG, TRASH,
 };
 use lipid::prelude::*;
-use metadata::{MetaDataFrame, egui::MetadataWidget};
+use metadata::egui::MetadataWidget;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
@@ -186,8 +186,8 @@ impl Pane {
 
     #[instrument(skip(self), err)]
     fn save(&mut self) -> Result<()> {
-        let name = format!("{}.utca.parquet", self.title_with_separator("."));
-        save(&mut self.frames[self.index], &name)?;
+        let name = format!("{}.utca.ron", self.title_with_separator("."));
+        export::ron::save(&mut self.frames[self.index], &name)?;
         Ok(())
     }
 }

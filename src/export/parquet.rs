@@ -4,7 +4,7 @@ pub use self::native::{save, save_data};
 pub use self::web::{save, save_data};
 
 use anyhow::Result;
-use metadata::{MetaDataFrame, Metadata};
+use metadata::{Metadata, polars::MetaDataFrame};
 use polars::prelude::*;
 use std::{borrow::BorrowMut, fmt::Debug};
 use tracing::instrument;

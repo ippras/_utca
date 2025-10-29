@@ -1,4 +1,4 @@
-use metadata::{MetaDataFrame, Metadata};
+use metadata::{Metadata, polars::MetaDataFrame};
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{

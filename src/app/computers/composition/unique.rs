@@ -7,8 +7,6 @@ use crate::{
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
-use lipid::prelude::*;
-use metadata::MetaDataFrame;
 use polars::prelude::*;
 use std::{
     collections::{BTreeSet, HashSet},

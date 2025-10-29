@@ -59,7 +59,7 @@ fn ui(ui: &mut Ui) -> Response {
         ui.separator();
         ui.horizontal(|ui| {
             let width =
-                ui.fonts(|fonts| fonts.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
+                ui.fonts_mut(|fonts| fonts.glyph_width(&TextStyle::Body.resolve(ui.style()), ' '));
             ui.spacing_mut().item_spacing.x = width;
             ui.label(COPYRIGHT);
             ui.label("2024");

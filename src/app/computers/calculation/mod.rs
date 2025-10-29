@@ -1,5 +1,5 @@
 use crate::{
-    app::{panes::calculation::parameters::Parameters, presets::CHRISTIE},
+    app::panes::calculation::parameters::Parameters,
     utils::{HashedDataFrame, HashedMetaDataFrame, hash_expr},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -74,9 +74,9 @@ type Value = HashedDataFrame;
 fn compute(data_frame: &DataFrame, parameters: &Parameters) -> PolarsResult<LazyFrame> {
     let mut lazy_frame = data_frame.clone().lazy();
     // Christie
-    if parameters.christie {
-        lazy_frame = christie(lazy_frame);
-    }
+    // if parameters.christie {
+    //     lazy_frame = christie(lazy_frame);
+    // }
     println!("compute 0: {}", lazy_frame.clone().collect().unwrap());
     let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, parameters);
     // let sn2 = experimental(STEREOSPECIFIC_NUMBERS2, parameters);
@@ -144,22 +144,22 @@ fn factors() -> Expr {
     .alias("Factors")
 }
 
-fn christie(lazy_frame: LazyFrame) -> LazyFrame {
-    lazy_frame
-        .with_column(hash_expr(col(FATTY_ACID)))
-        .join(
-            CHRISTIE.data.clone().lazy().select([
-                hash_expr(col(FATTY_ACID)),
-                col(FATTY_ACID),
-                col("Christie"),
-            ]),
-            [col("Hash"), col(FATTY_ACID)],
-            [col("Hash"), col(FATTY_ACID)],
-            JoinArgs::new(JoinType::Left),
-        )
-        // col("Christie").fill_null(lit(1)),
-        .drop(by_name(["Hash"], true))
-}
+// fn christie(lazy_frame: LazyFrame) -> LazyFrame {
+//     lazy_frame
+//         .with_column(hash_expr(col(FATTY_ACID)))
+//         .join(
+//             CHRISTIE.data.clone().lazy().select([
+//                 hash_expr(col(FATTY_ACID)),
+//                 col(FATTY_ACID),
+//                 col("Christie"),
+//             ]),
+//             [col("Hash"), col(FATTY_ACID)],
+//             [col("Hash"), col(FATTY_ACID)],
+//             JoinArgs::new(JoinType::Left),
+//         )
+//         // col("Christie").fill_null(lit(1)),
+//         .drop(by_name(["Hash"], true))
+// }
 
 // fn mean_and_standard_deviations(lazy_frame: LazyFrame, ddof: u8) -> PolarsResult<LazyFrame> {
 //     Ok(lazy_frame.select([

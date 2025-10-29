@@ -8,7 +8,7 @@ use egui::{
 use egui_dnd::dnd;
 use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::{CHECK, DOTS_SIX_VERTICAL, TRASH};
-use metadata::{MetaDataFrame, egui::MetadataWidget};
+use metadata::{egui::MetadataWidget, polars::MetaDataFrame};
 use polars::prelude::PolarsResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -34,13 +34,13 @@ impl Data {
         }
     }
 
-    pub fn try_add(&mut self, frame: MetaDataFrame) -> PolarsResult<()> {
-        self.add(MetaDataFrame {
-            meta: frame.meta,
-            data: HashedDataFrame::new(frame.data)?,
-        });
-        Ok(())
-    }
+    // pub fn try_add(&mut self, frame: MetaDataFrame) -> PolarsResult<()> {
+    //     self.add(MetaDataFrame {
+    //         meta: frame.meta,
+    //         data: HashedDataFrame::new(frame.data)?,
+    //     });
+    //     Ok(())
+    // }
 }
 
 impl Data {

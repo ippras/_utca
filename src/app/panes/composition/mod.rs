@@ -11,7 +11,7 @@ use crate::{
         FilteredCompositionComputed, FilteredCompositionKey, UniqueCompositionComputed,
         UniqueCompositionKey,
     },
-    export::{parquet, ron, xlsx},
+    export::{self, ron, xlsx},
     text::Text,
     utils::{
         HashedDataFrame, HashedMetaDataFrame,
@@ -26,7 +26,7 @@ use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, SIGMA,
 };
 use metadata::{
-    AUTHORS, DATE, DEFAULT_VERSION, DESCRIPTION, MetaDataFrame, Metadata, NAME, VERSION,
+    AUTHORS, DATE, DEFAULT_VERSION, DESCRIPTION, Metadata, NAME, VERSION, polars::MetaDataFrame,
 };
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
@@ -139,43 +139,43 @@ impl Pane {
             {
                 let _ = self.save_ron(ui, &title);
             }
-            if ui
-                .button("PARQUET")
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("Save"));
-                })
-                .on_hover_ui(|ui| {
-                    ui.label(&format!("{title}.tag.utca.parquet"));
-                })
-                .clicked()
-            {
-                let mut data_frame = ui.memory_mut(|memory| {
-                    memory.caches.cache::<FilteredCompositionComputed>().get(
-                        FilteredCompositionKey {
-                            data_frame: &self.target,
-                            settings: &self.settings,
-                        },
-                    )
-                });
-                let mut data = data_frame
-                    .data_frame
-                    .lazy()
-                    .select([col("Species").explode()])
-                    .unnest(by_name(["Species"], true))
-                    .sort(
-                        ["Value"],
-                        SortMultipleOptions::default().with_order_descending(true),
-                    )
-                    .collect()
-                    .unwrap();
-                println!("data_frame unnest: {}", data.clone());
-                // let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
-                let mut meta = self.source[0].meta.clone();
-                meta.retain(|key, _| key != "ARROW:schema");
-                println!("meta: {meta:?}");
-                let mut frame = MetaDataFrame::new(meta, data);
-                let _ = parquet::save(&mut frame, &format!("{title}.tag.utca.parquet"));
-            }
+            // if ui
+            //     .button("PARQUET")
+            //     .on_hover_ui(|ui| {
+            //         ui.label(ui.localize("Save"));
+            //     })
+            //     .on_hover_ui(|ui| {
+            //         ui.label(&format!("{title}.tag.utca.parquet"));
+            //     })
+            //     .clicked()
+            // {
+            //     let mut data_frame = ui.memory_mut(|memory| {
+            //         memory.caches.cache::<FilteredCompositionComputed>().get(
+            //             FilteredCompositionKey {
+            //                 data_frame: &self.target,
+            //                 settings: &self.settings,
+            //             },
+            //         )
+            //     });
+            //     let mut data = data_frame
+            //         .data_frame
+            //         .lazy()
+            //         .select([col("Species").explode()])
+            //         .unnest(by_name(["Species"], true), None)
+            //         .sort(
+            //             ["Value"],
+            //             SortMultipleOptions::default().with_order_descending(true),
+            //         )
+            //         .collect()
+            //         .unwrap();
+            //     println!("data_frame unnest: {}", data.clone());
+            //     // let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
+            //     let mut meta = self.source[0].meta.clone();
+            //     meta.retain(|key, _| key != "ARROW:schema");
+            //     println!("meta: {meta:?}");
+            //     let mut frame = MetaDataFrame::new(meta, data);
+            //     let _ = export::parquet::save(&mut frame, &format!("{title}.tag.utca.parquet"));
+            // }
             if ui
                 .button("XLSX")
                 .on_hover_ui(|ui| {
@@ -194,7 +194,7 @@ impl Pane {
                         },
                     )
                 });
-                let data_frame = data_frame.data_frame.unnest(["Keys"]).unwrap();
+                let data_frame = data_frame.data_frame.unnest(["Keys"], None).unwrap();
                 let _ = xlsx::save(&data_frame, &format!("{title}.utca.xlsx"));
             }
         });
@@ -232,7 +232,7 @@ impl Pane {
             .data_frame
             .lazy()
             .select([col("Species").explode()])
-            .unnest(by_name(["Species"], true))
+            .unnest(by_name(["Species"], true), None)
             .sort(
                 ["Value"],
                 SortMultipleOptions::default().with_order_descending(true),
