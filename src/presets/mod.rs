@@ -36,6 +36,10 @@ pub(crate) mod ippras {
     pub(crate) static ACER_UKURUNDUENSE_2025_07_08_2: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.2.utca.ron");
     pub(crate) static ACER_UKURUNDUENSE_2025_07_08_3: LazyLock<HashedMetaDataFrame> = preset!("Acer/Acer Ukurunduense.2025-07-08.0.0.3.utca.ron");
 
+    pub(crate) static HELIANTHUS_ANNUUS_2025_10_29_1: LazyLock<HashedMetaDataFrame> = preset!("HelianthusAnnuus/К-2233.25.10.29.0.0.1.utca.ron");
+    pub(crate) static HELIANTHUS_ANNUUS_2025_10_29_2: LazyLock<HashedMetaDataFrame> = preset!("HelianthusAnnuus/К-2233.25.10.29.0.0.2.utca.ron");
+    pub(crate) static HELIANTHUS_ANNUUS_2025_10_29_3: LazyLock<HashedMetaDataFrame> = preset!("HelianthusAnnuus/К-2233.25.10.29.0.0.3.utca.ron");
+
     pub(crate) static CEDRUS_2023_05_19: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.utca.ron");
     pub(crate) static CEDRUS_2023_05_19_1: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.0.0.1.utca.ron");
     pub(crate) static CEDRUS_2023_05_19_2: LazyLock<HashedMetaDataFrame> = preset!("Cedrus/Cedrus.2023-05-19.0.0.2.utca.ron");

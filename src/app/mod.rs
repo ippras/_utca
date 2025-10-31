@@ -97,7 +97,7 @@ impl App {
         cc.egui_ctx.set_localizations();
         custom_style(&cc.egui_ctx);
 
-        // return Default::default();
+        return Default::default();
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
         Self::load(cc).unwrap_or_default()
@@ -553,33 +553,32 @@ impl App {
 
         let bytes = dropped_file.bytes()?;
         trace!(?bytes);
-        // let frame = MetaDataFrame::read_parquet(Cursor::new(bytes))?;
-        let reader = Cursor::new(bytes);
-        let mut reader = ParquetReader::new(reader).set_rechunk(true);
-        let meta: Metadata = reader
-            .get_metadata()?
-            .key_value_metadata()
-            .as_ref()
-            .map(|key_values| {
-                key_values
-                    .into_iter()
-                    .filter_map(|KeyValue { key, value }| {
-                        if key != "ARROW:schema" {
-                            Some((key.to_upper_camel_case(), value.clone()?))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect()
-            })
-            .unwrap_or_default();
-        println!("meta: {meta:?}");
-        let data = reader.finish()?;
-        let frame = MetaDataFrame { meta, data };
-        let name = format!("{}.utca.ron", frame.meta.format("."));
-        println!("name: {name}");
-        let _ = export::ron::save(&frame, &name);
-        return Ok(());
+        // let reader = Cursor::new(bytes);
+        // let mut reader = ParquetReader::new(reader).set_rechunk(true);
+        // let meta: Metadata = reader
+        //     .get_metadata()?
+        //     .key_value_metadata()
+        //     .as_ref()
+        //     .map(|key_values| {
+        //         key_values
+        //             .into_iter()
+        //             .filter_map(|KeyValue { key, value }| {
+        //                 if key != "ARROW:schema" {
+        //                     Some((key.to_upper_camel_case(), value.clone()?))
+        //                 } else {
+        //                     None
+        //                 }
+        //             })
+        //             .collect()
+        //     })
+        //     .unwrap_or_default();
+        // println!("meta: {meta:?}");
+        // let data = reader.finish()?;
+        // let frame = MetaDataFrame { meta, data };
+        // let name = format!("{}.utca.ron", frame.meta.format("."));
+        // println!("name: {name}");
+        // let _ = export::ron::save(&frame, &name);
+        // return Ok(());
 
         let frame = ron::de::from_bytes::<MetaDataFrame>(&bytes)?;
         let hashed_frame = MetaDataFrame {

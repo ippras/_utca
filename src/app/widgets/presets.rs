@@ -50,6 +50,14 @@ impl Presets {
             preset(ui, &CEDRUS_2023_05_19_1);
             preset(ui, &CEDRUS_2023_05_19_2);
         });
+        ui.menu_button("Helianthus annuus", |ui| {
+            use crate::presets::ippras::*;
+
+            ui.labeled_separator(RichText::new("Helianthus annuus").heading());
+            preset(ui, &HELIANTHUS_ANNUUS_2025_10_29_1);
+            preset(ui, &HELIANTHUS_ANNUUS_2025_10_29_2);
+            preset(ui, &HELIANTHUS_ANNUUS_2025_10_29_3);
+        });
         ui.menu_button("Microalgae", |ui| {
             use crate::presets::ippras::*;
 
