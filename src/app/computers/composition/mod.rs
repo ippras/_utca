@@ -157,14 +157,14 @@ fn compose(
             match selection.composition {
                 MASS_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .mass(Some(lit(settings.special.adduct)))
+                    .relative_atomic_mass(Some(lit(settings.special.adduct)))
                     .round(settings.special.round_mass, RoundMode::HalfToEven)
                     .alias("MMC"),
                 MASS_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| {
                         expr.fatty_acid()
-                            .mass(None)
+                            .relative_atomic_mass(None)
                             .round(settings.special.round_mass, RoundMode::HalfToEven)
                     })
                     .alias("MSC"),

@@ -99,7 +99,8 @@ fn compute(data_frame: &DataFrame, parameters: &Parameters) -> PolarsResult<Lazy
 fn experimental(name: &str, parameters: &Parameters) -> Expr {
     let mut expr = col(name);
     if parameters.weighted {
-        expr = col(name) / (col(name) * col(FATTY_ACID).fatty_acid().mass(None)).sum()
+        expr =
+            col(name) / (col(name) * col(FATTY_ACID).fatty_acid().relative_atomic_mass(None)).sum()
     };
     expr.normalize_if(parameters.normalize.experimental)
 }
@@ -244,7 +245,8 @@ fn compute_sn(
 ) -> [Expr; 4] {
     let experimental = |mut sn: Expr| {
         if parameters.weighted {
-            sn = sn.clone() / (sn * fatty_acid.clone().fatty_acid().mass(None)).sum()
+            sn =
+                sn.clone() / (sn * fatty_acid.clone().fatty_acid().relative_atomic_mass(None)).sum()
         };
         sn.normalize_if(parameters.normalize.experimental)
     };

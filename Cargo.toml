@@ -1,6 +1,6 @@
 [package]
 name = "utca"
-version = "0.51.0"
+version = "0.52.0"
 authors = ["Giorgi Vladimirovich Kazakov", "Roman Alexandrovich Sidorov"]
 edition = "2024"
 
@@ -65,7 +65,7 @@ polars = { version = "0.52.0", default-features = false, features = [
 polars-utils = { version = "0.52.0", features = ["nightly"] }
 radix_trie = "0.3.0"
 ron = "0.11.0"
-rust_xlsxwriter = { version = "0.90.2", features = ["chrono", "wasm"] }
+rust_xlsxwriter = { version = "0.91.0", features = ["chrono", "wasm"] }
 serde = { version = "1.0.228", features = ["derive", "std"] }
 thiserror = "2.0.17"
 toml = "0.9.8"
@@ -89,6 +89,7 @@ url = { version = "2.5.7", features = ["serde"] }
 heck = "0.5.0"
 polars-parquet-format = "0.1.0"
 
+atom = { git = "https://github.com/ippras/atom" }
 egui_ext = { git = "https://github.com/kgv/egui_ext", branch = "egui-0.33.0" }
 egui_l20n = { git = "https://github.com/kgv/egui_l20n", branch = "egui-0.33.0", features = [
     "macros",
@@ -99,10 +100,10 @@ metadata = { git = "https://github.com/ippras/metadata", features = [
     "egui",
     "polars",
 ] }
-molecule = { git = "https://github.com/ippras/molecule" }
 polars_ext = { git = "https://github.com/kgv/polars_ext", features = [
     "temporal_conversions",
 ] }
+# molecule = { git = "https://github.com/ippras/molecule" }
 
 # native
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
