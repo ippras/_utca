@@ -28,7 +28,7 @@ ehttp = { version = "0.5.0", features = ["json", "native-async"] }
 indexmap = "2.12.0"
 itertools = "0.14.0"
 log = "0.4.28"
-polars = { git = "https://github.com/pola-rs/polars", rev = "5594b81b1177ad20ebecff8ad4c807b1816647ff", default-features = false, features = [
+polars = { version = "0.52.0", default-features = false, features = [
     "array_arithmetic",
     "bitwise",
     "concat_str",
@@ -62,7 +62,7 @@ polars = { git = "https://github.com/pola-rs/polars", rev = "5594b81b1177ad20ebe
     # "list_drop_nulls",
     # "semi_anti_join",
 ] }
-polars-utils = { version = "0.51.0", features = ["nightly"] }
+polars-utils = { version = "0.52.0", features = ["nightly"] }
 radix_trie = "0.3.0"
 ron = "0.11.0"
 rust_xlsxwriter = { version = "0.90.2", features = ["chrono", "wasm"] }
@@ -94,13 +94,13 @@ egui_l20n = { git = "https://github.com/kgv/egui_l20n", branch = "egui-0.33.0", 
     "macros",
 ] }
 egui_tiles_ext = { git = "https://github.com/kgv/egui_tiles_ext", branch = "egui-0.33.0" }
-lipid = { git = "https://github.com/ippras/lipid", branch = "new-polars" }
-metadata = { git = "https://github.com/ippras/metadata", branch = "new-polars", features = [
+lipid = { git = "https://github.com/ippras/lipid" }
+metadata = { git = "https://github.com/ippras/metadata", features = [
     "egui",
     "polars",
 ] }
 molecule = { git = "https://github.com/ippras/molecule" }
-polars_ext = { git = "https://github.com/kgv/polars_ext", branch = "new-polars", features = [
+polars_ext = { git = "https://github.com/kgv/polars_ext", features = [
     "temporal_conversions",
 ] }
 
