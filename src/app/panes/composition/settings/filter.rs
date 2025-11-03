@@ -1,4 +1,7 @@
-use super::{MASS_MONO, MASS_STEREO, ECN_MONO, ECN_STEREO, SPECIES_MONO, SPECIES_POSITIONAL, SPECIES_STEREO, Selection, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO};
+use super::{
+    ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL, SPECIES_STEREO,
+    Selection, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
+};
 use crate::text::Text;
 use ahash::RandomState;
 use egui::{
@@ -148,7 +151,8 @@ impl Widget for FilterWidget<'_> {
                             Ok(())
                         })?;
                     }
-                    MASS_STEREO | ECN_STEREO | SPECIES_STEREO | TYPE_STEREO | UNSATURATION_STEREO => {
+                    MASS_STEREO | ECN_STEREO | SPECIES_STEREO | TYPE_STEREO
+                    | UNSATURATION_STEREO => {
                         let fields = self.series.struct_()?.fields_as_series();
                         ui.columns_const(|ui: &mut [Ui; 3]| -> PolarsResult<()> {
                             for index in 0..3 {

@@ -1,5 +1,7 @@
 use crate::{
-    app::panes::composition::settings::{ECN_MONO, MASS_MONO, Settings, TYPE_MONO, UNSATURATION_MONO},
+    app::panes::composition::settings::{
+        ECN_MONO, MASS_MONO, Settings, TYPE_MONO, UNSATURATION_MONO,
+    },
     utils::HashedDataFrame,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -20,10 +22,7 @@ impl Computer {
         lazy_frame = filter(lazy_frame, key.settings);
         let mut data_frame = lazy_frame.collect()?;
         let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
-        Ok(HashedDataFrame {
-            data_frame,
-            hash,
-        })
+        Ok(HashedDataFrame { data_frame, hash })
     }
 }
 

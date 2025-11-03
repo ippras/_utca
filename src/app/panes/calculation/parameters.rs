@@ -64,8 +64,12 @@ impl Parameters {
                         ui.localize(From::StereospecificNumbers12_23.text()),
                     )
                     .on_hover_localized(From::StereospecificNumbers12_23.hover_text());
-                    ui.selectable_value(&mut self.from, From::StereospecificNumbers2, ui.localize(From::StereospecificNumbers2.text()))
-                        .on_hover_localized(From::StereospecificNumbers2.hover_text());
+                    ui.selectable_value(
+                        &mut self.from,
+                        From::StereospecificNumbers2,
+                        ui.localize(From::StereospecificNumbers2.text()),
+                    )
+                    .on_hover_localized(From::StereospecificNumbers2.hover_text());
                 })
                 .response
                 .on_hover_localized(self.from.hover_text());
