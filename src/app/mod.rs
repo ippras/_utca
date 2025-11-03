@@ -16,10 +16,10 @@ use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
     Align, Align2, CentralPanel, Color32, Context, DroppedFile, FontDefinitions, Frame, Id,
     LayerId, Layout, MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle,
-    TextWrapMode, TopBottomPanel, Visuals, util::IdTypeMap, warn_if_debug_build,
+    TextWrapMode, TopBottomPanel, Visuals, Widget as _, util::IdTypeMap, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
-use egui_l20n::{ResponseExt, UiExt as _};
+use egui_l20n::{ResponseExt, UiExt as _, ui::locale_button::LocaleButton};
 use egui_phosphor::{
     Variant, add_to_fonts,
     regular::{
@@ -121,7 +121,7 @@ impl App {
 
     // Bottom panel
     fn bottom_panel(&mut self, ctx: &Context) {
-        TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
+        TopBottomPanel::bottom("BottomPanel").show(ctx, |ui| {
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 Sides::new().show(
                     ui,
@@ -171,7 +171,7 @@ impl App {
                         RichText::new(SIDEBAR_SIMPLE).size(ICON_SIZE),
                     )
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize("left_panel"));
+                        ui.label(ui.localize("LeftPanel"));
                     });
                     ui.separator();
                     // Light/Dark
@@ -181,7 +181,7 @@ impl App {
                     if ui
                         .button(RichText::new(TRASH).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("reset_application"));
+                            ui.label(ui.localize("ResetApplication"));
                         })
                         .clicked()
                     {
@@ -192,7 +192,7 @@ impl App {
                     if ui
                         .button(RichText::new(ARROWS_CLOCKWISE).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("reset_gui"));
+                            ui.label(ui.localize("ResetGui"));
                         })
                         .clicked()
                     {
@@ -218,7 +218,7 @@ impl App {
                     if ui
                         .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("vertical"));
+                            ui.label(ui.localize("Vertical"));
                         })
                         .clicked()
                     {
@@ -231,7 +231,7 @@ impl App {
                     if ui
                         .button(RichText::new(SQUARE_SPLIT_HORIZONTAL).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("horizontal"));
+                            ui.label(ui.localize("Horizontal"));
                         })
                         .clicked()
                     {
@@ -244,7 +244,7 @@ impl App {
                     if ui
                         .button(RichText::new(GRID_FOUR).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("grid"));
+                            ui.label(ui.localize("Grid"));
                         })
                         .clicked()
                     {
@@ -257,7 +257,7 @@ impl App {
                     if ui
                         .button(RichText::new(TABS).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("tabs"));
+                            ui.label(ui.localize("Tabs"));
                         })
                         .clicked()
                     {
@@ -303,7 +303,7 @@ impl App {
                     if ui
                         .button(RichText::new(GEAR).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("settings"));
+                            ui.label(ui.localize("Settings"));
                         })
                         .clicked()
                     {
@@ -325,7 +325,7 @@ impl App {
                     // Create
                     if ui
                         .button(RichText::new(PLUS).size(ICON_SIZE))
-                        .on_hover_localized("create")
+                        .on_hover_localized("Create")
                         .clicked()
                     {
                         let data = DataFrame::empty_with_schema(&SCHEMA);
@@ -346,30 +346,30 @@ impl App {
                     if ui
                         .button(RichText::new(CLOUD_ARROW_DOWN).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
-                            ui.label(ui.localize("load"));
+                            ui.label(ui.localize("Load"));
                         })
                         .clicked()
                     {
                         self.github.toggle(ui);
                     }
                     ui.separator();
-
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        // About
-                        if ui
-                            .button(RichText::new(INFO).size(ICON_SIZE))
-                            .on_hover_localized("about")
-                            .clicked()
-                        {
-                            self.about.open ^= true;
-                        }
-                        ui.separator();
-                        // Locale
-                        ui.locale_button().on_hover_ui(|ui| {
-                            ui.label(ui.localize("language"));
+                    // Locale
+                    LocaleButton::new()
+                        .size(ICON_SIZE)
+                        .ui(ui)
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("Language"));
                         });
-                        ui.separator();
-                    });
+                    ui.separator();
+                    // About
+                    if ui
+                        .button(RichText::new(INFO).size(ICON_SIZE))
+                        .on_hover_localized("About")
+                        .clicked()
+                    {
+                        self.about.open ^= true;
+                    }
+                    ui.separator();
                 });
             });
         });
