@@ -25,25 +25,25 @@ impl Github {
         ui.hyperlink_to(RichText::new("IPPRAS").heading(), "https://ippras.ru");
         ui.menu_button("Acer", |ui| {
             ui.labeled_separator(RichText::new("Acer Ginnala").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Ginnala.2025-07-08.0.0.1.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Ginnala.2025-07-08.0.0.2.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Ginnala.2025-07-08.0.0.3.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ginnala[1].2025-07-08.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ginnala[2].2025-07-08.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ginnala[3].2025-07-08.utca.ron");
             ui.labeled_separator(RichText::new("Acer Pensylvanicum").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Pensylvanicum.2025-07-08.0.0.1.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Pensylvanicum.2025-07-08.0.0.2.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Pensylvanicum.2025-07-08.0.0.3.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer pensylvanicum[1].2025-07-08.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer pensylvanicum[2].2025-07-08.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer pensylvanicum[3].2025-07-08.utca.ron");
             ui.labeled_separator(RichText::new("Acer Rubrum").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Rubrum.2025-07-09.0.0.1.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Rubrum.2025-07-09.0.0.2.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Rubrum.2025-07-09.0.0.3.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer rubrum[1].2025-07-09.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer rubrum[2].2025-07-09.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer rubrum[3].2025-07-09.utca.ron");
             ui.labeled_separator(RichText::new("Acer Spicatum").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Spicatum.2025-07-09.0.0.1.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Spicatum.2025-07-09.0.0.2.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Spicatum.2025-07-09.0.0.3.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer spicatum[1].2025-07-09.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer spicatum[2].2025-07-09.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer spicatum[3].2025-07-09.utca.ron");
             ui.labeled_separator(RichText::new("Acer Ukurunduense").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Ukurunduense.2025-07-08.0.0.1.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Ukurunduense.2025-07-08.0.0.2.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Acer/Acer Ukurunduense.2025-07-08.0.0.3.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ukurunduense[1].2025-07-08.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ukurunduense[2].2025-07-08.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ukurunduense[3].2025-07-08.utca.ron");
         });
         ui.menu_button("Cedrus", |ui| {
             ui.labeled_separator(RichText::new("Cedrus").heading());
@@ -53,9 +53,9 @@ impl Github {
         });
         ui.menu_button("Helianthus annuus", |ui| {
             ui.labeled_separator(RichText::new("Helianthus annuus").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/HelianthusAnnuus/К-2233.25.10.29.0.0.1.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/HelianthusAnnuus/К-2233.25.10.29.0.0.2.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/HelianthusAnnuus/К-2233.25.10.29.0.0.3.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/ron/К-2233[1].2025-10-29.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/ron/К-2233[2].2025-10-29.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/ron/К-2233[3].2025-10-29.utca.ron");
         });
         ui.menu_button("Microalgae", |ui| {
             ui.labeled_separator(RichText::new("C-108 (Chromochloris zofingiensis)").heading());
@@ -83,28 +83,28 @@ impl Github {
             ui.doi("10.1007/s11746-014-2553-8");
             ui.labeled_separator(RichText::new("Subgenus Euonymus").heading());
             ui.labeled_separator(RichText::new("Section Euonymus").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Bungeanus.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Europaeus.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Hamiltonianus.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Phellomanus.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Semiexsertus.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Sieboldianus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus bungeanus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus europaeus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus hamiltonianus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus phellomanus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus semiexsertus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus sieboldianus.2014-06-19.utca.ron");
             ui.labeled_separator(RichText::new("Section Melanocarya").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Alatus.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Sacrosanctus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus alatus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus sacrosanctus.2014-06-19.utca.ron");
             ui.labeled_separator(RichText::new("Section Pseudovyenomus").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Pauciflorus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus pauciflorus.2014-06-19.utca.ron");
             ui.labeled_separator(RichText::new("Subgenus Kalonymus").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Latifolius.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Macropterus.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Maximowiczianus.2014-06-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2014/Euonymus Sachalinensis.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus latifolius.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus macropterus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus maximowiczianus.2014-06-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus sachalinensis.2014-06-19.utca.ron");
         });
         ui.menu_button("Sidorov (2025)", |ui| {
             ui.doi("10.3390/plants14040612");
-            // https://raw.githubusercontent.com/ippras/_utca/main/src/presets/Sidorov2025/Lunaria Rediviva.2024-01-24.1.1.1.utca.ron
             ui.labeled_separator(RichText::new("Lunaria Rediviva").heading());
-            // preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_1_1);
+            // https://raw.githubusercontent.com/ippras/utca/refs/heads/presets/Sidorov2025/ron/Lunaria%20rediviva.%5BSN-1%2C2(2%2C3)%3B%20TMSH%5D.2024-01-24.0.1.1.utca.ron
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/ron/Lunaria rediviva SN-1,2(2,3)[TMSH; 1.1].2024-01-24.utca.ron");
             // preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_1_2);
             // preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_2_1);
             // preset(ui, &LUNARIA_REDIVIVA_2024_01_24_1_2_2);
@@ -129,28 +129,28 @@ impl Github {
             ui.labeled_separator(RichText::new("Soybean").heading());
             // preset(ui, &SOYBEAN_SEED_COMMODITY);
             ui.labeled_separator(RichText::new("Sunflower").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Reske1997/Sunﬂower Seed (Commodity).1997-08-01.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Reske1997/Sunﬂower Seed (High linoleic).1997-08-01.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Reske1997/Sunﬂower Seed (High oleic).1997-08-01.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Reske1997/Sunﬂower Seed (High palmitic, high linoleic).1997-08-01.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Reske1997/Sunﬂower Seed (High palmitic, high oleic).1997-08-01.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Reske1997/Sunﬂower Seed (High stearic, high oleic).1997-08-01.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Reske1997/Sunflower seed (Commodity).1997-08-01.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Reske1997/Sunflower seed (High linoleic).1997-08-01.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Reske1997/Sunflower seed (High oleic).1997-08-01.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Reske1997/Sunflower seed (High palmitic, high linoleic).1997-08-01.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Reske1997/Sunflower seed (High palmitic, high oleic).1997-08-01.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Reske1997/Sunflower seed (High stearic, high oleic).1997-08-01.utca.ron");
         });
         ui.menu_button("Martinez-Force (2004)", |ui| {
             ui.doi("10.1016/j.ab.2004.07.019");
             ui.labeled_separator(RichText::new("Hazelnut").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Martinez-Force2004/Hazelnut.2025-08-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Martinez-Force2004/Hazelnut.2004-05-20.utca.ron");
             ui.labeled_separator(RichText::new("Olive").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Martinez-Force2004/Olive.2025-08-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Martinez-Force2004/Olive.2004-05-20.utca.ron");
             ui.labeled_separator(RichText::new("Rice").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Martinez-Force2004/Rice.2025-08-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Martinez-Force2004/Rice.2004-05-20.utca.ron");
             ui.labeled_separator(RichText::new("Soybean").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Martinez-Force2004/Soybean.2025-08-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Martinez-Force2004/Soybean.2004-05-20.utca.ron");
             ui.labeled_separator(RichText::new("Sunflower").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Martinez-Force2004/Sunflower CAS-3.2025-08-19.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Martinez-Force2004/Sunflower RHA-274.2025-08-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Martinez-Force2004/Sunflower CAS-3.2004-05-20.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Martinez-Force2004/Sunflower RHA-274.2004-05-20.utca.ron");
             ui.labeled_separator(RichText::new("Walnut").heading());
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/_utca/main/src/presets/ThirdParty/Martinez-Force2004/Walnut.2025-08-19.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Martinez-Force2004/Walnut.2004-05-20.utca.ron");
         });
     }
 }
@@ -170,25 +170,50 @@ impl Widget for Github {
 #[instrument(skip(ui), err)]
 fn preset(ui: &mut Ui, input: &str) -> Result<()> {
     let url = Url::parse(input)?;
-    let (name, date, version) = parse(&url)?;
-    if ui.button(format!("{name} {date} {version}")).clicked() {
+    let (name, date) = parse(&url)?;
+    if ui.button(format!("{name} {date}")).clicked() {
         load(ui.ctx(), url);
     }
     Ok(())
 }
 
 /// Parse preset url
-fn parse<'a>(url: &'a Url) -> Result<(Cow<'a, str>, &'a str, &'a str)> {
+fn parse<'a>(url: &'a Url) -> Result<(Cow<'a, str>, &'a str)> {
     let segment = url
         .path_segments()
         .context("Preset get path segments")?
         .last()
         .context("Preset get last path segment")?;
     let input = segment.trim_end_matches(".utca.ron");
-    let (name, input) = input.split_once(".").context("Preset parse name")?;
-    let (date, version) = input.split_once(".").unwrap_or((input, ""));
-    Ok((decode(name)?, date, version))
+    let (name, date) = input
+        .rsplit_once(".")
+        .context("Preset parse name and date")?;
+    Ok((decode(name)?, date))
 }
+
+// /// Preset
+// #[instrument(skip(ui), err)]
+// fn preset(ui: &mut Ui, input: &str) -> Result<()> {
+//     let url = Url::parse(input)?;
+//     let (name, date, version) = parse(&url)?;
+//     if ui.button(format!("{name} {date} {version}")).clicked() {
+//         load(ui.ctx(), url);
+//     }
+//     Ok(())
+// }
+
+// /// Parse preset url
+// fn parse<'a>(url: &'a Url) -> Result<(Cow<'a, str>, &'a str, &'a str)> {
+//     let segment = url
+//         .path_segments()
+//         .context("Preset get path segments")?
+//         .last()
+//         .context("Preset get last path segment")?;
+//     let input = segment.trim_end_matches(".utca.ron");
+//     let (name, input) = input.split_once(".").context("Preset parse name")?;
+//     let (date, version) = input.split_once(".").unwrap_or((input, ""));
+//     Ok((decode(name)?, date, version))
+// }
 
 fn load(ctx: &Context, url: Url) {
     let ctx = ctx.clone();
