@@ -3,7 +3,7 @@ use self::{
     identifiers::{CALCULATE, COMPOSE, CONFIGURE, DATA, GITHUB_TOKEN},
     panes::{Pane, behavior::Behavior},
     widgets::Presets,
-    windows::{About, GithubWindow},
+    windows::{About, Github},
 };
 use crate::{
     export,
@@ -70,7 +70,6 @@ pub struct App {
     // Windows
     #[serde(skip)]
     about: About,
-    github: GithubWindow,
     settings: SettingsWindow,
 }
 
@@ -81,7 +80,6 @@ impl Default for App {
             tree: Tree::empty("CentralTree"),
             data: Default::default(),
             about: Default::default(),
-            github: Default::default(),
             settings: SettingsWindow::default(),
         }
     }
@@ -343,15 +341,7 @@ impl App {
                     // Load
                     ui.add(Presets);
                     ui.separator();
-                    if ui
-                        .button(RichText::new(CLOUD_ARROW_DOWN).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Load"));
-                        })
-                        .clicked()
-                    {
-                        self.github.toggle(ui);
-                    }
+                    ui.add(Github);
                     ui.separator();
                     // Locale
                     LocaleButton::new()
@@ -380,7 +370,6 @@ impl App {
 impl App {
     fn windows(&mut self, ctx: &Context) {
         self.about.show(ctx);
-        self.github.show(ctx);
         self.settings.show(ctx);
     }
 }
