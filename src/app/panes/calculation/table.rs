@@ -10,6 +10,7 @@ use crate::{
     utils::HashedDataFrame,
 };
 use egui::{Context, Frame, Id, Label, Margin, Response, TextStyle, TextWrapMode, Ui, Widget};
+#[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
 use egui_l20n::UiExt;
 use egui_phosphor::regular::HASH;
@@ -131,16 +132,18 @@ impl TableView<'_> {
                     });
             }
             (1, factors::EF) => {
-                ui.heading(ui.localize("EnrichmentFactor.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.markdown(asset!("/doc/en/Factors/EnrichmentFactor.md"));
-                    });
+                let response = ui.heading(ui.localize("EnrichmentFactor.abbreviation"));
+                #[cfg(feature = "markdown")]
+                response.on_hover_ui(|ui| {
+                    ui.markdown(asset!("/doc/en/Factors/EnrichmentFactor.md"));
+                })
             }
             (1, factors::SF) => {
-                ui.heading(ui.localize("SelectivityFactor.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.markdown(asset!("/doc/en/Factors/SelectivityFactor.md"));
-                    });
+                let response = ui.heading(ui.localize("SelectivityFactor.abbreviation"));
+                #[cfg(feature = "markdown")]
+                response.on_hover_ui(|ui| {
+                    ui.markdown(asset!("/doc/en/Factors/SelectivityFactor.md"));
+                });
             }
             _ => {}
         };

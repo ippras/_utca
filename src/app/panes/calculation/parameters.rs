@@ -1,7 +1,9 @@
 use super::ID_SOURCE;
 use crate::app::panes::calculation::state::Windows;
 use egui::{ComboBox, Grid, Key, KeyboardShortcut, Modifiers, RichText, Slider, Ui};
-use egui_ext::{LabeledSeparator, Markdown as _};
+use egui_ext::LabeledSeparator;
+#[cfg(feature = "markdown")]
+use egui_ext::Markdown as _;
 use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::BROWSERS;
 use serde::{Deserialize, Serialize};
@@ -102,10 +104,12 @@ impl Parameters {
                 .checkbox(&mut self.weighted, ui.localize("Normalize-Weighted"))
                 .on_hover_localized("Normalize-Weighted.hover");
             if self.weighted {
+                #[cfg(feature = "markdown")]
                 response.on_hover_ui(|ui| {
                     ui.markdown(r#"$$\frac{S}{\sum{(S \cdot M)}}$$"#);
                 });
             } else {
+                #[cfg(feature = "markdown")]
                 response.on_hover_ui(|ui| {
                     ui.markdown(r#"$$\frac{S}{\sum{S}}$$"#);
                 });

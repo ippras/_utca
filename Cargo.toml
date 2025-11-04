@@ -123,7 +123,7 @@ wasm-bindgen-futures = "0.4.55"
 web-sys = "0.3.82"
 
 [features]
-default = ["markdown"]
+default = []
 markdown = ["egui_ext/markdown"]
 
 [profile.release]
