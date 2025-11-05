@@ -9,7 +9,7 @@ use crate::{
     utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
 };
 use anyhow::Result;
-use egui::{CursorIcon, Id, Response, RichText, Ui, Window, util::hash};
+use egui::{CursorIcon, Id, Response, RichText, TextWrapMode, Ui, Window, util::hash};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     CALCULATOR, ERASER, FLOPPY_DISK, LIST, NOTE_PENCIL, SLIDERS_HORIZONTAL, TAG, TRASH,
@@ -71,7 +71,7 @@ impl Pane {
 }
 
 impl Pane {
-    fn header_content(&mut self, ui: &mut Ui, settings: &mut Settings) -> Response {
+    fn top_content(&mut self, ui: &mut Ui, settings: &mut Settings) -> Response {
         let mut windows = Windows::load(ui.ctx());
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Configuration"));
@@ -84,6 +84,8 @@ impl Pane {
         ui.separator();
         // List
         ui.menu_button(RichText::new(LIST).heading(), |ui| {
+            ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+            // ui.set_max_width(ui.spacing().tooltip_width);
             for index in 0..self.frames.len() {
                 if ui
                     .selectable_value(
@@ -170,7 +172,7 @@ impl Pane {
         response
     }
 
-    fn body_content_meta(&mut self, ui: &mut Ui, index: usize) {
+    fn central_content_meta(&mut self, ui: &mut Ui, index: usize) {
         ui.style_mut().visuals.collapsing_header_frame = true;
         ui.collapsing(RichText::new(format!("{TAG} Metadata")).heading(), |ui| {
             MetadataWidget::new(&mut self.frames[index].meta)
@@ -179,7 +181,7 @@ impl Pane {
         });
     }
 
-    fn body_content_data(&mut self, ui: &mut Ui, index: usize, settings: &mut Settings) {
+    fn central_content_data(&mut self, ui: &mut Ui, index: usize, settings: &mut Settings) {
         let data_frame = &mut self.frames[index].data;
         TableView::new(data_frame, settings).show(ui);
     }
@@ -220,20 +222,20 @@ impl Pane {
 }
 
 impl PaneDelegate for Pane {
-    fn header(&mut self, ui: &mut Ui) -> Response {
+    fn top(&mut self, ui: &mut Ui) -> Response {
         let mut settings = Settings::load(ui.ctx(), self.hash());
         settings.filter_columns.update(&COLUMNS);
-        let response = self.header_content(ui, &mut settings);
+        let response = self.top_content(ui, &mut settings);
         settings.store(ui.ctx(), self.hash());
         response
     }
 
-    fn body(&mut self, ui: &mut Ui) {
+    fn central(&mut self, ui: &mut Ui) {
         let mut settings = Settings::load(ui.ctx(), self.hash());
         if settings.edit_table {
-            self.body_content_meta(ui, self.index);
+            self.central_content_meta(ui, self.index);
         }
-        self.body_content_data(ui, self.index, &mut settings);
+        self.central_content_data(ui, self.index, &mut settings);
         settings.store(ui.ctx(), self.hash());
         self.windows(ui);
     }

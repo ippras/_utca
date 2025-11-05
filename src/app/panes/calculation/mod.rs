@@ -421,11 +421,11 @@ impl Pane {
 }
 
 impl PaneDelegate for Pane {
-    fn header(&mut self, ui: &mut Ui) -> Response {
+    fn top(&mut self, ui: &mut Ui) -> Response {
         self.header_content(ui)
     }
 
-    fn body(&mut self, ui: &mut Ui) {
+    fn central(&mut self, ui: &mut Ui) {
         self.body_content(ui);
         self.windows(ui);
     }

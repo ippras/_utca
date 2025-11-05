@@ -43,17 +43,17 @@ impl Pane {
 
     fn header(&mut self, ui: &mut Ui) -> Response {
         match self {
-            Self::Configuration(pane) => pane.header(ui),
-            Self::Calculation(pane) => pane.header(ui),
-            Self::Composition(pane) => pane.header(ui),
+            Self::Configuration(pane) => pane.top(ui),
+            Self::Calculation(pane) => pane.top(ui),
+            Self::Composition(pane) => pane.top(ui),
         }
     }
 
     fn body(&mut self, ui: &mut Ui) {
         match self {
-            Self::Configuration(pane) => pane.body(ui),
-            Self::Calculation(pane) => pane.body(ui),
-            Self::Composition(pane) => pane.body(ui),
+            Self::Configuration(pane) => pane.central(ui),
+            Self::Calculation(pane) => pane.central(ui),
+            Self::Composition(pane) => pane.central(ui),
         }
     }
 }
@@ -72,9 +72,9 @@ impl PartialEq for Pane {
 
 /// Pane delegate
 pub(crate) trait PaneDelegate {
-    fn header(&mut self, ui: &mut Ui) -> Response;
+    fn top(&mut self, ui: &mut Ui) -> Response;
 
-    fn body(&mut self, ui: &mut Ui);
+    fn central(&mut self, ui: &mut Ui);
 }
 
 /// Central pane kind

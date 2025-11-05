@@ -1,5 +1,4 @@
-pub(super) use self::{about::About, github::Github, settings::SettingsWindow};
+pub(super) use self::{about::About, settings::SettingsWindow};
 
 mod about;
-mod github;
 mod settings;

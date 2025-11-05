@@ -2,13 +2,12 @@ use self::{
     data::Data,
     identifiers::{CALCULATE, COMPOSE, CONFIGURE, DATA, GITHUB_TOKEN},
     panes::{Pane, behavior::Behavior},
-    widgets::Presets,
-    windows::{About, Github},
+    widgets::{Github, Presets},
+    windows::About,
 };
 use crate::{
-    export,
     localization::ContextExt as _,
-    utils::{HashedDataFrame, HashedMetaDataFrame, hash_data_frame},
+    utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use anyhow::Result;
 use chrono::Local;
@@ -16,27 +15,25 @@ use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
     Align, Align2, CentralPanel, Color32, Context, DroppedFile, FontDefinitions, Frame, Id,
     LayerId, Layout, MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle,
-    TextWrapMode, TopBottomPanel, Visuals, Widget as _, util::IdTypeMap, warn_if_debug_build,
+    TopBottomPanel, Visuals, Widget as _, util::IdTypeMap, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
 use egui_l20n::{ResponseExt, UiExt as _, ui::locale_button::LocaleButton};
 use egui_phosphor::{
     Variant, add_to_fonts,
     regular::{
-        ARROWS_CLOCKWISE, CLOUD_ARROW_DOWN, GEAR, GRID_FOUR, INFO, PLUS, SIDEBAR_SIMPLE,
-        SQUARE_SPLIT_HORIZONTAL, SQUARE_SPLIT_VERTICAL, TABS, TRASH,
+        ARROWS_CLOCKWISE, GEAR, GRID_FOUR, INFO, PLUS, SIDEBAR_SIMPLE, SQUARE_SPLIT_HORIZONTAL,
+        SQUARE_SPLIT_VERTICAL, TABS, TRASH,
     },
 };
 use egui_tiles::{ContainerKind, Tile, Tree};
 use egui_tiles_ext::{HORIZONTAL, TreeExt as _, VERTICAL};
-use heck::ToUpperCamelCase;
 use lipid::prelude::*;
 use metadata::{DATE, Metadata, NAME, polars::MetaDataFrame};
 use panes::configuration::SCHEMA;
 use polars::prelude::*;
-use polars_parquet_format::KeyValue;
 use serde::{Deserialize, Serialize};
-use std::{borrow::BorrowMut, fmt::Write, io::Cursor, str, sync::LazyLock};
+use std::{borrow::BorrowMut, fmt::Write, str, sync::LazyLock};
 use tracing::{error, info, instrument, trace};
 use windows::SettingsWindow;
 
@@ -338,7 +335,7 @@ impl App {
                             },
                         ));
                     }
-                    // Load
+                    // Presets
                     ui.add(Presets);
                     ui.separator();
                     ui.add(Github);

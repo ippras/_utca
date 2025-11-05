@@ -102,10 +102,11 @@ impl Data {
 
     fn central(&mut self, ui: &mut Ui) {
         ui.visuals_mut().widgets.inactive.bg_fill = Color32::TRANSPARENT;
-        dnd(ui, ui.next_auto_id()).show_vec(&mut self.frames, |ui, frame, handle, _state| {
+        dnd(ui, ui.next_auto_id()).show_vec(&mut self.frames, |ui, frame, handle, state| {
             ui.horizontal(|ui| {
+                ui.label(state.index.to_string());
                 handle.ui(ui, |ui| {
-                    let _ = ui.label(DOTS_SIX_VERTICAL);
+                    ui.label(DOTS_SIX_VERTICAL);
                 });
                 let mut changed = false;
                 // Checkbox
@@ -117,15 +118,6 @@ impl Data {
                     .add(Label::new(text).truncate())
                     .on_hover_ui(|ui| {
                         MetadataWidget::new(&frame.meta).show(ui);
-                        ui.separator();
-                        Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                            ui.label("Rows");
-                            ui.label(frame.data.height().to_string());
-                            ui.end_row();
-                            ui.label("Columns");
-                            ui.label(frame.data.width().to_string());
-                            ui.end_row();
-                        });
                     })
                     .clicked();
                 if changed {

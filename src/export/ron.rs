@@ -4,13 +4,13 @@ pub use self::native::save;
 pub use self::web::save;
 
 use anyhow::Result;
-use metadata::polars::MetaDataFrame;
+use metadata::{Metadata, polars::MetaDataFrame};
+use polars::frame::DataFrame;
 use ron::{
     extensions::Extensions,
     ser::{PrettyConfig, to_string_pretty},
 };
-use serde::Serialize;
-use std::sync::LazyLock;
+use std::{borrow::Borrow, sync::LazyLock};
 use tracing::instrument;
 
 const CONFIG: LazyLock<PrettyConfig> =
@@ -22,8 +22,12 @@ mod native {
     use std::{fs::File, io::Write};
 
     #[instrument(skip(frame), err)]
-    pub fn save(frame: &MetaDataFrame<impl Serialize, impl Serialize>, name: &str) -> Result<()> {
+    pub fn save(
+        frame: &MetaDataFrame<impl Borrow<Metadata>, impl Borrow<DataFrame>>,
+        name: &str,
+    ) -> Result<()> {
         let mut file = File::create(name)?;
+        let frame = MetaDataFrame::new(frame.meta.borrow(), frame.data.borrow());
         let serialized = to_string_pretty(&frame, CONFIG.clone())?;
         file.write_all(serialized.as_bytes())?;
         Ok(())
@@ -37,7 +41,11 @@ mod web {
     use egui_ext::download::{NONE, download};
 
     #[instrument(skip(frame), err)]
-    pub fn save(frame: &MetaDataFrame<impl Serialize, impl Serialize>, name: &str) -> Result<()> {
+    pub fn save(
+        frame: &MetaDataFrame<impl Borrow<Metadata>, impl Borrow<DataFrame>>,
+        name: &str,
+    ) -> Result<()> {
+        let frame = MetaDataFrame::new(frame.meta.borrow(), frame.data.borrow());
         let serialized = to_string_pretty(&frame, CONFIG.clone())?;
         if let Err(error) = download(serialized.as_bytes(), NONE, name) {
             bail!("save: {error:?}");
