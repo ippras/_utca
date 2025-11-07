@@ -102,9 +102,8 @@ impl Data {
 
     fn central(&mut self, ui: &mut Ui) {
         ui.visuals_mut().widgets.inactive.bg_fill = Color32::TRANSPARENT;
-        dnd(ui, ui.next_auto_id()).show_vec(&mut self.frames, |ui, frame, handle, state| {
+        dnd(ui, ui.next_auto_id()).show_vec(&mut self.frames, |ui, frame, handle, _state| {
             ui.horizontal(|ui| {
-                ui.label(state.index.to_string());
                 handle.ui(ui, |ui| {
                     ui.label(DOTS_SIX_VERTICAL);
                 });

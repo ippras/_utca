@@ -237,7 +237,11 @@ fn format_mean(expr: Expr, settings: Settings) -> Expr {
 }
 
 fn format_standard_deviation(expr: Expr, settings: Settings) -> PolarsResult<Expr> {
-    Ok(format_str("±{}", [format_float(expr, settings)])?.alias("StandardDeviation"))
+    Ok(ternary_expr(
+        expr.clone().is_not_null(),
+        format_str("±{}", [format_float(expr, settings)])?.alias("StandardDeviation"),
+        lit(NULL),
+    ))
 }
 
 fn format_array(expr: Expr, settings: Settings) -> PolarsResult<Expr> {

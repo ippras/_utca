@@ -197,7 +197,10 @@ impl Widget for Github {
 fn preset(ui: &mut Ui, input: &str) -> Result<()> {
     let url = Url::parse(input)?;
     let (name, date) = parse(&url)?;
-    if ui.button(format!("{name} {date}")).clicked() {
+    if ui
+        .button(format!("{CLOUD_ARROW_DOWN} {name} {date}"))
+        .clicked()
+    {
         load(ui.ctx(), url);
     }
     Ok(())

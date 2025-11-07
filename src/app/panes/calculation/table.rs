@@ -1,4 +1,6 @@
 use super::{ID_SOURCE, parameters::Parameters, state::Settings};
+#[cfg(feature = "markdown")]
+use crate::asset;
 use crate::{
     app::{
         computers::{
@@ -6,7 +8,6 @@ use crate::{
         },
         panes::MARGIN,
     },
-    asset,
     utils::HashedDataFrame,
 };
 use egui::{Context, Frame, Id, Label, Margin, Response, TextStyle, TextWrapMode, Ui, Widget};
@@ -203,6 +204,13 @@ impl TableView<'_> {
                         .standard_deviation(&data_frame, row)?
                         .array(&data_frame, row)?;
                 }
+                if self.settings.standard_deviation {
+                    if let Some(standard_deviation) =
+                        data_frame["StandardDeviation"].str()?.get(row)
+                    {
+                        ui.label(standard_deviation);
+                    }
+                }
             }
             (row, stereospecific_numbers::SN2) => {
                 let data_frame = ui.memory_mut(|memory| {
@@ -222,6 +230,13 @@ impl TableView<'_> {
                     response
                         .standard_deviation(&data_frame, row)?
                         .array(&data_frame, row)?;
+                }
+                if self.settings.standard_deviation {
+                    if let Some(standard_deviation) =
+                        data_frame["StandardDeviation"].str()?.get(row)
+                    {
+                        ui.label(standard_deviation);
+                    }
                 }
             }
             (row, stereospecific_numbers::SN13) => {
@@ -244,6 +259,13 @@ impl TableView<'_> {
                         .array(&data_frame, row)?
                         .calculation(&data_frame, row)?;
                 }
+                if self.settings.standard_deviation {
+                    if let Some(standard_deviation) =
+                        data_frame["StandardDeviation"].str()?.get(row)
+                    {
+                        ui.label(standard_deviation);
+                    }
+                }
             }
             (row, factors::EF) => {
                 let data_frame = ui.memory_mut(|memory| {
@@ -262,6 +284,13 @@ impl TableView<'_> {
                         .standard_deviation(&data_frame, row)?
                         .array(&data_frame, row)?
                         .calculation(&data_frame, row)?;
+                }
+                if self.settings.standard_deviation {
+                    if let Some(standard_deviation) =
+                        data_frame["StandardDeviation"].str()?.get(row)
+                    {
+                        ui.label(standard_deviation);
+                    }
                 }
             }
             (row, factors::SF) => {
@@ -283,6 +312,13 @@ impl TableView<'_> {
                         .standard_deviation(&data_frame, row)?
                         .array(&data_frame, row)?
                         .calculation(&data_frame, row)?;
+                }
+                if self.settings.standard_deviation {
+                    if let Some(standard_deviation) =
+                        data_frame["StandardDeviation"].str()?.get(row)
+                    {
+                        ui.label(standard_deviation);
+                    }
                 }
             }
             _ => {}
