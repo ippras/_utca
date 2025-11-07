@@ -265,12 +265,14 @@ c18c10 =
     .systematic = (10Z)-octadec-10-enoic
 
 c18c11 =
-    .common = Asclepic
-    .synonyms = cis-Vaccenic
+    .abbreviation = CVA
+    .common = cis-Vaccenic
+    .synonyms = Asclepic; cis-Vaccenic
     .systematic = (11Z)-octadec-11-enoic
 
 c18t11 =
-    .common = Vaccenic
+    .abbreviation = TVA
+    .common = trans-Vaccenic
     .systematic = (11E)-octadec-11-enoic
 
 c18t5 =
