@@ -2,8 +2,8 @@ use self::{
     data::Data,
     identifiers::{CALCULATE, COMPOSE, CONFIGURE, DATA, GITHUB_TOKEN},
     panes::{Pane, behavior::Behavior},
-    widgets::{Github, Presets},
-    windows::About,
+    states::State,
+    widgets::{About, Github, Presets},
 };
 use crate::{
     localization::ContextExt as _,
@@ -15,15 +15,15 @@ use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
     Align, Align2, CentralPanel, Color32, Context, DroppedFile, FontDefinitions, Frame, Id,
     LayerId, Layout, MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle,
-    TopBottomPanel, Visuals, Widget as _, util::IdTypeMap, warn_if_debug_build,
+    TopBottomPanel, Visuals, Widget as _, Window, util::IdTypeMap, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
-use egui_l20n::{ResponseExt, UiExt as _, ui::locale_button::LocaleButton};
+use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::{
     Variant, add_to_fonts,
     regular::{
-        ARROWS_CLOCKWISE, GEAR, GRID_FOUR, INFO, PLUS, SIDEBAR_SIMPLE, SQUARE_SPLIT_HORIZONTAL,
-        SQUARE_SPLIT_VERTICAL, TABS, TRASH,
+        ARROWS_CLOCKWISE, GRID_FOUR, INFO, PLUS, SIDEBAR_SIMPLE, SLIDERS_HORIZONTAL,
+        SQUARE_SPLIT_HORIZONTAL, SQUARE_SPLIT_VERTICAL, TABS, TRASH,
     },
 };
 use egui_tiles::{ContainerKind, Tile, Tree};
@@ -34,8 +34,9 @@ use panes::configuration::SCHEMA;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{borrow::BorrowMut, fmt::Write, str, sync::LazyLock};
-use tracing::{error, info, instrument, trace};
-use windows::SettingsWindow;
+use tracing::{info, instrument, trace};
+
+const ID_SOURCE: &str = "UTCA";
 
 /// IEEE 754-2008
 const MAX_PRECISION: usize = 16;
@@ -63,11 +64,6 @@ pub struct App {
     tree: Tree<Pane>,
     // Data
     data: Data,
-
-    // Windows
-    #[serde(skip)]
-    about: About,
-    settings: SettingsWindow,
 }
 
 impl Default for App {
@@ -76,8 +72,6 @@ impl Default for App {
             left_panel: true,
             tree: Tree::empty("CentralTree"),
             data: Default::default(),
-            about: Default::default(),
-            settings: SettingsWindow::default(),
         }
     }
 }
@@ -92,23 +86,26 @@ impl App {
         cc.egui_ctx.set_localizations();
         custom_style(&cc.egui_ctx);
 
-        return Default::default();
+        // return Default::default();
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        Self::load(cc).unwrap_or_default()
+        cc.storage
+            .and_then(|storage| get_value(storage, APP_KEY))
+            .unwrap_or_default()
+        // Self::load(cc).unwrap_or_default()
     }
 
-    fn load(cc: &CreationContext) -> Option<Self> {
-        let storage = cc.storage?;
-        let value = get_value(storage, APP_KEY)?;
-        Some(value)
-    }
+    // fn load(cc: &CreationContext) -> Option<Self> {
+    //     let storage = cc.storage?;
+    //     let value = get_value(storage, APP_KEY)?;
+    //     Some(value)
+    // }
 }
 
 // Panels
 impl App {
-    fn panels(&mut self, ctx: &Context) {
-        self.top_panel(ctx);
+    fn panels(&mut self, ctx: &Context, state: &mut State) {
+        self.top_panel(ctx, state);
         self.bottom_panel(ctx);
         self.left_panel(ctx);
         self.central_panel(ctx);
@@ -156,7 +153,7 @@ impl App {
     }
 
     // Top panel
-    fn top_panel(&mut self, ctx: &Context) {
+    fn top_panel(&mut self, ctx: &Context, state: &mut State) {
         TopBottomPanel::top("TopPanel").show(ctx, |ui| {
             MenuBar::new().ui(ui, |ui| {
                 ScrollArea::horizontal().show(ui, |ui| {
@@ -263,60 +260,16 @@ impl App {
                         }
                     }
                     ui.separator();
-                    // ui.menu_button(RichText::new(GEAR).size(ICON_SIZE), |ui| {
-                    //     ui.horizontal(|ui| {
-                    //         ui.label(ui.localize("github token"));
-                    //         let id = Id::new("GithubToken");
-                    //         let mut github_token = ui.data_mut(|data| {
-                    //             data.get_persisted::<String>(id).unwrap_or_default()
-                    //         });
-                    //         if ui.text_edit_singleline(&mut github_token).changed() {
-                    //             ui.data_mut(|data| data.insert_persisted(id, github_token));
-                    //         }
-                    //         if ui.button(RichText::new(TRASH).heading()).clicked() {
-                    //             ui.data_mut(|data| data.remove::<String>(id));
-                    //         }
-                    //     });
-                    //     ui.horizontal(|ui| {
-                    //         ui.label(ui.localize("christie"));
-                    //         let pane = Pane::christie();
-                    //         let tile_id = self.tree.tiles.find_pane(&pane);
-                    //         let mut selected = tile_id.is_some();
-                    //         if ui
-                    //             .toggle_value(&mut selected, RichText::new(TABLE).heading())
-                    //             .on_hover_text("Christie")
-                    //             .clicked()
-                    //         {
-                    //             if selected {
-                    //                 self.tree.insert_pane::<VERTICAL>(pane);
-                    //             } else {
-                    //                 self.tree.tiles.remove(tile_id.unwrap());
-                    //             }
-                    //         }
-                    //     });
-                    // });
                     if ui
-                        .button(RichText::new(GEAR).size(ICON_SIZE))
+                        .button(RichText::new(SLIDERS_HORIZONTAL).size(ICON_SIZE))
                         .on_hover_ui(|ui| {
                             ui.label(ui.localize("Settings"));
                         })
                         .clicked()
                     {
-                        self.settings.open = !self.settings.open;
+                        state.windows.open_settings ^= true;
                     }
                     ui.separator();
-                    // // Configuration
-                    // let frames = self.data.selected();
-                    // ui.add_enabled_ui(!frames.is_empty(), |ui| {
-                    //     if ui
-                    //         .button(RichText::new(ConfigurationPane::icon()).size(ICON_SIZE))
-                    //         .on_hover_localized("configuration")
-                    //         .clicked()
-                    //     {
-                    //         let pane = Pane::Configuration(ConfigurationPane::new(frames));
-                    //         self.tree.insert_pane::<VERTICAL>(pane);
-                    //     }
-                    // });
                     // Create
                     if ui
                         .button(RichText::new(PLUS).size(ICON_SIZE))
@@ -340,21 +293,13 @@ impl App {
                     ui.separator();
                     ui.add(Github);
                     ui.separator();
-                    // Locale
-                    LocaleButton::new()
-                        .size(ICON_SIZE)
-                        .ui(ui)
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Language"));
-                        });
-                    ui.separator();
                     // About
                     if ui
                         .button(RichText::new(INFO).size(ICON_SIZE))
                         .on_hover_localized("About")
                         .clicked()
                     {
-                        self.about.open ^= true;
+                        state.windows.open_about ^= true;
                     }
                     ui.separator();
                 });
@@ -365,9 +310,23 @@ impl App {
 
 // Windows
 impl App {
-    fn windows(&mut self, ctx: &Context) {
-        self.about.show(ctx);
-        self.settings.show(ctx);
+    fn windows(&mut self, ctx: &Context, state: &mut State) {
+        self.about(ctx, state);
+        self.settings(ctx, state);
+    }
+
+    fn about(&mut self, ctx: &Context, state: &mut State) {
+        Window::new(format!("{INFO} About"))
+            .open(&mut state.windows.open_about)
+            .show(ctx, |ui| About.ui(ui));
+    }
+
+    fn settings(&mut self, ctx: &Context, state: &mut State) {
+        Window::new(format!("{SLIDERS_HORIZONTAL} Settings"))
+            .open(&mut state.windows.open_settings)
+            .show(ctx, |ui| {
+                state.settings.show(ui);
+            });
     }
 }
 
@@ -455,10 +414,10 @@ impl App {
         }) {
             let painter =
                 ctx.layer_painter(LayerId::new(Order::Foreground, Id::new("file_drop_target")));
-            let screen_rect = ctx.screen_rect();
-            painter.rect_filled(screen_rect, 0.0, Color32::from_black_alpha(192));
+            let content_rect = ctx.content_rect();
+            painter.rect_filled(content_rect, 0.0, Color32::from_black_alpha(192));
             painter.text(
-                screen_rect.center(),
+                content_rect.center(),
                 Align2::CENTER_CENTER,
                 text,
                 TextStyle::Heading.resolve(&ctx.style()),
@@ -680,15 +639,17 @@ impl eframe::App for App {
     /// Called each time the UI needs repainting, which may be many times per
     /// second.
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+        let mut state = State::load(ctx, Id::new(ID_SOURCE));
         self.data(ctx);
         self.configure(ctx);
         self.calculate(ctx);
         self.compose(ctx);
         // Pre update
-        self.panels(ctx);
-        self.windows(ctx);
+        self.panels(ctx, &mut state);
+        self.windows(ctx, &mut state);
         // Post update
         self.drag_and_drop(ctx);
+        state.store(ctx, Id::new(ID_SOURCE));
     }
 }
 
@@ -696,5 +657,5 @@ mod computers;
 mod data;
 mod identifiers;
 mod panes;
+mod states;
 mod widgets;
-mod windows;

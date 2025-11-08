@@ -6,13 +6,13 @@ use serde::{Deserialize, Serialize};
 
 const ID_SOURCE: &str = "Settings";
 
-/// Settings window
+/// Settings
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) struct SettingsWindow {
+pub(crate) struct Settings {
     pub(crate) open: bool,
 }
 
-impl SettingsWindow {
+impl Settings {
     pub(crate) fn new() -> Self {
         Self { open: false }
     }
@@ -29,7 +29,7 @@ impl SettingsWindow {
     }
 }
 
-impl Default for SettingsWindow {
+impl Default for Settings {
     fn default() -> Self {
         Self::new()
     }

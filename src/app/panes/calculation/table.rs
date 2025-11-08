@@ -137,7 +137,7 @@ impl TableView<'_> {
                 #[cfg(feature = "markdown")]
                 response.on_hover_ui(|ui| {
                     ui.markdown(asset!("/doc/en/Factors/EnrichmentFactor.md"));
-                })
+                });
             }
             (1, factors::SF) => {
                 let response = ui.heading(ui.localize("SelectivityFactor.abbreviation"));

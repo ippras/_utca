@@ -1,4 +1,5 @@
 pub(super) use self::{
+    about::About,
     fatty_acid::FattyAcidWidget,
     float::FloatWidget,
     github::Github,
@@ -7,6 +8,7 @@ pub(super) use self::{
     presets::Presets,
 };
 
+mod about;
 mod fatty_acid;
 mod float;
 mod github;

@@ -1,15 +1,12 @@
 use crate::{
     app::{identifiers::CONFIGURE, panes::configuration::Pane as ConfigurationPane},
-    utils::{HashedDataFrame, HashedMetaDataFrame},
+    utils::HashedMetaDataFrame,
 };
-use egui::{
-    CentralPanel, Color32, Grid, Id, Label, MenuBar, RichText, ScrollArea, TopBottomPanel, Ui,
-};
+use egui::{CentralPanel, Color32, Id, Label, MenuBar, RichText, ScrollArea, TopBottomPanel, Ui};
 use egui_dnd::dnd;
 use egui_l20n::{ResponseExt, UiExt as _};
 use egui_phosphor::regular::{CHECK, DOTS_SIX_VERTICAL, TRASH};
-use metadata::{egui::MetadataWidget, polars::MetaDataFrame};
-use polars::prelude::PolarsResult;
+use metadata::egui::MetadataWidget;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -33,14 +30,6 @@ impl Data {
             self.frames.push(frame);
         }
     }
-
-    // pub fn try_add(&mut self, frame: MetaDataFrame) -> PolarsResult<()> {
-    //     self.add(MetaDataFrame {
-    //         meta: frame.meta,
-    //         data: HashedDataFrame::new(frame.data)?,
-    //     });
-    //     Ok(())
-    // }
 }
 
 impl Data {
