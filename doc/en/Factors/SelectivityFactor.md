@@ -1,6 +1,6 @@
 # Selectivity factor
 
-$$\frac{X_{\{2: i\}}}{X_{\{1,2,3: i\}}} \cdot \frac{\sum X_{\{1,2,3: U\}}}{\sum X_{\{2: U\}}}$$
+$$\frac{X_{\{2:I\}}}{X_{\{1:I | 2:I | 3:I\}}} \cdot \frac{\sum X_{\{1:U | 2:U | 3:U\}}}{\sum X_{\{2:U\}}}$$
 
 * **Description**: Selectivity factor (SF) quantifies the relative preference
   for that specific fatty acid at the sn-2 position compared to other fatty

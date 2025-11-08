@@ -1,6 +1,6 @@
 # Enrichment factor
 
-$$\frac{X_{\{2: i\}}}{3 X_{\{1,2,3: i\}}}$$
+$$\frac{X_{\{2:I\}}}{3 X_{\{1:I | 2:I | 3:I\}}}$$
 
 * **Description**: The enrichment factor (EF) measures how much a specific fatty
   acid is enriched at the sn-2 position of a triacylglycerol (TAG) compared to
