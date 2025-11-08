@@ -132,10 +132,12 @@ fn sn13(sn123: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
 
 fn factors() -> Expr {
     as_struct(vec![
-        FattyAcidExpr::enrichment_factor(
-            col(STEREOSPECIFIC_NUMBERS2),
-            col(STEREOSPECIFIC_NUMBERS123),
-        )
+        (lit(2.0 / 3.0)
+            * FattyAcidExpr::enrichment_factor(
+                col(STEREOSPECIFIC_NUMBERS2),
+                col(STEREOSPECIFIC_NUMBERS123),
+            )
+            - lit(1))
         .alias("Enrichment"),
         col(FATTY_ACID)
             .fatty_acid()
