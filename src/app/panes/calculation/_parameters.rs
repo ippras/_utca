@@ -1,5 +1,5 @@
 use super::ID_SOURCE;
-use crate::app::panes::calculation::state::Windows;
+use crate::app::states::calculation::Windows;
 use egui::{ComboBox, Grid, Key, KeyboardShortcut, Modifiers, RichText, Slider, Ui};
 use egui_ext::LabeledSeparator;
 #[cfg(feature = "markdown")]

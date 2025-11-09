@@ -1,10 +1,7 @@
 pub(super) use self::{
     calculation::{
         Computed as CalculationComputed, Key as CalculationKey,
-        display::{
-            Computed as CalculationDisplayComputed, Key as CalculationDisplayKey,
-            Kind as CalculationDisplayKind, Settings as CalculationDisplaySettings,
-        },
+        display::{Computed as CalculationDisplayComputed, Key as CalculationDisplayKey},
         indices::{Computed as CalculationIndicesComputed, Key as CalculationIndicesKey},
     },
     composition::{

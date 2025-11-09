@@ -1,17 +1,16 @@
-pub(crate) use self::{
-    settings::{Normalize, Settings},
-    windows::Windows,
-};
+pub(crate) use self::{settings::Settings, windows::Windows};
 
 use egui::{Context, Id};
 use serde::{Deserialize, Serialize};
 
-pub(crate) const ID_SOURCE: &str = "Calculation";
+pub(crate) const ID_SOURCE: &str = "Configuration";
 
-/// State
+/// Configuration state
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub(crate) struct State {
     pub(crate) reset_table_state: bool,
+    pub(crate) add_row: bool,
+    pub(crate) delete_row: Option<usize>,
     pub(crate) settings: Settings,
     pub(crate) windows: Windows,
 }
@@ -19,6 +18,8 @@ pub(crate) struct State {
 impl State {
     pub(crate) fn new() -> Self {
         Self {
+            add_row: false,
+            delete_row: None,
             reset_table_state: false,
             settings: Settings::new(),
             windows: Windows::new(),

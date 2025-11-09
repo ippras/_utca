@@ -37,7 +37,7 @@ impl egui_tiles::Behavior<Pane> for Behavior {
                                     self.close = Some(tile_id);
                                 }
                                 ui.separator();
-                                pane.header(ui)
+                                pane.top(ui)
                             })
                             .inner
                     })

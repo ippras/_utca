@@ -158,31 +158,31 @@ impl Settings {
     }
 }
 
-/// Configuration windows
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-pub struct Windows {
-    pub open_settings: bool,
-}
+// /// Configuration windows
+// #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+// pub struct Windows {
+//     pub open_settings: bool,
+// }
 
-impl Windows {
-    pub fn new() -> Self {
-        Self {
-            open_settings: false,
-        }
-    }
-}
+// impl Windows {
+//     pub fn new() -> Self {
+//         Self {
+//             open_settings: false,
+//         }
+//     }
+// }
 
-impl Windows {
-    pub fn load(ctx: &Context) -> Self {
-        ctx.data_mut(|data| {
-            data.get_persisted_mut_or_insert_with(*WINDOWS, || Self::new())
-                .clone()
-        })
-    }
+// impl Windows {
+//     pub fn load(ctx: &Context) -> Self {
+//         ctx.data_mut(|data| {
+//             data.get_persisted_mut_or_insert_with(*WINDOWS, || Self::new())
+//                 .clone()
+//         })
+//     }
 
-    pub fn store(self, ctx: &Context) {
-        ctx.data_mut(|data| {
-            data.insert_persisted(*WINDOWS, self);
-        });
-    }
-}
+//     pub fn store(self, ctx: &Context) {
+//         ctx.data_mut(|data| {
+//             data.insert_persisted(*WINDOWS, self);
+//         });
+//     }
+// }

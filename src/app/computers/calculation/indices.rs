@@ -1,4 +1,4 @@
-use crate::utils::HashedDataFrame;
+use crate::{app::states::calculation::Settings, utils::HashedDataFrame};
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
@@ -58,6 +58,15 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
     pub(crate) ddof: u8,
+}
+
+impl<'a> Key<'a> {
+    pub(crate) fn new(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
+        Self {
+            frame,
+            ddof: settings.parameters.ddof,
+        }
+    }
 }
 
 /// Calculation indices value

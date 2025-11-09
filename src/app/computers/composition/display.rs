@@ -1,5 +1,5 @@
 use crate::{
-    app::panes::composition::settings::{
+    app::states::composition::{
         Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO,
         SPECIES_POSITIONAL, SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
         UNSATURATION_MONO, UNSATURATION_STEREO,
@@ -119,7 +119,7 @@ impl Computer {
                     let key = match *composition {
                         ECN_MONO | MASS_MONO | UNSATURATION_MONO => format_str("({})", [key()])?,
                         SPECIES_MONO | TYPE_MONO => format_str(
-                            "({}, {}, {})", // { 1, 2, 3: {}, {}, {}}
+                            "({}; {}; {})", // { 1, 2, 3: {}, {}, {}}
                             [
                                 key().triacylglycerol().stereospecific_number1(),
                                 key().triacylglycerol().stereospecific_number2(),
@@ -136,11 +136,11 @@ impl Computer {
                             ],
                         )?,
                         SPECIES_POSITIONAL | TYPE_POSITIONAL => format_str(
-                            "{1, 3: {}, {}; 2: {}}",
+                            "{{}; {}; {}}",
                             [
                                 key().triacylglycerol().stereospecific_number1(),
-                                key().triacylglycerol().stereospecific_number3(),
                                 key().triacylglycerol().stereospecific_number2(),
+                                key().triacylglycerol().stereospecific_number3(),
                             ],
                         )?,
                     };

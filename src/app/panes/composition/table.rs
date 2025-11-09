@@ -1,22 +1,21 @@
-use super::{
-    ID_SOURCE, Settings, State,
-    settings::{
-        ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
-        SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO,
-        UNSATURATION_STEREO,
-    },
-};
+use super::ID_SOURCE;
 use crate::{
     app::{
         computers::{DisplayCompositionComputed, DisplayCompositionKey, DisplayCompositionKind},
         panes::MARGIN,
+        states::composition::{
+            ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
+            SPECIES_STEREO, Settings, State, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
+            UNSATURATION_MONO, UNSATURATION_STEREO,
+        },
         widgets::FloatWidget,
     },
     text::Text,
     utils::{HashedDataFrame, egui::ResponseExt as _},
 };
 use egui::{
-    Color32, Frame, Grid, Id, Margin, Response, RichText, ScrollArea, Stroke, TextStyle, Ui,
+    Color32, Frame, Grid, Id, Label, Margin, Response, RichText, ScrollArea, Stroke, TextStyle, Ui,
+    Widget,
 };
 use egui_l20n::{ResponseExt as _, UiExt as _};
 use egui_phosphor::regular::HASH;
@@ -37,23 +36,14 @@ const INDEX: Range<usize> = 0..1;
 #[derive(Debug)]
 pub(super) struct TableView<'a> {
     data_frame: &'a HashedDataFrame,
-    settings: &'a Settings,
     state: &'a mut State,
     // is_row_expanded: BTreeMap<u64, bool>,
     // prefetched: Vec<PrefetchInfo>,
 }
 
 impl<'a> TableView<'a> {
-    pub(crate) fn new(
-        data_frame: &'a HashedDataFrame,
-        settings: &'a Settings,
-        state: &'a mut State,
-    ) -> Self {
-        Self {
-            data_frame,
-            settings,
-            state,
-        }
+    pub(crate) fn new(data_frame: &'a HashedDataFrame, state: &'a mut State) -> Self {
+        Self { data_frame, state }
     }
 }
 
@@ -67,7 +57,7 @@ impl TableView<'_> {
         }
         let height = ui.text_style_height(&TextStyle::Heading);
         let num_rows = self.data_frame.height() as u64 + 1;
-        let num_columns = self.settings.special.selections.len() * 2 + 1;
+        let num_columns = self.state.settings.parameters.selections.len() * 2 + 1;
         let top = vec![0..1, 1..num_columns];
         let mut middle = vec![0..1];
         const STEP: usize = 2;
@@ -78,10 +68,11 @@ impl TableView<'_> {
             .id_salt(id_salt)
             .num_rows(num_rows)
             .columns(vec![
-                Column::default().resizable(self.settings.resizable);
+                Column::default()
+                    .resizable(self.state.settings.resizable);
                 num_columns
             ])
-            .num_sticky_cols(self.settings.sticky_columns)
+            .num_sticky_cols(self.state.settings.sticky_columns)
             .headers([
                 HeaderRow {
                     height,
@@ -107,7 +98,7 @@ impl TableView<'_> {
             (1, column) => {
                 if column.start % 2 == 1 {
                     let index = column.start / 2;
-                    let composition = self.settings.special.selections[index].composition;
+                    let composition = self.state.settings.parameters.selections[index].composition;
                     ui.heading(ui.localize(composition.text()))
                         .on_hover_text(ui.localize(composition.hover_text()));
                 } else if column.start != 0 {
@@ -155,10 +146,11 @@ impl TableView<'_> {
                         .get(DisplayCompositionKey {
                             data_frame: self.data_frame,
                             kind: DisplayCompositionKind::Enrichment,
-                            percent: self.settings.percent,
+                            percent: self.state.settings.percent,
                             compositions: &self
+                                .state
                                 .settings
-                                .special
+                                .parameters
                                 .selections
                                 .iter()
                                 .map(|selection| selection.composition)
@@ -176,10 +168,11 @@ impl TableView<'_> {
                         .get(DisplayCompositionKey {
                             data_frame: self.data_frame,
                             kind: DisplayCompositionKind::Enrichment,
-                            percent: self.settings.percent,
+                            percent: self.state.settings.percent,
                             compositions: &self
+                                .state
                                 .settings
-                                .special
+                                .parameters
                                 .selections
                                 .iter()
                                 .map(|selection| selection.composition)
@@ -191,10 +184,11 @@ impl TableView<'_> {
                 if column.start % 2 == 1 {
                     let key = data_frame[name].struct_()?.field_by_name("Key")?;
                     let text = key.str_value(row)?;
-                    ui.label(text);
+                    Label::new(text).truncate().ui(ui);
+                    // ui.label(text);
                     // let keys = self.data_frame["Keys"].struct_()?;
                     // let key = &keys.fields_as_series()[index];
-                    // let response = match self.settings.special.selections[index].composition {
+                    // let response = match self.state.settings.parameters.selections[index].composition {
                     //     ECN_MONO | MASS_MONO | UNSATURATION_MONO => {
                     //         let text = Mono(key.str_value(row)?).to_string();
                     //         ui.label(text)
@@ -253,7 +247,7 @@ impl TableView<'_> {
                     let mean = value.struct_()?.field_by_name("Mean")?;
                     if let Some(mean) = mean.f64()?.get(row) {
                         let response = ui
-                            .label(format!("{mean:.0$}", self.settings.precision))
+                            .label(format!("{mean:.0$}", self.state.settings.precision))
                             .on_hover_text(mean.to_string());
                         if response.hovered() {
                             response
@@ -269,12 +263,12 @@ impl TableView<'_> {
 
     fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         // Last column
-        if column.start == self.settings.special.selections.len() * 2 {
+        if column.start == self.state.settings.parameters.selections.len() * 2 {
             self.value(
                 ui,
                 self.data_frame["Values"].as_materialized_series(),
                 None,
-                self.settings.special.selections.len() - 1,
+                self.state.settings.parameters.selections.len() - 1,
             )?;
         }
         Ok(())
@@ -297,8 +291,8 @@ impl TableView<'_> {
             })?
         };
         let response = FloatWidget::new(value)
-            .percent(self.settings.percent)
-            .precision(Some(self.settings.precision))
+            .percent(self.state.settings.percent)
+            .precision(Some(self.state.settings.precision))
             .hover(true)
             .show(ui)
             .response
@@ -319,8 +313,8 @@ impl TableView<'_> {
         //             array_sum(series, |array| Ok(array.f64()?.get(index)))?
         //         };
         //         FloatWidget::new(value)
-        //             .percent(self.settings.percent)
-        //             .precision(Some(self.settings.precision))
+        //             .percent(self.state.settings.percent)
+        //             .precision(Some(self.state.settings.precision))
         //             .hover(true)
         //             .show(ui);
         //     }
@@ -335,8 +329,8 @@ impl TableView<'_> {
         //             })?
         //         };
         //         let response = FloatWidget::new(value)
-        //             .percent(self.settings.percent)
-        //             .precision(Some(self.settings.precision))
+        //             .percent(self.state.settings.percent)
+        //             .precision(Some(self.state.settings.precision))
         //             .hover(true)
         //             .show(ui)
         //             .response
@@ -391,7 +385,7 @@ impl TableView<'_> {
     //                         ui.label(text);
     //                         let text = from_fn(|f| match stereospecific_numbers.1 {
     //                             Some(mut value) => {
-    //                                 if self.settings.percent {
+    //                                 if self.state.settings.percent {
     //                                     value *= 100.0;
     //                                 }
     //                                 f.write_fmt(format_args!("{}", AnyValue::Float64(value)))
@@ -437,7 +431,7 @@ impl TableView<'_> {
         ui.horizontal(|ui| {
             ui.label("±");
             FloatWidget::new(value)
-                .percent(self.settings.percent)
+                .percent(self.state.settings.percent)
                 .show(ui);
         });
         Ok(())
@@ -459,7 +453,7 @@ impl TableView<'_> {
         let text = format_list!(array.f64()?.iter().map(|item| {
             from_fn(move |f| match item {
                 Some(mut item) => {
-                    if self.settings.percent {
+                    if self.state.settings.percent {
                         item *= 100.0;
                     }
                     write!(f, "{}", AnyValue::Float64(item))

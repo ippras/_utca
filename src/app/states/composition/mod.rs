@@ -1,12 +1,20 @@
 pub(crate) use self::{
-    settings::{Normalize, Settings},
+    settings::{
+        Discriminants, Method, Order, Selection, Settings, Sort, View,
+        composition::{
+            COMPOSITIONS, Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO,
+            SPECIES_POSITIONAL, SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
+            UNSATURATION_MONO, UNSATURATION_STEREO,
+        },
+        filter::{Filter, FilterWidget},
+    },
     windows::Windows,
 };
 
-use egui::{Context, Id};
+use egui::{Context, Grid, Id, Ui};
 use serde::{Deserialize, Serialize};
 
-pub(crate) const ID_SOURCE: &str = "Calculation";
+pub(crate) const ID_SOURCE: &str = "Composition";
 
 /// State
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]

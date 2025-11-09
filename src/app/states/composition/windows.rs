@@ -1,20 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-/// Windows
+/// Composition windows
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
 pub struct Windows {
-    pub open_christie: bool,
-    pub open_indices: bool,
-    // pub open_parameters: bool,
     pub open_settings: bool,
 }
 
 impl Windows {
     pub fn new() -> Self {
         Self {
-            open_christie: false,
-            open_indices: false,
-            // open_parameters: false,
             open_settings: false,
         }
     }

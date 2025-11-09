@@ -1,16 +1,20 @@
 use super::Mode;
 use crate::{
-    app::panes::composition::settings::{
+    app::states::composition::{
         ECN_MONO, ECN_STEREO, Filter, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO,
         SPECIES_POSITIONAL, SPECIES_STEREO, Selection, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL,
         TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
     },
     utils::HashedDataFrame,
 };
-use egui::util::cache::{ComputerMut, FrameCache};
+use egui::{
+    emath::OrderedFloat,
+    util::cache::{ComputerMut, FrameCache},
+};
 use lipid::prelude::*;
 use polars::prelude::*;
 use std::{
+    collections::VecDeque,
     convert::identity,
     hash::{Hash, Hasher},
     sync::LazyLock,
@@ -32,15 +36,16 @@ impl Computer {
         println!("Compose 0: {:?}", key.data_frame);
         let mode = length(data_frame)?;
         // println!("Compose 1: {}", lazy_frame.clone().collect().unwrap());
-        let mut settings = key.settings.clone();
-        if settings.special.selections.is_empty() {
-            settings.special.selections.push_back(Selection {
-                composition: SPECIES_STEREO,
-                filter: Filter::new(),
-            });
-        }
+        // let mut selections = key.selections.clone();
+        // if key.selections.is_empty() {
+        //     selections.push_back(Selection {
+        //         composition: SPECIES_STEREO,
+        //         filter: Filter::new(),
+        //     });
+        //     key.selections = &selections;
+        // }
         let mut lazy_frame = key.data_frame.data_frame.clone().lazy();
-        lazy_frame = compute(lazy_frame, mode, settings.special.ddof, &settings)?;
+        lazy_frame = compute(lazy_frame, mode, key)?;
         lazy_frame.collect()
     }
 }
@@ -52,16 +57,30 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 }
 
 /// Composition key
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub(crate) struct Key<'a> {
     pub(crate) data_frame: &'a HashedDataFrame,
-    pub(crate) settings: &'a Settings,
+    pub(crate) index: Option<usize>,
+    pub(crate) adduct: OrderedFloat<f64>,
+    pub(crate) ddof: u8,
+    pub(crate) order: Order,
+    pub(crate) round_mass: u32,
+    pub(crate) selections: &'a VecDeque<Selection>,
+    pub(crate) sort: Sort,
 }
 
-impl Hash for Key<'_> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.data_frame.hash(state);
-        self.settings.special.hash(state);
+impl<'a> Key<'a> {
+    pub(crate) fn new(data_frame: &'a HashedDataFrame, settings: &'a Settings) -> Self {
+        Self {
+            data_frame,
+            index: settings.index,
+            adduct: OrderedFloat(settings.parameters.adduct),
+            ddof: settings.parameters.ddof,
+            order: settings.parameters.order,
+            round_mass: settings.parameters.round_mass,
+            selections: &settings.parameters.selections,
+            sort: settings.parameters.sort,
+        }
     }
 }
 
@@ -132,40 +151,30 @@ fn length(data_frame: &DataFrame) -> PolarsResult<Mode> {
     polars_bail!(SchemaMismatch: "Invalid composition schema: expected [`{ONE:?}`, `{MANY:?}`], got = `{schema:?}`");
 }
 
-fn compute(
-    mut lazy_frame: LazyFrame,
-    mode: Mode,
-    ddof: u8,
-    settings: &Settings,
-) -> PolarsResult<LazyFrame> {
+fn compute(mut lazy_frame: LazyFrame, mode: Mode, key: Key) -> PolarsResult<LazyFrame> {
     // Compose
-    lazy_frame = compose(lazy_frame, mode, ddof, settings)?;
+    lazy_frame = compose(lazy_frame, mode, key)?;
     // Sort
-    lazy_frame = sort(lazy_frame, settings);
+    lazy_frame = sort(lazy_frame, key);
     Ok(lazy_frame)
 }
 
-fn compose(
-    mut lazy_frame: LazyFrame,
-    mode: Mode,
-    ddof: u8,
-    settings: &Settings,
-) -> PolarsResult<LazyFrame> {
+fn compose(mut lazy_frame: LazyFrame, mode: Mode, key: Key) -> PolarsResult<LazyFrame> {
     // Composition
-    for (index, selection) in settings.special.selections.iter().enumerate() {
+    for (index, selection) in key.selections.iter().enumerate() {
         lazy_frame = lazy_frame.with_column(
             match selection.composition {
                 MASS_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .relative_atomic_mass(Some(lit(settings.special.adduct)))
-                    .round(settings.special.round_mass, RoundMode::HalfToEven)
+                    .relative_atomic_mass(Some(lit(key.adduct.0)))
+                    .round(key.round_mass, RoundMode::HalfToEven)
                     .alias("MMC"),
                 MASS_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map_expr(|expr| {
                         expr.fatty_acid()
                             .relative_atomic_mass(None)
-                            .round(settings.special.round_mass, RoundMode::HalfToEven)
+                            .round(key.round_mass, RoundMode::HalfToEven)
                     })
                     .alias("MSC"),
                 ECN_MONO => col(TRIACYLGLYCEROL)
@@ -247,7 +256,7 @@ fn compose(
                 };
                 as_struct(vec![
                     array()?.arr().mean().alias("Mean"),
-                    array()?.arr().std(ddof).alias("StandardDeviation"),
+                    array()?.arr().std(key.ddof).alias("StandardDeviation"),
                     array()?.alias("Array"),
                 ])
             }
@@ -268,18 +277,18 @@ fn compose(
     Ok(lazy_frame)
 }
 
-fn sort(mut lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
+fn sort(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
     let mut sort_options = SortMultipleOptions::default();
-    if let Order::Descending = settings.special.order {
+    if let Order::Descending = key.order {
         sort_options = sort_options
             .with_order_descending(true)
             .with_nulls_last(true);
     }
-    lazy_frame = match settings.special.sort {
+    lazy_frame = match key.sort {
         Sort::Key => lazy_frame.sort_by_exprs([col("Keys")], sort_options),
         Sort::Value => {
             let mut expr = col("Values");
-            if settings.index.is_none() {
+            if key.index.is_none() {
                 expr = expr
                     .arr()
                     .to_list()

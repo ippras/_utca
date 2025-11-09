@@ -1,8 +1,9 @@
-use super::{ID_SOURCE, state::Settings};
+use super::ID_SOURCE;
 use crate::{
     app::{
         computers::{ConfigurationDisplayComputed, ConfigurationDisplayKey},
         panes::MARGIN,
+        states::configuration::State,
         widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
     },
     utils::{HashedDataFrame, hash_data_frame},
@@ -27,14 +28,14 @@ const LEN: usize = SN2_OR_SN1223.end;
 /// Table view
 pub(super) struct TableView<'a> {
     data: &'a mut HashedDataFrame,
-    settings: &'a mut Settings,
+    state: &'a mut State,
 }
 
 impl<'a> TableView<'a> {
-    pub(super) fn new(data_frame: &'a mut HashedDataFrame, settings: &'a mut Settings) -> Self {
+    pub(super) fn new(data_frame: &'a mut HashedDataFrame, state: &'a mut State) -> Self {
         Self {
             data: data_frame,
-            settings,
+            state,
         }
     }
 }
@@ -42,10 +43,10 @@ impl<'a> TableView<'a> {
 impl TableView<'_> {
     pub(super) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        if self.settings.reset_state {
+        if self.state.reset_table_state {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            self.settings.reset_state = false;
+            self.state.reset_table_state = false;
         }
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
         let num_rows = self.data.height() as u64 + 1;
@@ -54,10 +55,11 @@ impl TableView<'_> {
             .id_salt(id_salt)
             .num_rows(num_rows)
             .columns(vec![
-                Column::default().resizable(self.settings.resize_table);
+                Column::default()
+                    .resizable(self.state.settings.resize_table);
                 num_columns
             ])
-            .num_sticky_cols(self.settings.sticky_columns)
+            .num_sticky_cols(self.state.settings.sticky_columns)
             .headers([HeaderRow::new(height)])
             .show(ui, self);
         let _ = self.change();
@@ -65,21 +67,21 @@ impl TableView<'_> {
 
     #[instrument(skip(self), err)]
     fn change(&mut self) -> PolarsResult<()> {
-        if self.settings.add_row {
+        if self.state.add_row {
             self.data.add_row()?;
             self.data.update()?;
-            self.settings.add_row = false;
+            self.state.add_row = false;
         }
-        if let Some(index) = self.settings.delete_row {
+        if let Some(index) = self.state.delete_row {
             self.data.delete_row(index)?;
             self.data.update()?;
-            self.settings.delete_row = None;
+            self.state.delete_row = None;
         }
         Ok(())
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
-        if self.settings.truncate_headers {
+        if self.state.settings.truncate_headers {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {
@@ -144,9 +146,9 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         match (row, column) {
             (row, INDEX) => {
-                if self.settings.edit_table {
+                if self.state.settings.edit_table {
                     if ui.button(MINUS).clicked() {
-                        self.settings.delete_row = Some(row);
+                        self.state.delete_row = Some(row);
                     }
                 }
                 ui.label(row.to_string());
@@ -155,8 +157,8 @@ impl TableView<'_> {
                 let fatty_acid = self.data.try_fatty_acid()?;
                 let label = self.data["Label"].str()?;
                 let inner_response = LabelWidget::new(label, fatty_acid, row)
-                    .editable(self.settings.edit_table)
-                    .hover_names(self.settings.hover_names)
+                    .editable(self.state.settings.edit_table)
+                    .hover_names(self.state.settings.hover_names)
                     .show(ui);
                 if inner_response.response.changed() {
                     match inner_response.inner? {
@@ -175,7 +177,7 @@ impl TableView<'_> {
             (row, FA) => {
                 let fatty_acid = self.data.try_fatty_acid()?.get(row)?;
                 let inner_response = FattyAcidWidget::new(fatty_acid.as_ref())
-                    .editable(self.settings.edit_table)
+                    .editable(self.state.settings.edit_table)
                     .hover(true)
                     .show(ui);
                 if inner_response.response.changed() {
@@ -193,8 +195,8 @@ impl TableView<'_> {
                 })?;
                 let value = data_frame[STEREOSPECIFIC_NUMBERS123].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
-                    .editable(self.settings.edit_table)
-                    .precision(Some(self.settings.precision))
+                    .editable(self.state.settings.edit_table)
+                    .precision(Some(self.state.settings.precision))
                     .hover(true)
                     .show(ui);
                 if let Some(value) = inner_response.inner {
@@ -214,8 +216,8 @@ impl TableView<'_> {
                 let name = data_frame.get_columns()[3].name().as_str();
                 let value = data_frame[name].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
-                    .editable(self.settings.edit_table)
-                    .precision(Some(self.settings.precision))
+                    .editable(self.state.settings.edit_table)
+                    .precision(Some(self.state.settings.precision))
                     .hover(true)
                     .show(ui);
                 if let Some(value) = inner_response.inner {
@@ -232,15 +234,15 @@ impl TableView<'_> {
     fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         match column {
             INDEX => {
-                if self.settings.edit_table {
+                if self.state.settings.edit_table {
                     if ui.button(PLUS).clicked() {
-                        self.settings.add_row = true;
+                        self.state.add_row = true;
                     }
                 }
             }
             // TAG => {
             //     FloatWidget::new(self.data_frame["Triacylglycerol"].f64()?.sum())
-            //         .precision(Some(self.settings.precision))
+            //         .precision(Some(self.state.settings.precision))
             //         .hover(true)
             //         .show(ui)
             //         .response
@@ -248,7 +250,7 @@ impl TableView<'_> {
             // }
             // DAG1223 => {
             //     FloatWidget::new(self.data_frame["Diacylglycerol1223"].f64()?.sum())
-            //         .precision(Some(self.settings.precision))
+            //         .precision(Some(self.state.settings.precision))
             //         .hover(true)
             //         .show(ui)
             //         .response
@@ -256,7 +258,7 @@ impl TableView<'_> {
             // }
             // MAG2 => {
             //     FloatWidget::new(self.data_frame["Monoacylglycerol2"].f64()?.sum())
-            //         .precision(Some(self.settings.precision))
+            //         .precision(Some(self.state.settings.precision))
             //         .hover(true)
             //         .show(ui)
             //         .response
@@ -270,8 +272,8 @@ impl TableView<'_> {
     fn f64_cell(&mut self, ui: &mut Ui, row: usize, column: &str) -> PolarsResult<Response> {
         let value = self.data[column].f64()?.get(row);
         let inner_response = FloatWidget::new(value)
-            .editable(self.settings.edit_table)
-            .precision(Some(self.settings.precision))
+            .editable(self.state.settings.edit_table)
+            .precision(Some(self.state.settings.precision))
             .hover(true)
             .show(ui);
         if let Some(value) = inner_response.inner {

@@ -1,7 +1,7 @@
 use self::{
     data::Data,
     identifiers::{CALCULATE, COMPOSE, CONFIGURE, DATA, GITHUB_TOKEN},
-    panes::{Pane, behavior::Behavior},
+    panes::{Behavior, Pane},
     states::State,
     widgets::{About, Github, Presets},
 };
@@ -133,7 +133,7 @@ impl App {
         CentralPanel::default()
             .frame(Frame::central_panel(&ctx.style()).inner_margin(0))
             .show(ctx, |ui| {
-                let mut behavior = Behavior::new();
+                let mut behavior = Behavior { close: None };
                 self.tree.ui(&mut behavior, ui);
                 if let Some(id) = behavior.close {
                     self.tree.tiles.remove(id);
@@ -378,20 +378,19 @@ impl App {
     }
 
     fn calculate(&mut self, ctx: &Context) {
-        if let Some((frames, index)) = ctx.data_mut(|data| {
-            data.remove_temp::<(Vec<HashedMetaDataFrame>, usize)>(Id::new(CALCULATE))
-        }) {
-            self.tree
-                .insert_pane::<VERTICAL>(Pane::calculation(frames, index));
+        if let Some(frames) =
+            ctx.data_mut(|data| data.remove_temp::<Vec<HashedMetaDataFrame>>(Id::new(CALCULATE)))
+        {
+            self.tree.insert_pane::<VERTICAL>(Pane::calculation(frames));
         }
     }
 
     fn compose(&mut self, ctx: &Context) {
-        if let Some((frames, index)) = ctx.data_mut(|data| {
-            data.remove_temp::<(Vec<HashedMetaDataFrame>, Option<usize>)>(Id::new(COMPOSE))
-        }) {
+        if let Some(frames) =
+            ctx.data_mut(|data| data.remove_temp::<Vec<HashedMetaDataFrame>>(Id::new(COMPOSE)))
+        {
             self.tree
-                .insert_pane::<HORIZONTAL>(Pane::composition(frames, index));
+                .insert_pane::<HORIZONTAL>(Pane::composition(frames));
         } else if let Some(frame) =
             ctx.data_mut(|data| data.remove_temp::<MetaDataFrame>(Id::new(COMPOSE)))
         {

@@ -1,5 +1,5 @@
 use crate::{
-    app::panes::calculation::parameters::Parameters,
+    app::states::calculation::{Normalize, Settings},
     utils::{HashedDataFrame, HashedMetaDataFrame, hash_expr},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -16,11 +16,11 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let mut lazy_frame = match key.parameters.index {
+        let mut lazy_frame = match key.index {
             Some(index) => {
                 let frame = &key.frames[index];
                 // let mut lazy_frame = frame.data.data_frame.clone().lazy();
-                compute(&frame.data.data_frame, key.parameters)?.select([
+                compute(&frame.data.data_frame, key)?.select([
                     col(LABEL),
                     col(FATTY_ACID),
                     as_struct(vec![all().exclude_cols([LABEL, FATTY_ACID]).as_expr()])
@@ -29,7 +29,7 @@ impl Computer {
             }
             None => {
                 let compute = |frame: &HashedMetaDataFrame| -> PolarsResult<LazyFrame> {
-                    Ok(compute(&frame.data.data_frame, key.parameters)?.select([
+                    Ok(compute(&frame.data.data_frame, key)?.select([
                         hash_expr(as_struct(vec![col(LABEL), col(FATTY_ACID)])),
                         col(LABEL),
                         col(FATTY_ACID),
@@ -50,7 +50,7 @@ impl Computer {
                 lazy_frame
             }
         };
-        lazy_frame = mean_and_standard_deviations(lazy_frame, key.parameters.ddof)?;
+        lazy_frame = mean_and_standard_deviations(lazy_frame, key.ddof)?;
         HashedDataFrame::new(lazy_frame.collect()?)
     }
 }
@@ -64,58 +64,81 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Calculation key
 #[derive(Clone, Copy, Debug, Hash)]
 pub(crate) struct Key<'a> {
-    pub(crate) frames: &'a Vec<HashedMetaDataFrame>,
-    pub(crate) parameters: &'a Parameters,
+    pub(crate) frames: &'a [HashedMetaDataFrame],
+    pub(crate) index: Option<usize>,
+    pub(crate) ddof: u8,
+    pub(crate) normalize_enrichment_factor: bool,
+    pub(crate) normalize: Normalize,
+    pub(crate) unsigned: bool,
+    pub(crate) weighted: bool,
+}
+
+impl<'a> Key<'a> {
+    pub(crate) fn new(frames: &'a [HashedMetaDataFrame], settings: &Settings) -> Self {
+        Self {
+            frames,
+            index: settings.index,
+            ddof: settings.parameters.ddof,
+            normalize_enrichment_factor: settings.normalize_enrichment_factor,
+            normalize: settings.parameters.normalize,
+            unsigned: settings.parameters.unsigned,
+            weighted: settings.parameters.weighted,
+        }
+    }
+
+    pub(crate) fn with_index(self, index: Option<usize>) -> Self {
+        Self { index, ..self }
+    }
 }
 
 /// Calculation value
 type Value = HashedDataFrame;
 
-fn compute(data_frame: &DataFrame, parameters: &Parameters) -> PolarsResult<LazyFrame> {
+fn compute(data_frame: &DataFrame, key: Key) -> PolarsResult<LazyFrame> {
     let mut lazy_frame = data_frame.clone().lazy();
     // Christie
     // if parameters.christie {
     //     lazy_frame = christie(lazy_frame);
     // }
     println!("compute 0: {}", lazy_frame.clone().collect().unwrap());
-    let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, parameters);
-    // let sn2 = experimental(STEREOSPECIFIC_NUMBERS2, parameters);
+    let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, key);
+    // let sn2 = experimental(STEREOSPECIFIC_NUMBERS2, key);
     let sn2 = match data_frame[3].name().as_str() {
-        STEREOSPECIFIC_NUMBERS2 => experimental(STEREOSPECIFIC_NUMBERS2, parameters),
+        STEREOSPECIFIC_NUMBERS2 => experimental(STEREOSPECIFIC_NUMBERS2, key),
         STEREOSPECIFIC_NUMBERS12_23 => {
-            let sn_1223 = experimental(STEREOSPECIFIC_NUMBERS12_23, parameters);
-            sn1223(sn123.clone(), sn_1223, parameters)
+            let sn_1223 = experimental(STEREOSPECIFIC_NUMBERS12_23, key);
+            sn1223(sn123.clone(), sn_1223, key)
         }
         _ => lit(NULL),
     };
-    let sn13 = sn13(sn123.clone(), sn2.clone(), parameters);
+    let sn13 = sn13(sn123.clone(), sn2.clone(), key);
     // Stereospecific numbers
     lazy_frame = lazy_frame.with_columns([sn123, sn2, sn13]);
     // Factors
-    lazy_frame = lazy_frame.with_column(factors());
+    lazy_frame = lazy_frame.with_column(factors(key));
     Ok(lazy_frame)
 }
 
-fn experimental(name: &str, parameters: &Parameters) -> Expr {
+fn experimental(name: &str, key: Key) -> Expr {
     let mut expr = col(name);
-    if parameters.weighted {
+    if key.weighted {
         expr =
             col(name) / (col(name) * col(FATTY_ACID).fatty_acid().relative_atomic_mass(None)).sum()
     };
-    expr.normalize_if(parameters.normalize.experimental)
+    expr.normalize_if(key.normalize.experimental)
 }
 
 /// MAG2 = 4 * DAG1223 - 3 * TAG
-fn sn1223(sn123: Expr, sn1223: Expr, parameters: &Parameters) -> Expr {
+fn sn1223(sn123: Expr, sn1223: Expr, key: Key) -> Expr {
     (lit(4) * sn1223 - lit(3) * sn123)
-        .clip_min_if(parameters.unsigned)
-        .normalize_if(parameters.normalize.theoretical)
+        .clip_min_if(key.unsigned)
+        .normalize_if(key.normalize.theoretical)
         .alias(STEREOSPECIFIC_NUMBERS2)
 }
 
 /// 2 * DAG1(3) = 3 * TAG - MAG2 (стр. 116)
 /// $x_{1 => i} = x_{3 => i} = x_{1|3 => i} / 2 = (3 * x_{1|2|3 => i} - x_{2 => i}) / 2$ (Sovová2008)
-fn sn13(sn123: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+fn sn13(sn123: Expr, sn2: Expr, key: Key) -> Expr {
     // // DAG1(3) = 3 * TAG - 2 * DAG1223
     // let sn12_23 = (lit(3) * sn123.clone() - lit(2) * sn12_23)
     //     .clip_min_if(parameters.unsigned)
@@ -124,20 +147,24 @@ fn sn13(sn123: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
     // DAG1(3) = (3 * TAG - MAG2) / 2
     // $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$
     ((lit(3) * sn123 - sn2) / lit(2))
-        .clip_min_if(parameters.unsigned)
-        .normalize_if(parameters.normalize.theoretical)
+        .clip_min_if(key.unsigned)
+        .normalize_if(key.normalize.theoretical)
         .alias(STEREOSPECIFIC_NUMBERS13)
     // as_struct(vec![sn12_23, sn2]).alias(STEREOSPECIFIC_NUMBERS13)
 }
 
-fn factors() -> Expr {
+fn factors(key: Key) -> Expr {
     as_struct(vec![
-        (lit(2.0 / 3.0)
-            * FattyAcidExpr::enrichment_factor(
+        {
+            let mut enrichment_factor = FattyAcidExpr::enrichment_factor(
                 col(STEREOSPECIFIC_NUMBERS2),
                 col(STEREOSPECIFIC_NUMBERS123),
-            )
-            - lit(1))
+            );
+            if key.normalize_enrichment_factor {
+                enrichment_factor = lit(2.0 / 3.0) * enrichment_factor - lit(1);
+            }
+            enrichment_factor
+        }
         .alias("Enrichment"),
         col(FATTY_ACID)
             .fatty_acid()
@@ -238,28 +265,22 @@ fn mean(names: &[&str], ddof: u8) -> PolarsResult<Expr> {
     .alias(names[names.len() - 1]))
 }
 
-fn compute_sn(
-    fatty_acid: Expr,
-    sn123: Expr,
-    sn12_23: Expr,
-    sn2: Expr,
-    parameters: &Parameters,
-) -> [Expr; 4] {
+fn compute_sn(fatty_acid: Expr, sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> [Expr; 4] {
     let experimental = |mut sn: Expr| {
-        if parameters.weighted {
+        if key.weighted {
             sn =
                 sn.clone() / (sn * fatty_acid.clone().fatty_acid().relative_atomic_mass(None)).sum()
         };
-        sn.normalize_if(parameters.normalize.experimental)
+        sn.normalize_if(key.normalize.experimental)
     };
     let sn123 = experimental(sn123);
     let sn12_23 = experimental(sn12_23);
     let sn2 = experimental(sn2);
     [
-        compute_sn123(sn123.clone(), sn12_23.clone(), sn2.clone(), parameters),
-        compute_sn12_23(sn123.clone(), sn12_23.clone(), sn2.clone(), parameters),
-        compute_sn2(sn123.clone(), sn12_23.clone(), sn2.clone(), parameters),
-        compute_sn13(sn123, sn12_23, sn2, parameters),
+        compute_sn123(sn123.clone(), sn12_23.clone(), sn2.clone(), key),
+        compute_sn12_23(sn123.clone(), sn12_23.clone(), sn2.clone(), key),
+        compute_sn2(sn123.clone(), sn12_23.clone(), sn2.clone(), key),
+        compute_sn13(sn123, sn12_23, sn2, key),
     ]
 }
 
@@ -267,10 +288,10 @@ fn compute_sn(
 /// 3 * x{1,2,3: i} = 4 * x{1,2: i; 2,3: i} - x{2: i}
 /// 3 * TAG = 2 * DAG1(3) + MAG2
 /// 3 * TAG = 4 * DAG1223 - MAG2
-fn compute_sn123(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+fn compute_sn123(sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> Expr {
     let theoretical = ((lit(4) * sn12_23 - sn2) / lit(3))
-        .clip_min_if(parameters.unsigned)
-        .normalize_if(parameters.normalize.theoretical);
+        .clip_min_if(key.unsigned)
+        .normalize_if(key.normalize.theoretical);
     as_struct(vec![
         sn123.alias("Experimental"),
         theoretical.alias("Theoretical"),
@@ -279,9 +300,8 @@ fn compute_sn123(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters)
 }
 
 /// DAG1223 = (3 * TAG + MAG2) / 4
-fn compute_sn12_23(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
-    let theoretical =
-        ((lit(3) * sn123 + sn2) / lit(4)).normalize_if(parameters.normalize.theoretical);
+fn compute_sn12_23(sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> Expr {
+    let theoretical = ((lit(3) * sn123 + sn2) / lit(4)).normalize_if(key.normalize.theoretical);
     as_struct(vec![
         sn12_23.alias("Experimental"),
         theoretical.alias("Theoretical"),
@@ -290,10 +310,10 @@ fn compute_sn12_23(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameter
 }
 
 /// MAG2 = 4 * DAG1223 - 3 * TAG
-fn compute_sn2(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+fn compute_sn2(sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> Expr {
     let theoretical = (lit(4) * sn12_23 - lit(3) * sn123)
-        .clip_min_if(parameters.unsigned)
-        .normalize_if(parameters.normalize.theoretical);
+        .clip_min_if(key.unsigned)
+        .normalize_if(key.normalize.theoretical);
     as_struct(vec![
         sn2.alias("Experimental"),
         theoretical.alias("Theoretical"),
@@ -309,17 +329,17 @@ fn compute_sn2(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -
 
 /// 2 * DAG1(3) = 3 * TAG - MAG2 (стр. 116)
 /// $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$ (Sovová2008)
-fn compute_sn13(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
+fn compute_sn13(sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> Expr {
     // DAG1(3) = 3 * TAG - 2 * DAG1223
     let sn12_23 = (lit(3) * sn123.clone() - lit(2) * sn12_23)
-        .clip_min_if(parameters.unsigned)
-        .normalize_if(parameters.normalize.theoretical)
+        .clip_min_if(key.unsigned)
+        .normalize_if(key.normalize.theoretical)
         .alias(STEREOSPECIFIC_NUMBERS12_23);
     // DAG1(3) = (3 * TAG - MAG2) / 2
     // $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$
     let sn2 = ((lit(3) * sn123 - sn2) / lit(2))
-        .clip_min_if(parameters.unsigned)
-        .normalize_if(parameters.normalize.theoretical)
+        .clip_min_if(key.unsigned)
+        .normalize_if(key.normalize.theoretical)
         .alias(STEREOSPECIFIC_NUMBERS2);
     as_struct(vec![sn12_23, sn2]).alias(STEREOSPECIFIC_NUMBERS13)
 }

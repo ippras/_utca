@@ -1,7 +1,5 @@
 use crate::{
-    app::panes::composition::settings::{
-        ECN_MONO, MASS_MONO, Settings, TYPE_MONO, UNSATURATION_MONO,
-    },
+    app::states::composition::{ECN_MONO, MASS_MONO, Settings, TYPE_MONO, UNSATURATION_MONO},
     utils::HashedDataFrame,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -51,7 +49,7 @@ type Value = HashedDataFrame;
 
 fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     let mut predicate = lit(true);
-    for (index, selection) in settings.special.selections.iter().enumerate() {
+    for (index, selection) in settings.parameters.selections.iter().enumerate() {
         // Key
         for (key, value) in &selection.filter.key {
             let expr = col("Keys").struct_().field_by_index(index as _);

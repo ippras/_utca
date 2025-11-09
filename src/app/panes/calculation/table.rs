@@ -1,16 +1,15 @@
-use super::{ID_SOURCE, parameters::Parameters, state::Settings};
+use super::ID_SOURCE;
 #[cfg(feature = "markdown")]
 use crate::asset;
 use crate::{
     app::{
-        computers::{
-            CalculationDisplayComputed, CalculationDisplayKey, CalculationDisplaySettings,
-        },
+        computers::{CalculationDisplayComputed, CalculationDisplayKey},
         panes::MARGIN,
+        states::calculation::State,
     },
     utils::HashedDataFrame,
 };
-use egui::{Context, Frame, Id, Label, Margin, Response, TextStyle, TextWrapMode, Ui, Widget};
+use egui::{Frame, Id, Label, Margin, Response, TextStyle, TextWrapMode, Ui, Widget};
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
 use egui_l20n::UiExt;
@@ -31,34 +30,23 @@ const TOP: &[Range<usize>] = &[ID, SN, FACTORS];
 /// Calculation table
 pub(crate) struct TableView<'a> {
     data_frame: &'a HashedDataFrame,
-    parameters: &'a Parameters,
-    settings: Settings,
+    state: &'a mut State,
 }
 
 impl<'a> TableView<'a> {
-    pub(crate) fn new(
-        ctx: &Context,
-        data_frame: &'a HashedDataFrame,
-        parameters: &'a Parameters,
-    ) -> Self {
-        Self {
-            data_frame,
-            parameters,
-            settings: Settings::load(ctx),
-        }
+    pub(crate) fn new(data_frame: &'a HashedDataFrame, state: &'a mut State) -> Self {
+        Self { data_frame, state }
     }
 }
 
 impl TableView<'_> {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        if self.settings.table.reset_state {
+        if self.state.settings.table.reset_state {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            self.settings.table.reset_state = false;
-            self.settings.clone().store(ui.ctx());
+            self.state.settings.table.reset_state = false;
         }
-        // let settings = Settings::load(ui.ctx());
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
         let num_rows = self.data_frame.height() as u64 + 1;
         let num_columns = LEN;
@@ -67,10 +55,10 @@ impl TableView<'_> {
             .num_rows(num_rows)
             .columns(vec![
                 Column::default()
-                    .resizable(self.settings.table.resizable);
+                    .resizable(self.state.settings.table.resizable);
                 num_columns
             ])
-            .num_sticky_cols(self.settings.table.sticky_columns)
+            .num_sticky_cols(self.state.settings.table.sticky_columns)
             .headers([
                 HeaderRow {
                     height,
@@ -82,7 +70,7 @@ impl TableView<'_> {
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
-        if self.settings.table.truncate_headers {
+        if self.state.settings.table.truncate_headers {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {
@@ -187,15 +175,12 @@ impl TableView<'_> {
             }
             (row, stereospecific_numbers::SN123) => {
                 let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            frame: self.data_frame,
-                            settings: CalculationDisplaySettings::stereospecific_numbers123(
-                                &self.settings,
-                            ),
-                        })
+                    memory.caches.cache::<CalculationDisplayComputed>().get(
+                        CalculationDisplayKey::stereospecific_numbers123(
+                            self.data_frame,
+                            &self.state.settings,
+                        ),
+                    )
                 });
                 let mean = data_frame["Mean"].get(row)?.str_value();
                 let response = ui.label(mean);
@@ -204,7 +189,7 @@ impl TableView<'_> {
                         .standard_deviation(&data_frame, row)?
                         .array(&data_frame, row)?;
                 }
-                if self.settings.standard_deviation {
+                if self.state.settings.display_standard_deviation {
                     if let Some(standard_deviation) =
                         data_frame["StandardDeviation"].str()?.get(row)
                     {
@@ -214,15 +199,12 @@ impl TableView<'_> {
             }
             (row, stereospecific_numbers::SN2) => {
                 let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            frame: self.data_frame,
-                            settings: CalculationDisplaySettings::stereospecific_numbers2(
-                                &self.settings,
-                            ),
-                        })
+                    memory.caches.cache::<CalculationDisplayComputed>().get(
+                        CalculationDisplayKey::stereospecific_numbers2(
+                            self.data_frame,
+                            &self.state.settings,
+                        ),
+                    )
                 });
                 let mean = data_frame["Mean"].get(row)?.str_value();
                 let response = ui.label(mean);
@@ -231,7 +213,7 @@ impl TableView<'_> {
                         .standard_deviation(&data_frame, row)?
                         .array(&data_frame, row)?;
                 }
-                if self.settings.standard_deviation {
+                if self.state.settings.display_standard_deviation {
                     if let Some(standard_deviation) =
                         data_frame["StandardDeviation"].str()?.get(row)
                     {
@@ -241,15 +223,12 @@ impl TableView<'_> {
             }
             (row, stereospecific_numbers::SN13) => {
                 let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            frame: self.data_frame,
-                            settings: CalculationDisplaySettings::stereospecific_numbers13(
-                                &self.settings,
-                            ),
-                        })
+                    memory.caches.cache::<CalculationDisplayComputed>().get(
+                        CalculationDisplayKey::stereospecific_numbers13(
+                            self.data_frame,
+                            &self.state.settings,
+                        ),
+                    )
                 });
                 let mean = data_frame["Mean"].get(row)?.str_value();
                 let response = ui.label(mean);
@@ -259,7 +238,7 @@ impl TableView<'_> {
                         .array(&data_frame, row)?
                         .calculation(&data_frame, row)?;
                 }
-                if self.settings.standard_deviation {
+                if self.state.settings.display_standard_deviation {
                     if let Some(standard_deviation) =
                         data_frame["StandardDeviation"].str()?.get(row)
                     {
@@ -269,13 +248,12 @@ impl TableView<'_> {
             }
             (row, factors::EF) => {
                 let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            frame: self.data_frame,
-                            settings: CalculationDisplaySettings::enrichment_factor(&self.settings),
-                        })
+                    memory.caches.cache::<CalculationDisplayComputed>().get(
+                        CalculationDisplayKey::enrichment_factor(
+                            self.data_frame,
+                            &self.state.settings,
+                        ),
+                    )
                 });
                 let mean = data_frame["Mean"].get(row)?.str_value();
                 let response = ui.label(mean);
@@ -285,7 +263,7 @@ impl TableView<'_> {
                         .array(&data_frame, row)?
                         .calculation(&data_frame, row)?;
                 }
-                if self.settings.standard_deviation {
+                if self.state.settings.display_standard_deviation {
                     if let Some(standard_deviation) =
                         data_frame["StandardDeviation"].str()?.get(row)
                     {
@@ -295,15 +273,12 @@ impl TableView<'_> {
             }
             (row, factors::SF) => {
                 let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            frame: self.data_frame,
-                            settings: CalculationDisplaySettings::selectivity_factor(
-                                &self.settings,
-                            ),
-                        })
+                    memory.caches.cache::<CalculationDisplayComputed>().get(
+                        CalculationDisplayKey::selectivity_factor(
+                            self.data_frame,
+                            &self.state.settings,
+                        ),
+                    )
                 });
                 let mean = data_frame["Mean"].get(row)?.str_value();
                 let response = ui.label(mean);
@@ -313,7 +288,7 @@ impl TableView<'_> {
                         .array(&data_frame, row)?
                         .calculation(&data_frame, row)?;
                 }
-                if self.settings.standard_deviation {
+                if self.state.settings.display_standard_deviation {
                     if let Some(standard_deviation) =
                         data_frame["StandardDeviation"].str()?.get(row)
                     {
@@ -330,15 +305,12 @@ impl TableView<'_> {
         match column {
             stereospecific_numbers::SN123 => {
                 let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            frame: self.data_frame,
-                            settings: CalculationDisplaySettings::stereospecific_numbers123(
-                                &self.settings,
-                            ),
-                        })
+                    memory.caches.cache::<CalculationDisplayComputed>().get(
+                        CalculationDisplayKey::stereospecific_numbers123(
+                            self.data_frame,
+                            &self.state.settings,
+                        ),
+                    )
                 });
                 let row = data_frame.height() - 1;
                 if let Some(mean) = data_frame["Mean"].str()?.get(row) {
@@ -356,15 +328,12 @@ impl TableView<'_> {
             }
             stereospecific_numbers::SN2 => {
                 let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            frame: self.data_frame,
-                            settings: CalculationDisplaySettings::stereospecific_numbers2(
-                                &self.settings,
-                            ),
-                        })
+                    memory.caches.cache::<CalculationDisplayComputed>().get(
+                        CalculationDisplayKey::stereospecific_numbers2(
+                            self.data_frame,
+                            &self.state.settings,
+                        ),
+                    )
                 });
                 let row = data_frame.height() - 1;
                 if let Some(mean) = data_frame["Mean"].str()?.get(row) {
@@ -382,15 +351,12 @@ impl TableView<'_> {
             }
             stereospecific_numbers::SN13 => {
                 let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<CalculationDisplayComputed>()
-                        .get(CalculationDisplayKey {
-                            frame: self.data_frame,
-                            settings: CalculationDisplaySettings::stereospecific_numbers13(
-                                &self.settings,
-                            ),
-                        })
+                    memory.caches.cache::<CalculationDisplayComputed>().get(
+                        CalculationDisplayKey::stereospecific_numbers13(
+                            self.data_frame,
+                            &self.state.settings,
+                        ),
+                    )
                 });
                 let row = data_frame.height() - 1;
                 if let Some(mean) = data_frame["Mean"].str()?.get(row) {

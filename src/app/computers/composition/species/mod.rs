@@ -1,10 +1,9 @@
 use crate::{
-    app::panes::composition::settings::{Discriminants, Method},
+    app::states::composition::{Discriminants, Method, Settings},
     utils::{HashedDataFrame, HashedMetaDataFrame, hash_expr},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
-use metadata::polars::MetaDataFrame;
 use polars::prelude::*;
 use polars_ext::expr::ExprExt as _;
 use tracing::instrument;
@@ -71,12 +70,32 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Composition key
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub(crate) struct Key<'a> {
-    pub(crate) frames: &'a Vec<HashedMetaDataFrame>,
+    pub(crate) frames: &'a [HashedMetaDataFrame],
     pub(crate) index: Option<usize>,
     pub(crate) ddof: u8,
     pub(crate) discriminants: &'a Discriminants,
     pub(crate) method: Method,
 }
+
+impl<'a> Key<'a> {
+    pub(crate) fn new(frames: &'a [HashedMetaDataFrame], settings: &'a Settings) -> Self {
+        Self {
+            frames,
+            index: settings.index,
+            ddof: settings.parameters.ddof,
+            discriminants: &settings.parameters.discriminants,
+            method: settings.parameters.method,
+        }
+    }
+}
+
+// {
+//     frames: &self.source,
+//     index: state.settings.index,
+//     ddof: state.settings.parameters.ddof,
+//     method: state.settings.parameters.method,
+//     discriminants: &state.settings.parameters.discriminants,
+// }
 
 /// Parameters
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]

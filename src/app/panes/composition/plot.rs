@@ -1,10 +1,8 @@
-use super::{
-    ID_SOURCE, Settings, State,
-    settings::{
-        Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO,
-        SPECIES_POSITIONAL, SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
-        UNSATURATION_MONO, UNSATURATION_STEREO,
-    },
+use super::ID_SOURCE;
+use crate::app::states::composition::{
+    Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
+    SPECIES_STEREO, Settings, State, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO,
+    UNSATURATION_STEREO,
 };
 use egui::{Align2, Color32, Id, Ui, Vec2b};
 use egui_plot::{AxisHints, Bar, BarChart, Line, Plot, PlotPoints};
@@ -14,17 +12,12 @@ use polars::prelude::*;
 #[derive(Debug)]
 pub(crate) struct PlotView<'a> {
     pub(crate) data_frame: &'a DataFrame,
-    pub(crate) settings: &'a Settings,
     pub(crate) state: &'a mut State,
 }
 
 impl<'a> PlotView<'a> {
-    pub fn new(data_frame: &'a DataFrame, settings: &'a Settings, state: &'a mut State) -> Self {
-        Self {
-            data_frame,
-            settings,
-            state,
-        }
+    pub fn new(data_frame: &'a DataFrame, state: &'a mut State) -> Self {
+        Self { data_frame, state }
     }
 }
 
@@ -35,41 +28,41 @@ impl PlotView<'_> {
 
     pub(crate) fn try_show(&mut self, ui: &mut Ui) -> PolarsResult<()> {
         // println!("self: {}", self.data_frame.unnest(["Keys"]).unwrap());
-        let id_salt = Id::new(ID_SOURCE).with("Plot");
-        let mut plot = Plot::new(id_salt)
-            .allow_drag(self.state.allow_drag)
-            .allow_scroll(self.state.allow_scroll)
-            .custom_x_axes(vec![AxisHints::new_x().label("Composition")]);
-        if self.state.show_legend {
-            plot = plot.legend(Default::default());
-        }
-        plot.show(ui, |plot_ui| -> PolarsResult<()> {
-            let indices = &self.data_frame["Index"];
-            let keys = self.data_frame["Keys"].struct_()?;
-            let values = self.data_frame["Values"].array()?;
-            let selections = &self.settings.special.selections;
-            let index = selections.len() - 1;
-            let fields = &keys.fields_as_series();
-            let keys = &fields[index];
-            let mut bars = Vec::new();
-            for (row, values) in values.into_iter().enumerate() {
-                let values = values.unwrap();
-                let mut value = values.f64()?.get(index).unwrap();
-                let key = keys.str_value(row)?;
-                let x = match self.settings.special.selections[index].composition {
-                    MASS_MONO => keys.f64()?.get(row).unwrap(),
-                    ECN_MONO => keys.i64()?.get(row).unwrap() as _,
-                    UNSATURATION_MONO => keys.i64()?.get(row).unwrap() as _,
-                    _ => indices.u32()?.get(row).unwrap() as _,
-                };
-                if self.settings.percent {
-                    value *= 100.0;
-                }
-                bars.push(Bar::new(x, value).name(key));
-            }
-            plot_ui.bar_chart(BarChart::new("Bars", bars).name(index));
-            Ok(())
-        });
+        // let id_salt = Id::new(ID_SOURCE).with("Plot");
+        // let mut plot = Plot::new(id_salt)
+        //     .allow_drag(self.state.allow_drag)
+        //     .allow_scroll(self.state.allow_scroll)
+        //     .custom_x_axes(vec![AxisHints::new_x().label("Composition")]);
+        // if self.state.show_legend {
+        //     plot = plot.legend(Default::default());
+        // }
+        // plot.show(ui, |plot_ui| -> PolarsResult<()> {
+        //     let indices = &self.data_frame["Index"];
+        //     let keys = self.data_frame["Keys"].struct_()?;
+        //     let values = self.data_frame["Values"].array()?;
+        //     let selections = &self.settings.special.selections;
+        //     let index = selections.len() - 1;
+        //     let fields = &keys.fields_as_series();
+        //     let keys = &fields[index];
+        //     let mut bars = Vec::new();
+        //     for (row, values) in values.into_iter().enumerate() {
+        //         let values = values.unwrap();
+        //         let mut value = values.f64()?.get(index).unwrap();
+        //         let key = keys.str_value(row)?;
+        //         let x = match self.settings.special.selections[index].composition {
+        //             MASS_MONO => keys.f64()?.get(row).unwrap(),
+        //             ECN_MONO => keys.i64()?.get(row).unwrap() as _,
+        //             UNSATURATION_MONO => keys.i64()?.get(row).unwrap() as _,
+        //             _ => indices.u32()?.get(row).unwrap() as _,
+        //         };
+        //         if self.settings.percent {
+        //             value *= 100.0;
+        //         }
+        //         bars.push(Bar::new(x, value).name(key));
+        //     }
+        //     plot_ui.bar_chart(BarChart::new("Bars", bars).name(index));
+        //     Ok(())
+        // });
         Ok(())
 
         // let Self { context } = self;

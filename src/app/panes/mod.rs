@@ -1,5 +1,8 @@
+use std::fmt::Display;
+
 use crate::utils::HashedMetaDataFrame;
-use egui::{Response, Ui, Vec2, vec2};
+use egui::{Response, Ui, Vec2, WidgetText, vec2};
+use egui_tiles::{TileId, UiResponse};
 use serde::{Deserialize, Serialize};
 
 const MARGIN: Vec2 = vec2(4.0, 2.0);
@@ -17,12 +20,12 @@ impl Pane {
         Self::Configuration(configuration::Pane::new(frames))
     }
 
-    pub(crate) fn calculation(frames: Vec<HashedMetaDataFrame>, index: usize) -> Self {
-        Self::Calculation(calculation::Pane::new(frames, index))
+    pub(crate) fn calculation(frames: Vec<HashedMetaDataFrame>) -> Self {
+        Self::Calculation(calculation::Pane::new(frames))
     }
 
-    pub(crate) fn composition(frames: Vec<HashedMetaDataFrame>, index: Option<usize>) -> Self {
-        Self::Composition(composition::Pane::new(frames, index))
+    pub(crate) fn composition(frames: Vec<HashedMetaDataFrame>) -> Self {
+        Self::Composition(composition::Pane::new(frames))
     }
 
     pub(crate) const fn kind(&self) -> Kind {
@@ -33,28 +36,13 @@ impl Pane {
         }
     }
 
-    pub(crate) fn title(&self) -> String {
-        match self {
-            Self::Configuration(pane) => pane.title(),
-            Self::Calculation(pane) => pane.title(),
-            Self::Composition(pane) => pane.title(),
-        }
-    }
-
-    fn header(&mut self, ui: &mut Ui) -> Response {
-        match self {
-            Self::Configuration(pane) => pane.top(ui),
-            Self::Calculation(pane) => pane.top(ui),
-            Self::Composition(pane) => pane.top(ui),
-        }
-    }
-
-    fn body(&mut self, ui: &mut Ui) {
-        match self {
-            Self::Configuration(pane) => pane.central(ui),
-            Self::Calculation(pane) => pane.central(ui),
-            Self::Composition(pane) => pane.central(ui),
-        }
+    pub(crate) fn title(&self) -> impl Display {
+        // match self {
+        //     Self::Configuration(pane) => pane.title(),
+        //     Self::Calculation(pane) => pane.title(),
+        //     Self::Composition(pane) => pane.title(),
+        // }
+        "pane.title()"
     }
 }
 
@@ -70,11 +58,24 @@ impl PartialEq for Pane {
     }
 }
 
-/// Pane delegate
-pub(crate) trait PaneDelegate {
-    fn top(&mut self, ui: &mut Ui) -> Response;
+/// Behavior
+#[derive(Debug)]
+pub(crate) struct Behavior {
+    pub(crate) close: Option<TileId>,
+}
 
-    fn central(&mut self, ui: &mut Ui);
+impl egui_tiles::Behavior<Pane> for Behavior {
+    fn tab_title_for_pane(&mut self, pane: &Pane) -> WidgetText {
+        pane.title().to_string().into()
+    }
+
+    fn pane_ui(&mut self, ui: &mut Ui, tile_id: TileId, pane: &mut Pane) -> UiResponse {
+        match pane {
+            Pane::Configuration(pane) => pane.ui(ui, self, tile_id),
+            Pane::Calculation(pane) => pane.ui(ui, self, tile_id),
+            Pane::Composition(pane) => pane.ui(ui, self, tile_id),
+        }
+    }
 }
 
 /// Central pane kind
@@ -85,7 +86,6 @@ pub(crate) enum Kind {
     Composition,
 }
 
-pub(crate) mod behavior;
 pub(crate) mod calculation;
 pub(crate) mod composition;
 pub(crate) mod configuration;

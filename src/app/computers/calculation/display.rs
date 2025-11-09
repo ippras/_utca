@@ -1,5 +1,5 @@
 use crate::{
-    app::panes::calculation::state::Settings as CalculationSettings,
+    app::states::calculation::Settings,
     utils::{HashedDataFrame, polars::SchemaExt},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -105,8 +105,8 @@ impl Computer {
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
         // println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
         let length = schema(&key.frame)?;
-        let body = lazy_frame.clone().select(format(key.settings)?);
-        let sum = lazy_frame.select(format_sum(key.settings, length)?);
+        let body = lazy_frame.clone().select(format(key)?);
+        let sum = lazy_frame.select(format_sum(key, length)?);
         lazy_frame = concat_lf_diagonal([body, sum], UnionArgs::default())?;
         // println!("Display 1: {}", lazy_frame.clone().collect().unwrap());
         let data_frame = lazy_frame.collect()?;
@@ -124,12 +124,6 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 #[derive(Clone, Copy, Debug, Hash)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
-    pub(crate) settings: Settings,
-}
-
-/// Display calculation settings
-#[derive(Clone, Copy, Debug, Hash)]
-pub(crate) struct Settings {
     pub(crate) kind: Kind,
     pub(crate) ddof: u8,
     pub(crate) percent: bool,
@@ -137,9 +131,10 @@ pub(crate) struct Settings {
     pub(crate) significant: bool,
 }
 
-impl Settings {
-    fn new(kind: Kind, settings: &CalculationSettings) -> Self {
+impl<'a> Key<'a> {
+    fn new(frame: &'a HashedDataFrame, kind: Kind, settings: &Settings) -> Self {
         Self {
+            frame,
             kind,
             ddof: 1,
             percent: settings.percent,
@@ -148,24 +143,30 @@ impl Settings {
         }
     }
 
-    pub(crate) fn stereospecific_numbers123(settings: &CalculationSettings) -> Self {
-        Self::new(Kind::StereospecificNumbers123, settings)
+    pub(crate) fn stereospecific_numbers123(
+        frame: &'a HashedDataFrame,
+        settings: &Settings,
+    ) -> Self {
+        Self::new(frame, Kind::StereospecificNumbers123, settings)
     }
 
-    pub(crate) fn stereospecific_numbers13(settings: &CalculationSettings) -> Self {
-        Self::new(Kind::StereospecificNumbers13, settings)
+    pub(crate) fn stereospecific_numbers13(
+        frame: &'a HashedDataFrame,
+        settings: &Settings,
+    ) -> Self {
+        Self::new(frame, Kind::StereospecificNumbers13, settings)
     }
 
-    pub(crate) fn stereospecific_numbers2(settings: &CalculationSettings) -> Self {
-        Self::new(Kind::StereospecificNumbers2, settings)
+    pub(crate) fn stereospecific_numbers2(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
+        Self::new(frame, Kind::StereospecificNumbers2, settings)
     }
 
-    pub(crate) fn enrichment_factor(settings: &CalculationSettings) -> Self {
-        Self::new(Kind::EnrichmentFactor, settings)
+    pub(crate) fn enrichment_factor(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
+        Self::new(frame, Kind::EnrichmentFactor, settings)
     }
 
-    pub(crate) fn selectivity_factor(settings: &CalculationSettings) -> Self {
-        Self::new(Kind::SelectivityFactor, settings)
+    pub(crate) fn selectivity_factor(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
+        Self::new(frame, Kind::SelectivityFactor, settings)
     }
 }
 
@@ -193,11 +194,11 @@ fn schema(data_frame: &DataFrame) -> PolarsResult<usize> {
     Ok(length)
 }
 
-fn format_sum(settings: Settings, length: usize) -> PolarsResult<[Expr; 3]> {
+fn format_sum(key: Key, length: usize) -> PolarsResult<[Expr; 3]> {
     let array = concat_arr(
         (0..length)
             .map(|index| {
-                expr(settings)
+                expr(key)
                     .struct_()
                     .field_by_name("Array")
                     .arr()
@@ -207,44 +208,38 @@ fn format_sum(settings: Settings, length: usize) -> PolarsResult<[Expr; 3]> {
             .collect(),
     )?;
     Ok([
-        format_mean(
-            expr(settings).struct_().field_by_name("Mean").sum(),
-            settings,
-        ),
-        format_standard_deviation(array.clone().arr().std(settings.ddof), settings)?,
-        format_array(array, settings)?,
+        format_mean(expr(key).struct_().field_by_name("Mean").sum(), key),
+        format_standard_deviation(array.clone().arr().std(key.ddof), key)?,
+        format_array(array, key)?,
     ])
 }
 
-fn format(mut settings: Settings) -> PolarsResult<[Expr; 4]> {
-    let calculation = format_calculation(settings)?;
-    if let Kind::EnrichmentFactor | Kind::SelectivityFactor = settings.kind {
-        settings.percent = false;
+fn format(mut key: Key) -> PolarsResult<[Expr; 4]> {
+    let calculation = format_calculation(key)?;
+    if let Kind::EnrichmentFactor | Kind::SelectivityFactor = key.kind {
+        key.percent = false;
     };
     Ok([
-        format_mean(expr(settings).struct_().field_by_name("Mean"), settings),
-        format_standard_deviation(
-            expr(settings).struct_().field_by_name("StandardDeviation"),
-            settings,
-        )?,
-        format_array(expr(settings).struct_().field_by_name("Array"), settings)?,
+        format_mean(expr(key).struct_().field_by_name("Mean"), key),
+        format_standard_deviation(expr(key).struct_().field_by_name("StandardDeviation"), key)?,
+        format_array(expr(key).struct_().field_by_name("Array"), key)?,
         calculation,
     ])
 }
 
-fn format_mean(expr: Expr, settings: Settings) -> Expr {
-    format_float(expr, settings)
+fn format_mean(expr: Expr, key: Key) -> Expr {
+    format_float(expr, key)
 }
 
-fn format_standard_deviation(expr: Expr, settings: Settings) -> PolarsResult<Expr> {
+fn format_standard_deviation(expr: Expr, key: Key) -> PolarsResult<Expr> {
     Ok(ternary_expr(
         expr.clone().is_not_null(),
-        format_str("±{}", [format_float(expr, settings)])?.alias("StandardDeviation"),
+        format_str("±{}", [format_float(expr, key)])?.alias("StandardDeviation"),
         lit(NULL),
     ))
 }
 
-fn format_array(expr: Expr, settings: Settings) -> PolarsResult<Expr> {
+fn format_array(expr: Expr, key: Key) -> PolarsResult<Expr> {
     Ok(ternary_expr(
         expr.clone().arr().len().neq(1),
         format_str(
@@ -253,7 +248,7 @@ fn format_array(expr: Expr, settings: Settings) -> PolarsResult<Expr> {
                 .arr()
                 .to_list()
                 .list()
-                .eval(format_float(col(""), settings))
+                .eval(format_float(col(""), key))
                 .list()
                 .join(lit(", "), false)],
         )?,
@@ -262,20 +257,20 @@ fn format_array(expr: Expr, settings: Settings) -> PolarsResult<Expr> {
     .alias("Array"))
 }
 
-fn format_calculation(settings: Settings) -> PolarsResult<Expr> {
+fn format_calculation(key: Key) -> PolarsResult<Expr> {
     let mean = |name| col(name).struct_().field_by_name("Mean");
     let standard_deviation = |name| col(name).struct_().field_by_name("StandardDeviation");
     let predicate = standard_deviation(STEREOSPECIFIC_NUMBERS2)
         .is_null()
         .or(standard_deviation(STEREOSPECIFIC_NUMBERS123).is_null());
-    Ok(match settings.kind {
+    Ok(match key.kind {
         Kind::StereospecificNumbers13 => ternary_expr(
             predicate,
             format_str(
                 "(3 * {} - {}) / 2",
                 [
-                    format_float(mean(STEREOSPECIFIC_NUMBERS123), settings),
-                    format_float(mean(STEREOSPECIFIC_NUMBERS2), settings),
+                    format_float(mean(STEREOSPECIFIC_NUMBERS123), key),
+                    format_float(mean(STEREOSPECIFIC_NUMBERS2), key),
                 ],
             )?,
             lit(NULL),
@@ -287,16 +282,16 @@ fn format_calculation(settings: Settings) -> PolarsResult<Expr> {
                 [
                     format_float(
                         mean(STEREOSPECIFIC_NUMBERS2),
-                        Settings {
+                        Key {
                             kind: Kind::StereospecificNumbers2,
-                            ..settings
+                            ..key
                         },
                     ),
                     format_float(
                         mean(STEREOSPECIFIC_NUMBERS123),
-                        Settings {
+                        Key {
                             kind: Kind::StereospecificNumbers123,
-                            ..settings
+                            ..key
                         },
                     ),
                 ],
@@ -310,34 +305,34 @@ fn format_calculation(settings: Settings) -> PolarsResult<Expr> {
                 [
                     format_float(
                         mean(STEREOSPECIFIC_NUMBERS2),
-                        Settings {
+                        Key {
                             kind: Kind::StereospecificNumbers2,
-                            ..settings
+                            ..key
                         },
                     ),
                     format_float(
                         mean(STEREOSPECIFIC_NUMBERS123)
                             .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
                             .sum(),
-                        Settings {
+                        Key {
                             kind: Kind::StereospecificNumbers123,
-                            ..settings
+                            ..key
                         },
                     ),
                     format_float(
                         mean(STEREOSPECIFIC_NUMBERS123),
-                        Settings {
+                        Key {
                             kind: Kind::StereospecificNumbers123,
-                            ..settings
+                            ..key
                         },
                     ),
                     format_float(
                         mean(STEREOSPECIFIC_NUMBERS2)
                             .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
                             .sum(),
-                        Settings {
+                        Key {
                             kind: Kind::StereospecificNumbers2,
-                            ..settings
+                            ..key
                         },
                     ),
                 ],
@@ -349,14 +344,14 @@ fn format_calculation(settings: Settings) -> PolarsResult<Expr> {
     .alias("Calculation"))
 }
 
-fn format_float(expr: Expr, settings: Settings) -> Expr {
-    expr.percent_if(settings.percent)
-        .precision(settings.precision, settings.significant)
+fn format_float(expr: Expr, key: Key) -> Expr {
+    expr.percent_if(key.percent)
+        .precision(key.precision, key.significant)
         .cast(DataType::String)
 }
 
-fn expr(settings: Settings) -> Expr {
-    match settings.kind {
+fn expr(key: Key) -> Expr {
+    match key.kind {
         Kind::StereospecificNumbers123 => col(STEREOSPECIFIC_NUMBERS123),
         Kind::StereospecificNumbers13 => col(STEREOSPECIFIC_NUMBERS13),
         Kind::StereospecificNumbers2 => col(STEREOSPECIFIC_NUMBERS2),
