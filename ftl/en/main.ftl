@@ -82,7 +82,8 @@ DeltaDegreesOfFreedom = Delta Degrees of Freedom
     .hover = The divisor used in calculations is N - DDOF, where N represents the number of elements. By default DDOF is zero.
     .info = Different values of the argument ddof are useful in different contexts.
 Statistics = Statistics
-NormalizeEnrichmentFactor = Normalize enrichment factor
+NormalizeFactors = Normalize factors 
+    .hover = Normalize enrichment and selectivity factors.
 
 ### Configuration
 

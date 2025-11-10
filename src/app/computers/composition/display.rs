@@ -10,7 +10,6 @@ use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_ext::expr::ExprIfExt as _;
-use polars_utils::format_list;
 use std::{
     hash::{Hash, Hasher},
     iter::once,

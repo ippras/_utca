@@ -1,6 +1,6 @@
 use crate::{
     app::states::calculation::{Normalize, Settings},
-    utils::{HashedDataFrame, HashedMetaDataFrame, hash_expr},
+    utils::{hash_expr, HashedDataFrame, HashedMetaDataFrame},
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -79,7 +79,7 @@ impl<'a> Key<'a> {
             frames,
             index: settings.index,
             ddof: settings.parameters.ddof,
-            normalize_enrichment_factor: settings.normalize_enrichment_factor,
+            normalize_enrichment_factor: settings.normalize_factors,
             normalize: settings.parameters.normalize,
             unsigned: settings.parameters.unsigned,
             weighted: settings.parameters.weighted,
@@ -100,7 +100,6 @@ fn compute(data_frame: &DataFrame, key: Key) -> PolarsResult<LazyFrame> {
     // if parameters.christie {
     //     lazy_frame = christie(lazy_frame);
     // }
-    println!("compute 0: {}", lazy_frame.clone().collect().unwrap());
     let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, key);
     // let sn2 = experimental(STEREOSPECIFIC_NUMBERS2, key);
     let sn2 = match data_frame[3].name().as_str() {
@@ -161,15 +160,21 @@ fn factors(key: Key) -> Expr {
                 col(STEREOSPECIFIC_NUMBERS123),
             );
             if key.normalize_enrichment_factor {
-                enrichment_factor = lit(2.0 / 3.0) * enrichment_factor - lit(1);
+                enrichment_factor = enrichment_factor / lit(3);
             }
             enrichment_factor
         }
         .alias("Enrichment"),
-        col(FATTY_ACID)
-            .fatty_acid()
-            .selectivity_factor(col(STEREOSPECIFIC_NUMBERS2), col(STEREOSPECIFIC_NUMBERS123))
-            .alias("Selectivity"),
+        {
+            let mut selectivity_factor = col(FATTY_ACID)
+                .fatty_acid()
+                .selectivity_factor(col(STEREOSPECIFIC_NUMBERS2), col(STEREOSPECIFIC_NUMBERS123));
+            if key.normalize_enrichment_factor {
+                selectivity_factor = selectivity_factor / lit(3);
+            }
+            selectivity_factor
+        }
+        .alias("Selectivity"),
     ])
     .alias("Factors")
 }
@@ -250,12 +255,10 @@ fn mean_and_standard_deviations(lazy_frame: LazyFrame, ddof: u8) -> PolarsResult
 
 fn mean(names: &[&str], ddof: u8) -> PolarsResult<Expr> {
     let array = || {
-        concat_arr(vec![
-            all()
-                .exclude_cols([LABEL, FATTY_ACID])
-                .as_expr()
-                .destruct(names),
-        ])
+        concat_arr(vec![all()
+            .exclude_cols([LABEL, FATTY_ACID])
+            .as_expr()
+            .destruct(names)])
     };
     Ok(as_struct(vec![
         array()?.arr().mean().alias("Mean"),

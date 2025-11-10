@@ -17,7 +17,7 @@ pub(crate) struct Settings {
     pub(crate) precision: usize,
     pub(crate) significant: bool,
     pub(crate) display_standard_deviation: bool,
-    pub(crate) normalize_enrichment_factor: bool,
+    pub(crate) normalize_factors: bool,
     pub(crate) table: Table,
 
     pub(crate) parameters: Parameters,
@@ -32,7 +32,7 @@ impl Settings {
             precision: 1,
             significant: false,
             display_standard_deviation: false,
-            normalize_enrichment_factor: false,
+            normalize_factors: false,
             table: Table::new(),
 
             parameters: Parameters::new(),
@@ -74,12 +74,11 @@ impl Settings {
             ui.checkbox(&mut self.display_standard_deviation, ());
             ui.end_row();
 
-            // Normalize enrichment factor
-            ui.label(ui.localize("NormalizeEnrichmentFactor"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("NormalizeEnrichmentFactor.hover"));
-                });
-            ui.checkbox(&mut self.normalize_enrichment_factor, ());
+            // Normalize factors
+            ui.label(ui.localize("NormalizeFactors")).on_hover_ui(|ui| {
+                ui.label(ui.localize("NormalizeFactors.hover"));
+            });
+            ui.checkbox(&mut self.normalize_factors, ());
             ui.end_row();
 
             ui.heading("Table");

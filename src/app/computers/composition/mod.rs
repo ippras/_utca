@@ -1,9 +1,9 @@
 use super::Mode;
 use crate::{
     app::states::composition::{
-        ECN_MONO, ECN_STEREO, Filter, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO,
-        SPECIES_POSITIONAL, SPECIES_STEREO, Selection, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL,
-        TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
+        ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO, SPECIES_POSITIONAL,
+        SPECIES_STEREO, Selection, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
+        UNSATURATION_MONO, UNSATURATION_STEREO,
     },
     utils::HashedDataFrame,
 };
@@ -13,12 +13,7 @@ use egui::{
 };
 use lipid::prelude::*;
 use polars::prelude::*;
-use std::{
-    collections::VecDeque,
-    convert::identity,
-    hash::{Hash, Hasher},
-    sync::LazyLock,
-};
+use std::{collections::VecDeque, convert::identity, sync::LazyLock};
 use tracing::instrument;
 
 /// Composition computed
@@ -33,7 +28,7 @@ impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let data_frame = key.data_frame;
         // |Label|Triacylglycerol|Value|
-        println!("Compose 0: {:?}", key.data_frame);
+        // println!("Compose 0: {:?}", key.data_frame);
         let mode = length(data_frame)?;
         // println!("Compose 1: {}", lazy_frame.clone().collect().unwrap());
         // let mut selections = key.selections.clone();

@@ -4,5 +4,3 @@
 * на подумать: оценить нормальность распределения ТАГ
 * Индексы для ТАГ можно расчитывать - ?
 * Reske1997/Sunﬂower Seed -> Suflower
-
-normalize_enrichment_factor
