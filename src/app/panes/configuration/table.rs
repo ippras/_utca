@@ -9,9 +9,7 @@ use crate::{
     utils::{HashedDataFrame, hash_data_frame},
 };
 use anyhow::Result;
-use egui::{
-    Context, Event, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui, ViewportCommand,
-};
+use egui::{Context, Event, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{HASH, MINUS, PLUS};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
@@ -110,11 +108,11 @@ impl TableView<'_> {
                         .on_hover_ui(|ui| {
                             ui.label(ui.localize("StereospecificNumber?number=2"));
                         });
-                    if response.hovered() {
+                    if self.state.settings.edit_table && response.hovered() {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
                                 if let Event::Paste(text) = event {
-                                    let _ = self.paste(STEREOSPECIFIC_NUMBERS123, text);
+                                    let _ = self.paste(STEREOSPECIFIC_NUMBERS2, text);
                                 }
                             }
                         });
@@ -125,11 +123,11 @@ impl TableView<'_> {
                         .on_hover_ui(|ui| {
                             ui.label(ui.localize("StereospecificNumber?number=1223"));
                         });
-                    if response.hovered() {
+                    if self.state.settings.edit_table && response.hovered() {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
                                 if let Event::Paste(text) = event {
-                                    let _ = self.paste(STEREOSPECIFIC_NUMBERS123, text);
+                                    let _ = self.paste(STEREOSPECIFIC_NUMBERS12_23, text);
                                 }
                             }
                         });
@@ -142,7 +140,7 @@ impl TableView<'_> {
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=123"));
                     });
-                if response.hovered() {
+                if self.state.settings.edit_table && response.hovered() {
                     ui.ctx().input(|input| {
                         for event in &input.raw.events {
                             if let Event::Paste(text) = event {
@@ -157,9 +155,15 @@ impl TableView<'_> {
     }
 
     #[instrument(skip(self), err)]
-    fn paste(&mut self, column: &str, paste: &str) -> Result<()> {
-        let iter = paste.split('\n').map(|row| row.parse::<f64>().ok());
-        self.data.replace(column, Float64Chunked::from_iter(iter))?;
+    fn paste(&mut self, column: &'static str, text: &str) -> Result<()> {
+        let mut builder = PrimitiveChunkedBuilder::<Float64Type>::new(
+            PlSmallStr::from_static(column),
+            self.data.height(),
+        );
+        for row in text.split('\n') {
+            builder.append_value(row.trim().parse()?);
+        }
+        self.data.replace(column, builder.finish())?;
         self.data.rehash()?;
         Ok(())
     }
