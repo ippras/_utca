@@ -1,11 +1,12 @@
 use egui::{
     Button, ComboBox, DragValue, Grid, InnerResponse, Label, Popup, PopupCloseBehavior, Response,
-    Ui, Widget,
-    containers::menu::{MenuConfig, SubMenuButton},
+    ScrollArea, TextStyle, TextWrapMode, Ui, Widget,
+    containers::menu::{MenuButton, MenuConfig, SubMenuButton},
     vec2,
 };
+use egui_extras::{Column, TableBuilder};
 use egui_l20n::ResponseExt as _;
-use egui_phosphor::regular::SORT_ASCENDING;
+use egui_phosphor::regular::{MINUS, PLUS, SORT_ASCENDING};
 use lipid::prelude::*;
 use std::{borrow::Cow, cmp::Ordering, convert::identity};
 
@@ -47,7 +48,7 @@ impl FattyAcidWidget<'_> {
                     let mut fatty_acid = fatty_acid.clone();
                     let button = Button::new(&text)
                         .min_size(vec2(ui.available_width(), ui.spacing().interact_size.y));
-                    let response = SubMenuButton::from_button(button)
+                    let response = MenuButton::from_button(button)
                         .config(
                             MenuConfig::new()
                                 .close_behavior(PopupCloseBehavior::CloseOnClickOutside),
@@ -59,40 +60,6 @@ impl FattyAcidWidget<'_> {
                             }
                         })
                         .0;
-                    // if response.should_close() {
-                    //     error!("should_close!!!!!!!!!!!!!!!!");
-                    //     Popup::toggle_id(ui.ctx(), response.id);
-                    // }
-
-                    // let response = ui.add_sized(
-                    //     vec2(ui.available_width(), ui.spacing().interact_size.y),
-                    //     Button::new(&text),
-                    // );
-                    // let popup_id = ui.auto_id_with("Menu");
-                    // Popup::menu(&response)
-                    //     .close_behavior(PopupCloseBehavior::IgnoreClicks)
-                    //     .id(popup_id)
-                    //     // .open(true)
-                    //     .show(|ui| {
-                    //         if content(&mut fatty_acid)(ui).changed() {
-                    //             inner = Some(fatty_acid);
-                    //             changed = true;
-                    //         }
-                    //     });
-                    // // if response.should_close() {
-                    // //     error!("should_close!!!!!!!!!!!!!!!!");
-                    // //     Popup::toggle_id(ui.ctx(), popup_id);
-                    // // }
-
-                    Popup::context_menu(&response)
-                        .id(ui.auto_id_with("ContextMenu"))
-                        .show(|ui| {
-                            if ui.button("None").clicked() {
-                                inner = None;
-                                changed = true;
-                                ui.close();
-                            }
-                        });
                     response
                 }
                 None => {
@@ -147,7 +114,7 @@ fn content(fatty_acid: &mut FattyAcid) -> impl FnMut(&mut Ui) -> Response {
             })
             .inner;
         ui.separator();
-        response | indices(fatty_acid)(ui)
+        response | new_indices(fatty_acid)(ui)
     }
 }
 
@@ -188,6 +155,126 @@ fn unsaturated(fatty_acid: &mut FattyAcid) -> impl FnMut(&mut Ui) -> Response {
                 }
             }
         }
+        response
+    }
+}
+
+fn new_indices(fatty_acid: &mut FattyAcid) -> impl FnMut(&mut Ui) -> Response {
+    |ui| {
+        let mut response = ui.response();
+        let height = ui.text_style_height(&TextStyle::Body);
+        let width = ui.spacing().combo_width;
+        ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+        TableBuilder::new(ui)
+            .column(Column::auto().at_least(width / 2.0))
+            .column(Column::auto().at_least(width))
+            .column(Column::auto().at_least(width / 2.0))
+            .header(0.0, |_| {})
+            .body(|mut body| {
+                for unsaturated in &mut fatty_acid.unsaturated {
+                    body.row(height, |mut row| {
+                        // Index
+                        row.col(|ui| {
+                            let text = match unsaturated.index {
+                                Some(index) => Cow::Owned(index.to_string()),
+                                None => Cow::Borrowed("?"),
+                            };
+                            let inner_response = ui.menu_button(text, |ui| {
+                                ui.set_min_width(ui.spacing().combo_width / 2.0);
+                                ui.set_max_height(ui.spacing().combo_height);
+                                let mut changed = false;
+                                ScrollArea::vertical().show(ui, |ui| {
+                                    for selected in 1..fatty_acid.carbon {
+                                        changed |= ui
+                                            .selectable_value(
+                                                &mut unsaturated.index,
+                                                Some(selected),
+                                                selected.to_string(),
+                                            )
+                                            .changed();
+                                    }
+                                    changed |= ui
+                                        .selectable_value(&mut unsaturated.index, None, "?")
+                                        .changed();
+                                });
+                                changed
+                            });
+                            response |= inner_response.response;
+                            if inner_response.inner.is_some_and(identity) {
+                                response.mark_changed();
+                            }
+                        });
+                        // Triple
+                        row.col(|ui| {
+                            let text = match unsaturated.triple {
+                                Some(false) => "Olefinic",
+                                Some(true) => "Acetylenic",
+                                None => "?",
+                            };
+                            let inner_response = ui.menu_button(text, |ui| {
+                                let mut changed = false;
+                                changed |= ui
+                                    .selectable_value(
+                                        &mut unsaturated.triple,
+                                        Some(false),
+                                        "Olefinic",
+                                    )
+                                    .changed();
+                                changed |= ui
+                                    .selectable_value(
+                                        &mut unsaturated.triple,
+                                        Some(true),
+                                        "Acetylenic",
+                                    )
+                                    .changed();
+                                changed |= ui
+                                    .selectable_value(&mut unsaturated.triple, None, "?")
+                                    .changed();
+                                changed
+                            });
+                            response |= inner_response.response;
+                            if inner_response.inner.is_some_and(identity) {
+                                response.mark_changed();
+                            }
+                        });
+                        // Parity
+                        row.col(|ui| {
+                            if let Some(false) = unsaturated.triple {
+                                let text = match unsaturated.parity {
+                                    Some(false) => "Cis",
+                                    Some(true) => "Trans",
+                                    None => "?",
+                                };
+                                let inner_response = ui.menu_button(text, |ui| {
+                                    let mut changed = false;
+                                    changed |= ui
+                                        .selectable_value(
+                                            &mut unsaturated.parity,
+                                            Some(false),
+                                            "Cis",
+                                        )
+                                        .changed();
+                                    changed |= ui
+                                        .selectable_value(
+                                            &mut unsaturated.parity,
+                                            Some(true),
+                                            "Trans",
+                                        )
+                                        .changed();
+                                    changed |= ui
+                                        .selectable_value(&mut unsaturated.parity, None, "?")
+                                        .changed();
+                                    changed
+                                });
+                                response |= inner_response.response;
+                                if inner_response.inner.is_some_and(identity) {
+                                    response.mark_changed();
+                                }
+                            }
+                        });
+                    });
+                }
+            });
         response
     }
 }

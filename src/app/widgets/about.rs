@@ -1,7 +1,7 @@
 use egui::{Label, Response, RichText, Sense, TextStyle, Ui, Widget};
 use egui_phosphor::regular::{COPYRIGHT, GITHUB_LOGO, GLOBE, WARNING};
 
-/// About
+/// About widget
 #[derive(Debug, Default)]
 pub(crate) struct About;
 

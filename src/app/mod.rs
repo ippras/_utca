@@ -13,7 +13,7 @@ use anyhow::Result;
 use chrono::Local;
 use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
-    Align, Align2, CentralPanel, Color32, Context, DroppedFile, FontDefinitions, Frame, Id,
+    Align, Align2, CentralPanel, Color32, Context, DroppedFile, Event, FontDefinitions, Frame, Id,
     LayerId, Layout, MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle,
     TopBottomPanel, Visuals, Widget as _, Window, util::IdTypeMap, warn_if_debug_build,
 };
@@ -554,14 +554,11 @@ impl App {
     //     if !ctx.memory(|memory| memory.focused().is_some()) {
     //         ctx.input(|input| {
     //             for event in &input.raw.events {
-    //                 if let Event::Paste(paste) = event {
-    //                     if let Err(error) = self.parse(paste) {
-    //                         error!(?error);
-    //                         self.toasts
-    //                             .error(error.to_string().chars().take(64).collect::<String>())
-    //                             .set_duration(Some(Duration::from_secs(5)))
-    //                             .set_closable(true);
-    //                     }
+    //                 if let Event::Paste(text) = event {
+    //                     println!("Paste: {text}");
+    //                     // ctx.data_mut(|data| {
+    //                     //     data.insert_temp(Id::new("Paste"), text.clone());
+    //                     // });
     //                 }
     //             }
     //         });
@@ -648,6 +645,7 @@ impl eframe::App for App {
         self.windows(ctx, &mut state);
         // Post update
         self.drag_and_drop(ctx);
+        // self.paste(ctx);
         state.store(ctx, Id::new(ID_SOURCE));
     }
 }

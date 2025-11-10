@@ -8,7 +8,10 @@ use crate::{
     },
     utils::{HashedDataFrame, hash_data_frame},
 };
-use egui::{Context, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
+use anyhow::Result;
+use egui::{
+    Context, Event, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui, ViewportCommand,
+};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{HASH, MINUS, PLUS};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
@@ -69,12 +72,12 @@ impl TableView<'_> {
     fn change(&mut self) -> PolarsResult<()> {
         if self.state.add_row {
             self.data.add_row()?;
-            self.data.update()?;
+            self.data.rehash()?;
             self.state.add_row = false;
         }
         if let Some(index) = self.state.delete_row {
             self.data.delete_row(index)?;
-            self.data.update()?;
+            self.data.rehash()?;
             self.state.delete_row = None;
         }
         Ok(())
@@ -102,25 +105,63 @@ impl TableView<'_> {
             (0, SN2_OR_SN1223) => {
                 let name = self.data.get_columns()[3].name();
                 if name == STEREOSPECIFIC_NUMBERS2 {
-                    ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
+                    let response = ui
+                        .heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
                         .on_hover_ui(|ui| {
                             ui.label(ui.localize("StereospecificNumber?number=2"));
                         });
+                    if response.hovered() {
+                        ui.ctx().input(|input| {
+                            for event in &input.raw.events {
+                                if let Event::Paste(text) = event {
+                                    let _ = self.paste(STEREOSPECIFIC_NUMBERS123, text);
+                                }
+                            }
+                        });
+                    };
                 } else if name == STEREOSPECIFIC_NUMBERS12_23 {
-                    ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
+                    let response = ui
+                        .heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
                         .on_hover_ui(|ui| {
                             ui.label(ui.localize("StereospecificNumber?number=1223"));
                         });
-                }
+                    if response.hovered() {
+                        ui.ctx().input(|input| {
+                            for event in &input.raw.events {
+                                if let Event::Paste(text) = event {
+                                    let _ = self.paste(STEREOSPECIFIC_NUMBERS123, text);
+                                }
+                            }
+                        });
+                    };
+                };
             }
             (0, SN123) => {
-                ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
+                let response = ui
+                    .heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=123"));
                     });
+                if response.hovered() {
+                    ui.ctx().input(|input| {
+                        for event in &input.raw.events {
+                            if let Event::Paste(text) = event {
+                                let _ = self.paste(STEREOSPECIFIC_NUMBERS123, text);
+                            }
+                        }
+                    });
+                };
             }
             _ => {}
         };
+    }
+
+    #[instrument(skip(self), err)]
+    fn paste(&mut self, column: &str, paste: &str) -> Result<()> {
+        let iter = paste.split('\n').map(|row| row.parse::<f64>().ok());
+        self.data.replace(column, Float64Chunked::from_iter(iter))?;
+        self.data.rehash()?;
+        Ok(())
     }
 
     #[instrument(skip(self, ui), err)]
@@ -164,11 +205,11 @@ impl TableView<'_> {
                     match inner_response.inner? {
                         Some(Inner::Cell(new)) => {
                             self.data.try_apply("Label", change_label(row, &new))?;
-                            self.data.update()?;
+                            self.data.rehash()?;
                         }
                         Some(Inner::Column(new_col)) => {
                             self.data.replace("Label", new_col)?;
-                            self.data.update()?;
+                            self.data.rehash()?;
                         }
                         None => todo!(),
                     }
@@ -183,7 +224,7 @@ impl TableView<'_> {
                 if inner_response.response.changed() {
                     self.data
                         .try_apply("FattyAcid", change_fatty_acid(row, inner_response.inner))?;
-                    self.data.update()?;
+                    self.data.rehash()?;
                 }
             }
             (row, SN123) => {
@@ -202,7 +243,7 @@ impl TableView<'_> {
                 if let Some(value) = inner_response.inner {
                     self.data
                         .try_apply(STEREOSPECIFIC_NUMBERS123, change_f64(row, value))?;
-                    self.data.update()?;
+                    self.data.rehash()?;
                 }
                 // self.f64_cell(ui, row, "Triacylglycerol")?;
             }
@@ -222,7 +263,7 @@ impl TableView<'_> {
                     .show(ui);
                 if let Some(value) = inner_response.inner {
                     self.data.try_apply(name, change_f64(row, value))?;
-                    self.data.update()?;
+                    self.data.rehash()?;
                 }
                 // self.f64_cell(ui, row, "Monoacylglycerol2")?;
             }

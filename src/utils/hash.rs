@@ -28,7 +28,7 @@ impl HashedDataFrame {
         Ok(Self { data_frame, hash })
     }
 
-    pub fn update(&mut self) -> PolarsResult<()> {
+    pub fn rehash(&mut self) -> PolarsResult<()> {
         self.hash = hash_data_frame(&mut self.data_frame)?;
         Ok(())
     }
