@@ -8,9 +8,10 @@ pub(crate) const ID_SOURCE: &str = "Configuration";
 /// Configuration state
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub(crate) struct State {
-    pub(crate) reset_table_state: bool,
     pub(crate) add_row: bool,
     pub(crate) delete_row: Option<usize>,
+    pub(crate) reset_table: bool,
+    pub(crate) row_up: Option<usize>,
     pub(crate) settings: Settings,
     pub(crate) windows: Windows,
 }
@@ -20,7 +21,8 @@ impl State {
         Self {
             add_row: false,
             delete_row: None,
-            reset_table_state: false,
+            reset_table: false,
+            row_up: None,
             settings: Settings::new(),
             windows: Windows::new(),
         }

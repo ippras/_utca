@@ -165,7 +165,7 @@ impl Pane {
         });
         ui.separator();
         // Reset
-        ui.reset(&mut state.reset_table_state);
+        ui.reset(&mut state.reset_table);
         // Resize
         ui.resize(&mut state.settings.resize_table);
         // Edit

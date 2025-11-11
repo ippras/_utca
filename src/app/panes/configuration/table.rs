@@ -11,7 +11,7 @@ use crate::{
 use anyhow::Result;
 use egui::{Context, Event, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{HASH, MINUS, PLUS};
+use egui_phosphor::regular::{ARROW_FAT_UP, HASH, MINUS, PLUS};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use lipid::prelude::*;
 use polars::{chunked_array::builder::AnonymousOwnedListBuilder, prelude::*};
@@ -44,10 +44,10 @@ impl<'a> TableView<'a> {
 impl TableView<'_> {
     pub(super) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        if self.state.reset_table_state {
+        if self.state.reset_table {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            self.state.reset_table_state = false;
+            self.state.reset_table = false;
         }
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
         let num_rows = self.data.height() as u64 + 1;
@@ -78,6 +78,11 @@ impl TableView<'_> {
             self.data.rehash()?;
             self.state.delete_row = None;
         }
+        if let Some(index) = self.state.row_up {
+            // self.data.row_up(index)?;
+            self.data.rehash()?;
+            self.state.delete_row = None;
+        }
         Ok(())
     }
 
@@ -92,7 +97,16 @@ impl TableView<'_> {
                 });
             }
             (0, LABEL) => {
-                ui.heading(ui.localize("Label"));
+                let response = ui.heading(ui.localize("Label"));
+                if self.state.settings.edit_table && response.hovered() {
+                    ui.ctx().input(|input| {
+                        for event in &input.raw.events {
+                            if let Event::Paste(text) = event {
+                                let _ = self.paste_labels("Label", text);
+                            }
+                        }
+                    });
+                };
             }
             (0, FA) => {
                 ui.heading(ui.localize("FattyAcid.abbreviation"))
@@ -112,7 +126,7 @@ impl TableView<'_> {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
                                 if let Event::Paste(text) = event {
-                                    let _ = self.paste(STEREOSPECIFIC_NUMBERS2, text);
+                                    let _ = self.paste_floats(STEREOSPECIFIC_NUMBERS2, text);
                                 }
                             }
                         });
@@ -127,7 +141,7 @@ impl TableView<'_> {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
                                 if let Event::Paste(text) = event {
-                                    let _ = self.paste(STEREOSPECIFIC_NUMBERS12_23, text);
+                                    let _ = self.paste_floats(STEREOSPECIFIC_NUMBERS12_23, text);
                                 }
                             }
                         });
@@ -144,7 +158,7 @@ impl TableView<'_> {
                     ui.ctx().input(|input| {
                         for event in &input.raw.events {
                             if let Event::Paste(text) = event {
-                                let _ = self.paste(STEREOSPECIFIC_NUMBERS123, text);
+                                let _ = self.paste_floats(STEREOSPECIFIC_NUMBERS123, text);
                             }
                         }
                     });
@@ -155,7 +169,19 @@ impl TableView<'_> {
     }
 
     #[instrument(skip(self), err)]
-    fn paste(&mut self, column: &'static str, text: &str) -> Result<()> {
+    fn paste_labels(&mut self, column: &'static str, text: &str) -> Result<()> {
+        let mut builder =
+            StringChunkedBuilder::new(PlSmallStr::from_static(column), self.data.height());
+        for row in text.split('\n') {
+            builder.append_value(row.trim());
+        }
+        self.data.replace(column, builder.finish())?;
+        self.data.rehash()?;
+        Ok(())
+    }
+
+    #[instrument(skip(self), err)]
+    fn paste_floats(&mut self, column: &'static str, text: &str) -> Result<()> {
         let mut builder = PrimitiveChunkedBuilder::<Float64Type>::new(
             PlSmallStr::from_static(column),
             self.data.height(),
@@ -178,7 +204,7 @@ impl TableView<'_> {
         if row != self.data.height() {
             self.body_cell_content_ui(ui, row, column)?;
         } else {
-            self.footer_cell_content_ui(ui, column)?;
+            self.footer_cell_content_ui(ui, row, column)?;
         }
         Ok(())
     }
@@ -249,7 +275,6 @@ impl TableView<'_> {
                         .try_apply(STEREOSPECIFIC_NUMBERS123, change_f64(row, value))?;
                     self.data.rehash()?;
                 }
-                // self.f64_cell(ui, row, "Triacylglycerol")?;
             }
             (row, SN2_OR_SN1223) => {
                 let data_frame = ui.memory_mut(|memory| -> PolarsResult<_> {
@@ -269,19 +294,26 @@ impl TableView<'_> {
                     self.data.try_apply(name, change_f64(row, value))?;
                     self.data.rehash()?;
                 }
-                // self.f64_cell(ui, row, "Monoacylglycerol2")?;
             }
             _ => {}
         }
         Ok(())
     }
 
-    fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
+    fn footer_cell_content_ui(
+        &mut self,
+        ui: &mut Ui,
+        row: usize,
+        column: Range<usize>,
+    ) -> PolarsResult<()> {
         match column {
             INDEX => {
                 if self.state.settings.edit_table {
                     if ui.button(PLUS).clicked() {
                         self.state.add_row = true;
+                    }
+                    if ui.button(ARROW_FAT_UP).clicked() {
+                        self.state.row_up = Some(row);
                     }
                 }
             }
@@ -312,22 +344,6 @@ impl TableView<'_> {
             _ => {}
         }
         Ok(())
-    }
-
-    fn f64_cell(&mut self, ui: &mut Ui, row: usize, column: &str) -> PolarsResult<Response> {
-        let value = self.data[column].f64()?.get(row);
-        let inner_response = FloatWidget::new(value)
-            .editable(self.state.settings.edit_table)
-            .precision(Some(self.state.settings.precision))
-            .hover(true)
-            .show(ui);
-        if let Some(value) = inner_response.inner {
-            self.data
-                .data_frame
-                .try_apply(column, change_f64(row, value))?;
-            self.data.hash = hash_data_frame(&mut self.data.data_frame)?;
-        }
-        Ok(inner_response.response)
     }
 }
 

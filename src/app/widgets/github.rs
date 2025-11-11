@@ -103,6 +103,14 @@ impl Github {
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/P-519[-N;1].2025-04-23.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/P-519[-N;2].2025-04-23.utca.ron");
         });
+        ui.menu_button("Lunaria rediviva", |ui| {
+            ui.heading("Lunaria rediviva");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[1].2024-05-16.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[2].2024-05-16.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[3].2024-05-16.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[4].2024-05-17.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[5].2024-05-17.utca.ron");
+        });
         ui.menu_button("Sidorov (2014)", |ui| {
             ui.doi("10.1007/s11746-014-2553-8");
             ui.heading("Subgenus Euonymus");

@@ -1,4 +1,4 @@
-use egui::{Grid, InnerResponse, Response, Ui, Widget};
+use egui::{Grid, InnerResponse, Label, Response, Ui, Widget};
 use egui_l20n::UiExt as _;
 use lipid::prelude::*;
 use polars::prelude::*;
@@ -137,7 +137,7 @@ impl LabelWidget<'_> {
             }
             response
         } else {
-            ui.label(text)
+            Label::new(text).truncate().ui(ui)
         };
         if self.hover_names {
             response = response.on_hover_ui(|ui| {
