@@ -1,11 +1,11 @@
 use super::ID_SOURCE;
 use crate::app::{MAX_PRECISION, states::ColumnFilter};
 use egui::{
-    Grid, PopupCloseBehavior, Slider, SliderClamping, Ui,
+    Grid, PopupCloseBehavior, Slider, SliderClamping, Ui, Widget,
     containers::menu::{MenuButton, MenuConfig},
 };
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::FUNNEL;
+use egui_phosphor::regular::{ARROWS_CLOCKWISE, DATABASE, FUNNEL};
 use polars::prelude::AnyValue;
 use serde::{Deserialize, Serialize};
 
@@ -104,7 +104,7 @@ impl Settings {
             ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
                 ui.label(ui.localize("StickyColumns.hover"));
             });
-            ui.add(Slider::new(&mut self.table.sticky_columns, 0..=8));
+            Slider::new(&mut self.table.sticky_columns, 0..=8).ui(ui);
             ui.end_row();
 
             // Truncate
@@ -114,6 +114,10 @@ impl Settings {
             ui.checkbox(&mut self.table.truncate_headers, ());
             ui.end_row();
 
+            ui.heading("Parameters");
+            ui.separator();
+            ui.end_row();
+
             // Filter
             ui.label(ui.localize("FilterTableRows")).on_hover_ui(|ui| {
                 ui.label(ui.localize("FilterTableRows.hover"));
@@ -121,7 +125,7 @@ impl Settings {
             MenuButton::new(FUNNEL)
                 .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
                 .ui(ui, |ui| {
-                    ui.add(
+                    ui.horizontal(|ui| {
                         Slider::new(&mut self.table.row_filter, 0.0..=1.0)
                             .clamping(SliderClamping::Always)
                             .custom_formatter(|mut value, _| {
@@ -137,8 +141,12 @@ impl Settings {
                                 }
                                 Some(parsed)
                             })
-                            .logarithmic(true),
-                    );
+                            .logarithmic(true)
+                            .ui(ui);
+                        if ui.button(ARROWS_CLOCKWISE).clicked() {
+                            self.table.row_filter = 0.0025;
+                        }
+                    });
                 });
             ui.end_row();
             ui.label(ui.localize("FilterTableColumns"))
@@ -151,6 +159,13 @@ impl Settings {
                     // self.table.filter.show(ui);
                 });
             ui.end_row();
+
+            ui.label(ui.localize("Normalize_Weighted"))
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("Normalize_Weighted.hover"));
+                });
+            ui.checkbox(&mut self.parameters.weighted, ());
+            ui.end_row();
         });
     }
 }
@@ -160,16 +175,6 @@ impl Default for Settings {
         Self::new()
     }
 }
-
-// /// Calculation table settings
-// #[derive(Clone, Debug, Deserialize, Serialize)]
-// pub(crate) struct Table {
-//     pub(crate) reset_state: bool,
-//     pub(crate) resizable: bool,
-//     pub(crate) sticky_columns: usize,
-//     pub(crate) truncate_headers: bool,
-//     pub(crate) column_filter: ColumnFilter,
-// }
 
 /// Calculation table settings
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -199,7 +204,6 @@ impl Table {
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) struct Parameters {
     pub(crate) weighted: bool,
-    // pub(crate) from: From,
     pub(crate) normalize: Normalize,
     pub(crate) unsigned: bool,
     pub(crate) christie: bool,
@@ -210,7 +214,6 @@ impl Parameters {
     pub(crate) fn new() -> Self {
         Self {
             weighted: false,
-            // from: From::StereospecificNumbers2,
             normalize: Normalize::new(),
             unsigned: true,
             christie: false,
@@ -224,29 +227,6 @@ impl Default for Parameters {
         Self::new()
     }
 }
-
-// /// From
-// #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
-// pub(crate) enum From {
-//     StereospecificNumbers12_23,
-//     StereospecificNumbers2,
-// }
-
-// impl From {
-//     pub(crate) fn text(self) -> &'static str {
-//         match self {
-//             Self::StereospecificNumbers12_23 => "CalculateFrom-Sn12Sn23",
-//             Self::StereospecificNumbers2 => "CalculateFrom-Sn2",
-//         }
-//     }
-
-//     pub(crate) fn hover_text(self) -> &'static str {
-//         match self {
-//             Self::StereospecificNumbers12_23 => "CalculateFrom-Sn12Sn23.hover",
-//             Self::StereospecificNumbers2 => "CalculateFrom-Sn2.hover",
-//         }
-//     }
-// }
 
 /// Normalize
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]

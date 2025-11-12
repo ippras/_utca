@@ -4,10 +4,13 @@ use crate::{
     app::{
         computers::{
             CalculationComputed, CalculationIndicesComputed, CalculationIndicesKey, CalculationKey,
+            calculation::correlations::{
+                Computed as CalculationCorrelationsComputed, Key as CalculationCorrelationsKey,
+            },
         },
         identifiers::COMPOSE,
-        states::calculation::{Settings, State, Windows},
-        widgets::{FattyAcidWidget, FloatWidget, IndicesWidget},
+        states::calculation::{Settings, State},
+        widgets::IndicesWidget,
     },
     export::ron,
     utils::{
@@ -16,10 +19,9 @@ use crate::{
         metadata::{authors, date, name},
     },
 };
-use anyhow::{Result, bail};
-use chrono::NaiveDate;
+use anyhow::Result;
 use egui::{
-    CentralPanel, CursorIcon, Frame, Grid, Id, MenuBar, Response, RichText, ScrollArea, TextStyle,
+    CentralPanel, CursorIcon, Frame, Id, MenuBar, Response, RichText, ScrollArea, TextStyle,
     TopBottomPanel, Ui, Window, util::hash,
 };
 use egui_l20n::UiExt as _;
@@ -28,13 +30,12 @@ use egui_phosphor::regular::{
     SLIDERS_HORIZONTAL, X,
 };
 use egui_tiles::{TileId, UiResponse};
-use itertools::Itertools;
 use lipid::prelude::*;
 use metadata::{
     AUTHORS, DATE, DEFAULT_DATE, DEFAULT_VERSION, Metadata, NAME, VERSION, polars::MetaDataFrame,
 };
 use polars::prelude::*;
-use polars_utils::{format_list, format_list_truncated};
+use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -178,12 +179,8 @@ impl Pane {
         // Settings
         ui.settings(&mut state.windows.open_settings);
         ui.separator();
-        // // Parameters
-        // ui.parameters(&mut state.windows.open_parameters);
-        // ui.separator();
         // Indices
         ui.menu_button(RichText::new(SIGMA).heading(), |ui| {
-            // ui.indices(&mut windows.open_indices);
             ui.toggle_value(
                 &mut state.windows.open_indices,
                 (
@@ -192,7 +189,17 @@ impl Pane {
                 ),
             )
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("Indices"));
+                ui.label(ui.localize("Indices.hover"));
+            });
+            ui.toggle_value(
+                &mut state.windows.open_correlations,
+                (
+                    RichText::new(SIGMA).heading(),
+                    RichText::new(ui.localize("Correlations")).heading(),
+                ),
+            )
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Correlations.hover"));
             });
         });
         ui.separator();
@@ -378,6 +385,7 @@ impl Pane {
 impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
         self.christie(ui, state);
+        self.correlations(ui, state);
         self.indices(ui, state);
         self.settings(ui, state);
     }
@@ -407,6 +415,27 @@ impl Pane {
             });
     }
 
+    fn correlations(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SLIDERS_HORIZONTAL} Calculation correlations"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Correlations"))
+            .open(&mut state.windows.open_correlations)
+            .show(ui.ctx(), |ui| {
+                self.correlations_content(ui, &state.settings)
+            });
+    }
+
+    #[instrument(skip_all, err)]
+    fn correlations_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<CalculationCorrelationsComputed>()
+                .get(CalculationCorrelationsKey::new(&self.target, settings))
+        });
+        println!("data_frame: {data_frame}");
+        Ok(())
+    }
+
     fn indices(&mut self, ui: &mut Ui, state: &mut State) {
         Window::new(format!("{SIGMA} Calculation indices"))
             .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
@@ -427,15 +456,6 @@ impl Pane {
             .show(ui)
             .inner
     }
-
-    // fn parameters(&mut self, ui: &mut Ui, state: &mut State) {
-    //     Window::new(format!("{GEAR} Calculation parameters"))
-    //         .id(ui.auto_id_with(ID_SOURCE).with("Parameters"))
-    //         .open(&mut state.windows.open_parameters)
-    //         .show(ui.ctx(), |ui| {
-    //             self.parameters.show(ui);
-    //         });
-    // }
 
     fn settings(&mut self, ui: &mut Ui, state: &mut State) {
         Window::new(format!("{SLIDERS_HORIZONTAL} Calculation settings"))

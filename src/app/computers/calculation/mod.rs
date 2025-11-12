@@ -1,6 +1,6 @@
 use crate::{
     app::states::calculation::{Normalize, Settings},
-    utils::{HashedDataFrame, HashedMetaDataFrame, hash_expr},
+    utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use egui::{
     emath::OrderedFloat,
@@ -19,41 +19,26 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let mut lazy_frame = match key.index {
-            Some(index) => {
-                let frame = &key.frames[index];
-                // let mut lazy_frame = frame.data.data_frame.clone().lazy();
-                compute(&frame.data.data_frame, key)?.select([
-                    col(LABEL),
-                    col(FATTY_ACID),
-                    as_struct(vec![all().exclude_cols([LABEL, FATTY_ACID]).as_expr()])
-                        .alias(frame.meta.format(".").to_string()),
-                ])
-            }
-            None => {
-                let compute = |frame: &HashedMetaDataFrame| -> PolarsResult<LazyFrame> {
-                    Ok(compute(&frame.data.data_frame, key)?.select([
-                        hash_expr(as_struct(vec![col(LABEL), col(FATTY_ACID)])),
-                        col(LABEL),
-                        col(FATTY_ACID),
-                        as_struct(vec![all().exclude_cols([LABEL, FATTY_ACID]).as_expr()])
-                            .alias(frame.meta.format(".").to_string()),
-                    ]))
-                };
-                let mut lazy_frame = compute(&key.frames[0])?;
-                for frame in &key.frames[1..] {
-                    lazy_frame = lazy_frame.join(
-                        compute(frame)?,
-                        [col("Hash"), col(LABEL), col(FATTY_ACID)],
-                        [col("Hash"), col(LABEL), col(FATTY_ACID)],
-                        JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
-                    );
-                }
-                lazy_frame = lazy_frame.drop(by_name(["Hash"], true));
-                lazy_frame
-            }
-        };
-        lazy_frame = mean_and_standard_deviations(lazy_frame, key.ddof)?;
+        let mut lazy_frame = key.frames[0]
+            .data
+            .data_frame
+            .clone()
+            .lazy()
+            .select(exprs(0));
+        for index in 1..key.frames.len() {
+            lazy_frame = lazy_frame.join(
+                key.frames[index]
+                    .data
+                    .data_frame
+                    .clone()
+                    .lazy()
+                    .select(exprs(index)),
+                [col(LABEL), col(FATTY_ACID)],
+                [col(LABEL), col(FATTY_ACID)],
+                JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
+            );
+        }
+        lazy_frame = compute(lazy_frame, key)?;
         HashedDataFrame::new(lazy_frame.collect()?)
     }
 }
@@ -70,7 +55,7 @@ pub(crate) struct Key<'a> {
     pub(crate) frames: &'a [HashedMetaDataFrame],
     pub(crate) index: Option<usize>,
     pub(crate) ddof: u8,
-    pub(crate) normalize_enrichment_factor: bool,
+    pub(crate) normalize_factors: bool,
     pub(crate) normalize: Normalize,
     pub(crate) row_filter: OrderedFloat<f64>,
     pub(crate) unsigned: bool,
@@ -83,7 +68,7 @@ impl<'a> Key<'a> {
             frames,
             index: settings.index,
             ddof: settings.parameters.ddof,
-            normalize_enrichment_factor: settings.normalize_factors,
+            normalize_factors: settings.normalize_factors,
             normalize: settings.parameters.normalize,
             row_filter: OrderedFloat(settings.table.row_filter),
             unsigned: settings.parameters.unsigned,
@@ -99,461 +84,156 @@ impl<'a> Key<'a> {
 /// Calculation value
 type Value = HashedDataFrame;
 
-fn compute(data_frame: &DataFrame, key: Key) -> PolarsResult<LazyFrame> {
-    let mut lazy_frame = data_frame.clone().lazy();
+fn exprs(index: usize) -> [Expr; 3] {
+    [
+        col(LABEL),
+        col(FATTY_ACID),
+        all()
+            .exclude_cols([
+                PlSmallStr::from_static(LABEL),
+                PlSmallStr::from_static(FATTY_ACID),
+            ])
+            .as_expr()
+            .name()
+            .suffix(&format!("[{index}]")),
+    ]
+}
+
+fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    let sn123 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS123}\[\d+\]$"#));
+    let sn2 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS2}\[\d+\]$"#));
+    // Normalize
+    lazy_frame = lazy_frame.with_columns([
+        experimental(sn123.clone(), key),
+        experimental(sn2.clone(), key),
+    ]);
+    // Filter
+    lazy_frame = lazy_frame.filter(any_horizontal([sn123.clone().gt_eq(key.row_filter.0)])?.or(
+        any_horizontal([sn2.clone().fill_nan(lit(0)).gt_eq(key.row_filter.0)])?,
+    ));
+    // Calculate
+    lazy_frame = lazy_frame.with_columns([
+        sn13(sn123.clone(), sn2.clone(), key),
+        enrichment_factors(sn2.clone(), sn123.clone(), key),
+        selectivity_factors(sn2.clone(), sn123.clone(), key),
+    ]);
+    // Mean and standard deviation
+    match key.index {
+        Some(index) => {
+            let sn123 = col(format!("{STEREOSPECIFIC_NUMBERS123}[{index}]"));
+            let sn2 = col(format!("{STEREOSPECIFIC_NUMBERS2}[{index}]"));
+            let sn13 = col(format!("{STEREOSPECIFIC_NUMBERS13}[{index}]"));
+            let enrichment_factor = col(format!("EnrichmentFactor[{index}]"));
+            let selectivity_factor = col(format!("SelectivityFactor[{index}]"));
+            lazy_frame = lazy_frame.select([
+                col(LABEL),
+                col(FATTY_ACID),
+                mean_and_standard_deviations(sn123, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS123),
+                mean_and_standard_deviations(sn2, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS2),
+                mean_and_standard_deviations(sn13, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS13),
+                as_struct(vec![
+                    mean_and_standard_deviations(enrichment_factor, key.ddof)?.alias("Enrichment"),
+                    mean_and_standard_deviations(selectivity_factor, key.ddof)?
+                        .alias("Selectivity"),
+                ])
+                .alias("Factors"),
+            ]);
+        }
+        None => {
+            let sn13 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS13}\[\d]$"#));
+            let enrichment_factors = col(format!(r#"^EnrichmentFactor\[\d]$"#));
+            let selectivity_factors = col(format!(r#"^SelectivityFactor\[\d]$"#));
+            lazy_frame = lazy_frame.select([
+                col(LABEL),
+                col(FATTY_ACID),
+                mean_and_standard_deviations(sn123, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS123),
+                mean_and_standard_deviations(sn2, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS2),
+                mean_and_standard_deviations(sn13, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS13),
+                as_struct(vec![
+                    mean_and_standard_deviations(enrichment_factors, key.ddof)?.alias("Enrichment"),
+                    mean_and_standard_deviations(selectivity_factors, key.ddof)?
+                        .alias("Selectivity"),
+                ])
+                .alias("Factors"),
+            ]);
+        }
+    }
+
     // Christie
     // if parameters.christie {
     //     lazy_frame = christie(lazy_frame);
     // }
-    let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, key);
-    let sn2 = match data_frame[3].name().as_str() {
-        STEREOSPECIFIC_NUMBERS2 => experimental(STEREOSPECIFIC_NUMBERS2, key),
-        STEREOSPECIFIC_NUMBERS12_23 => {
-            let sn_1223 = experimental(STEREOSPECIFIC_NUMBERS12_23, key);
-            sn1223(sn123.clone(), sn_1223, key)
-        }
-        _ => lit(NULL),
-    };
-    let sn13 = sn13(sn123.clone(), sn2.clone(), key);
-    // Stereospecific numbers
-    lazy_frame = lazy_frame.with_columns([sn123, sn2, sn13]);
-    // Filter
-    lazy_frame = lazy_frame.filter(
-        col(STEREOSPECIFIC_NUMBERS123)
-            .gt_eq(key.row_filter.0)
-            .or(col(STEREOSPECIFIC_NUMBERS2)
-                .fill_nan(lit(0))
-                .gt_eq(key.row_filter.0)),
-    );
-    // Factors
-    lazy_frame = lazy_frame.with_column(factors(key));
+    // let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, key);
+    // let sn2 = match data_frame[3].name().as_str() {
+    //     STEREOSPECIFIC_NUMBERS2 => experimental(STEREOSPECIFIC_NUMBERS2, key),
+    //     STEREOSPECIFIC_NUMBERS12_23 => {
+    //         let sn_1223 = experimental(STEREOSPECIFIC_NUMBERS12_23, key);
+    //         sn1223(sn123.clone(), sn_1223, key)
+    //     }
+    //     _ => lit(NULL),
+    // };
+    // let sn13 = sn13(sn123.clone(), sn2.clone(), key);
+    // // Stereospecific numbers
+    // lazy_frame = lazy_frame.with_columns([sn123, sn2, sn13]);
+    // // Filter
+    // lazy_frame = lazy_frame.filter(
+    //     col(STEREOSPECIFIC_NUMBERS123)
+    //         .gt_eq(key.row_filter.0)
+    //         .or(col(STEREOSPECIFIC_NUMBERS2)
+    //             .fill_nan(lit(0))
+    //             .gt_eq(key.row_filter.0)),
+    // );
+    // // Factors
+    // lazy_frame = lazy_frame.with_column(factors(key));
     Ok(lazy_frame)
 }
 
-fn experimental(name: &str, key: Key) -> Expr {
-    let mut expr = col(name);
+fn experimental(mut expr: Expr, key: Key) -> Expr {
     if key.weighted {
-        expr =
-            col(name) / (col(name) * col(FATTY_ACID).fatty_acid().relative_atomic_mass(None)).sum()
+        expr = expr * col(FATTY_ACID).fatty_acid().relative_atomic_mass(None);
+        expr = expr.clone() / expr.sum()
     };
-    expr.normalize_if(key.normalize.experimental)
-}
-
-/// MAG2 = 4 * DAG1223 - 3 * TAG
-fn sn1223(sn123: Expr, sn1223: Expr, key: Key) -> Expr {
-    (lit(4) * sn1223 - lit(3) * sn123)
-        .clip_min_if(key.unsigned)
-        .normalize_if(key.normalize.theoretical)
-        .alias(STEREOSPECIFIC_NUMBERS2)
+    expr.normalize()
 }
 
 /// 2 * DAG1(3) = 3 * TAG - MAG2 (стр. 116)
-/// $x_{1 => i} = x_{3 => i} = x_{1|3 => i} / 2 = (3 * x_{1|2|3 => i} - x_{2 => i}) / 2$ (Sovová2008)
+/// $x_{1:i} = x_{3:i} = x_{1:i | 3:i} / 2 = (3 * x_{1:i | 2:i | 3:i} - x_{2:i}) / 2$ (Sovová2008)
 fn sn13(sn123: Expr, sn2: Expr, key: Key) -> Expr {
-    // // DAG1(3) = 3 * TAG - 2 * DAG1223
-    // let sn12_23 = (lit(3) * sn123.clone() - lit(2) * sn12_23)
-    //     .clip_min_if(parameters.unsigned)
-    //     .normalize_if(parameters.normalize.theoretical)
-    //     .alias(STEREOSPECIFIC_NUMBERS13);
-    // DAG1(3) = (3 * TAG - MAG2) / 2
-    // $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$
-    ((lit(3) * sn123 - sn2) / lit(2))
+    ((sn123 * lit(3) - sn2) / lit(2))
         .clip_min_if(key.unsigned)
-        .normalize_if(key.normalize.theoretical)
-        .alias(STEREOSPECIFIC_NUMBERS13)
-    // as_struct(vec![sn12_23, sn2]).alias(STEREOSPECIFIC_NUMBERS13)
+        .normalize()
+        .name()
+        .replace(STEREOSPECIFIC_NUMBERS123, STEREOSPECIFIC_NUMBERS13, true)
 }
 
-fn factors(key: Key) -> Expr {
-    as_struct(vec![
-        {
-            let mut enrichment_factor = FattyAcidExpr::enrichment_factor(
-                col(STEREOSPECIFIC_NUMBERS2),
-                col(STEREOSPECIFIC_NUMBERS123),
-            );
-            if key.normalize_enrichment_factor {
-                enrichment_factor = enrichment_factor / lit(3);
-            }
-            enrichment_factor
-        }
-        .alias("Enrichment"),
-        {
-            let mut selectivity_factor = col(FATTY_ACID)
-                .fatty_acid()
-                .selectivity_factor(col(STEREOSPECIFIC_NUMBERS2), col(STEREOSPECIFIC_NUMBERS123));
-            if key.normalize_enrichment_factor {
-                selectivity_factor = selectivity_factor / lit(3);
-            }
-            selectivity_factor
-        }
-        .alias("Selectivity"),
-    ])
-    .alias("Factors")
+fn enrichment_factors(sn2: Expr, sn123: Expr, key: Key) -> Expr {
+    let mut enrichment_factor = FattyAcidExpr::enrichment_factor(sn2.clone(), sn123.clone());
+    if key.normalize_factors {
+        enrichment_factor = enrichment_factor / lit(3);
+    }
+    enrichment_factor
+        .name()
+        .replace(STEREOSPECIFIC_NUMBERS2, "EnrichmentFactor", true)
 }
 
-// fn christie(lazy_frame: LazyFrame) -> LazyFrame {
-//     lazy_frame
-//         .with_column(hash_expr(col(FATTY_ACID)))
-//         .join(
-//             CHRISTIE.data.clone().lazy().select([
-//                 hash_expr(col(FATTY_ACID)),
-//                 col(FATTY_ACID),
-//                 col("Christie"),
-//             ]),
-//             [col("Hash"), col(FATTY_ACID)],
-//             [col("Hash"), col(FATTY_ACID)],
-//             JoinArgs::new(JoinType::Left),
-//         )
-//         // col("Christie").fill_null(lit(1)),
-//         .drop(by_name(["Hash"], true))
-// }
+fn selectivity_factors(sn2: Expr, sn123: Expr, key: Key) -> Expr {
+    let mut selectivity_factor = col(FATTY_ACID).fatty_acid().selectivity_factor(sn2, sn123);
+    if key.normalize_factors {
+        selectivity_factor = selectivity_factor / lit(3);
+    }
+    selectivity_factor
+        .name()
+        .replace(STEREOSPECIFIC_NUMBERS2, "SelectivityFactor", true)
+}
 
-// fn mean_and_standard_deviations(lazy_frame: LazyFrame, ddof: u8) -> PolarsResult<LazyFrame> {
-//     Ok(lazy_frame.select([
-//         col(LABEL),
-//         col(FATTY_ACID),
-//         as_struct(vec![
-//             mean(&["Experimental", STEREOSPECIFIC_NUMBERS123], ddof)?,
-//             mean(&["Experimental", STEREOSPECIFIC_NUMBERS12_23], ddof)?,
-//             mean(&["Experimental", STEREOSPECIFIC_NUMBERS2], ddof)?,
-//         ])
-//         .alias("Experimental"),
-//         as_struct(vec![
-//             mean(&["Theoretical", STEREOSPECIFIC_NUMBERS123], ddof)?,
-//             mean(&["Theoretical", STEREOSPECIFIC_NUMBERS12_23], ddof)?,
-//             mean(&["Theoretical", STEREOSPECIFIC_NUMBERS2], ddof)?,
-//             as_struct(vec![
-//                 mean(
-//                     &[
-//                         "Theoretical",
-//                         STEREOSPECIFIC_NUMBERS13,
-//                         STEREOSPECIFIC_NUMBERS12_23,
-//                     ],
-//                     ddof,
-//                 )?,
-//                 mean(
-//                     &[
-//                         "Theoretical",
-//                         STEREOSPECIFIC_NUMBERS13,
-//                         STEREOSPECIFIC_NUMBERS2,
-//                     ],
-//                     ddof,
-//                 )?,
-//             ])
-//             .alias(STEREOSPECIFIC_NUMBERS13),
-//         ])
-//         .alias("Theoretical"),
-//         as_struct(vec![
-//             mean(&["Factors", "Enrichment"], ddof)?,
-//             mean(&["Factors", "Selectivity"], ddof)?,
-//         ])
-//         .alias("Factors"),
-//     ]))
-// }
-fn mean_and_standard_deviations(lazy_frame: LazyFrame, ddof: u8) -> PolarsResult<LazyFrame> {
-    Ok(lazy_frame.select([
-        col(LABEL),
-        col(FATTY_ACID),
-        mean(&[STEREOSPECIFIC_NUMBERS123], ddof)?,
-        mean(&[STEREOSPECIFIC_NUMBERS2], ddof)?,
-        mean(&[STEREOSPECIFIC_NUMBERS13], ddof)?,
-        as_struct(vec![
-            mean(&["Factors", "Enrichment"], ddof)?,
-            mean(&["Factors", "Selectivity"], ddof)?,
-        ])
-        .alias("Factors"),
+fn mean_and_standard_deviations(expr: Expr, ddof: u8) -> PolarsResult<Expr> {
+    let array = concat_arr(vec![expr])?;
+    Ok(as_struct(vec![
+        array.clone().arr().mean().alias("Mean"),
+        array.clone().arr().std(ddof).alias("StandardDeviation"),
+        array.alias("Array"),
     ]))
 }
-
-fn mean(names: &[&str], ddof: u8) -> PolarsResult<Expr> {
-    let array = || {
-        concat_arr(vec![
-            all()
-                .exclude_cols([LABEL, FATTY_ACID])
-                .as_expr()
-                .destruct(names),
-        ])
-    };
-    Ok(as_struct(vec![
-        array()?.arr().mean().alias("Mean"),
-        array()?.arr().std(ddof).alias("StandardDeviation"),
-        array()?.alias("Array"),
-    ])
-    .alias(names[names.len() - 1]))
-}
-
-fn compute_sn(fatty_acid: Expr, sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> [Expr; 4] {
-    let experimental = |mut sn: Expr| {
-        if key.weighted {
-            sn =
-                sn.clone() / (sn * fatty_acid.clone().fatty_acid().relative_atomic_mass(None)).sum()
-        };
-        sn.normalize_if(key.normalize.experimental)
-    };
-    let sn123 = experimental(sn123);
-    let sn12_23 = experimental(sn12_23);
-    let sn2 = experimental(sn2);
-    [
-        compute_sn123(sn123.clone(), sn12_23.clone(), sn2.clone(), key),
-        compute_sn12_23(sn123.clone(), sn12_23.clone(), sn2.clone(), key),
-        compute_sn2(sn123.clone(), sn12_23.clone(), sn2.clone(), key),
-        compute_sn13(sn123, sn12_23, sn2, key),
-    ]
-}
-
-/// 3 * x{1,2,3: i} = 2 * x{1,3: i} + x{2: i}
-/// 3 * x{1,2,3: i} = 4 * x{1,2: i; 2,3: i} - x{2: i}
-/// 3 * TAG = 2 * DAG1(3) + MAG2
-/// 3 * TAG = 4 * DAG1223 - MAG2
-fn compute_sn123(sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> Expr {
-    let theoretical = ((lit(4) * sn12_23 - sn2) / lit(3))
-        .clip_min_if(key.unsigned)
-        .normalize_if(key.normalize.theoretical);
-    as_struct(vec![
-        sn123.alias("Experimental"),
-        theoretical.alias("Theoretical"),
-    ])
-    .alias(STEREOSPECIFIC_NUMBERS123)
-}
-
-/// DAG1223 = (3 * TAG + MAG2) / 4
-fn compute_sn12_23(sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> Expr {
-    let theoretical = ((lit(3) * sn123 + sn2) / lit(4)).normalize_if(key.normalize.theoretical);
-    as_struct(vec![
-        sn12_23.alias("Experimental"),
-        theoretical.alias("Theoretical"),
-    ])
-    .alias(STEREOSPECIFIC_NUMBERS12_23)
-}
-
-/// MAG2 = 4 * DAG1223 - 3 * TAG
-fn compute_sn2(sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> Expr {
-    let theoretical = (lit(4) * sn12_23 - lit(3) * sn123)
-        .clip_min_if(key.unsigned)
-        .normalize_if(key.normalize.theoretical);
-    as_struct(vec![
-        sn2.alias("Experimental"),
-        theoretical.alias("Theoretical"),
-    ])
-    .alias(STEREOSPECIFIC_NUMBERS2)
-}
-
-// xi мольная доля i-й ЖК в ТГ
-// x[i,,] мольная доля i-й ЖК в sn-1 положении ТГ
-// x[,i,] мольная доля i-й ЖК в sn-2 положении ТГ
-// x[,,i] мольная доля i-й ЖК в sn-3 положении ТГ
-// x[i,j,k] мольная доля стереоизомера ТГ, содержащего ацил i-й ЖК в положении sn-1, ацил j-й ЖК в положении sn-2 и ацил k-й ЖК в положении sn-3
-
-/// 2 * DAG1(3) = 3 * TAG - MAG2 (стр. 116)
-/// $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$ (Sovová2008)
-fn compute_sn13(sn123: Expr, sn12_23: Expr, sn2: Expr, key: Key) -> Expr {
-    // DAG1(3) = 3 * TAG - 2 * DAG1223
-    let sn12_23 = (lit(3) * sn123.clone() - lit(2) * sn12_23)
-        .clip_min_if(key.unsigned)
-        .normalize_if(key.normalize.theoretical)
-        .alias(STEREOSPECIFIC_NUMBERS12_23);
-    // DAG1(3) = (3 * TAG - MAG2) / 2
-    // $x_{[i,,]} = x_{[,,i]} = (3 * x_{(i)} - x_{[,i,]}) / 2$
-    let sn2 = ((lit(3) * sn123 - sn2) / lit(2))
-        .clip_min_if(key.unsigned)
-        .normalize_if(key.normalize.theoretical)
-        .alias(STEREOSPECIFIC_NUMBERS2);
-    as_struct(vec![sn12_23, sn2]).alias(STEREOSPECIFIC_NUMBERS13)
-}
-
-fn _factors(fatty_acid: Expr, sn123: Expr, sn2: Expr) -> Expr {
-    let sn123 = sn123
-        .clone()
-        .struct_()
-        .field_by_index(0)
-        .fill_nan(sn123.struct_().field_by_index(1));
-    let sn2 = sn2
-        .clone()
-        .struct_()
-        .field_by_index(0)
-        .fill_nan(sn2.struct_().field_by_index(1));
-    as_struct(vec![
-        FattyAcidExpr::enrichment_factor(sn2.clone(), sn123.clone()).alias("Enrichment"),
-        fatty_acid
-            .fatty_acid()
-            .selectivity_factor(sn2, sn123)
-            .alias("Selectivity"),
-    ])
-    .alias("Factors")
-}
-
-// fn experimental(
-//     fatty_acid: Expr,
-//     sn123: Expr,
-//     sn12_23: Expr,
-//     sn2: Expr,
-//     parameters: &Parameters,
-// ) -> Expr {
-//     // // col(name) / (col(name) * col("FA").fa().mass() / lit(10)).sum()
-//     let compute = |mut expr: Expr| {
-//         // S / ∑(S * M)
-//         if parameters.weighted {
-//             expr = expr.clone() / (expr * fatty_acid.clone().fatty_acid().mass(None)).sum()
-//         };
-//         expr.normalize_if(parameters.normalize.experimental)
-//     };
-//     as_struct(vec![compute(sn123), compute(sn12_23), compute(sn2)]).alias("Experimental")
-// }
-
-// fn theoretical(sn123: Expr, sn12_23: Expr, sn2: Expr, parameters: &Parameters) -> Expr {
-//     // 3 * TAG =  2 * DAG13 + MAG2
-//     let tag = || (lit(4) * sn12_23.clone() - sn2.clone()) / lit(3);
-//     // DAG1223 = (3 * TAG + MAG2) / 4
-//     let dag1223 = || (lit(3) * sn123.clone() + sn2.clone()) / lit(4);
-//     // MAG2 = 4 * DAG1223 - 3 * TAG
-//     let mag2 = || lit(4) * sn12_23.clone() - lit(3) * sn123.clone();
-//     // 2 * DAG13 = 3 * TAG - MAG2 (стр. 116)
-//     let sn13 = || {
-//         // DAG13 = (3 * TAG - MAG2) / 2
-//         let sn2 = || (lit(3) * sn123.clone() - sn2.clone()) / lit(2);
-//         // DAG13 = 3 * TAG - 2 * DAG1223
-//         let sn12_23 = || lit(3) * sn123.clone() - lit(2) * sn12_23.clone();
-//         let sn12_23 = sn12_23()
-//             .clip_min_if(parameters.unsigned)
-//             .normalize_if(parameters.normalize.theoretical)
-//             .alias(STEREOSPECIFIC_NUMBERS12_23);
-//         let sn2 = sn2()
-//             .clip_min_if(parameters.unsigned)
-//             .normalize_if(parameters.normalize.theoretical)
-//             .alias(STEREOSPECIFIC_NUMBERS2);
-//         match parameters.from {
-//             From::Sn12_23 => as_struct(vec![sn12_23, sn2]),
-//             From::Sn2 => as_struct(vec![sn2, sn12_23]),
-//         }
-//     };
-//     as_struct(vec![
-//         tag()
-//             .clip_min_if(parameters.unsigned)
-//             .normalize_if(parameters.normalize.theoretical)
-//             .alias(STEREOSPECIFIC_NUMBERS123),
-//         dag1223()
-//             .normalize_if(parameters.normalize.theoretical)
-//             .alias(STEREOSPECIFIC_NUMBERS12_23),
-//         mag2()
-//             .clip_min_if(parameters.unsigned)
-//             .normalize_if(parameters.normalize.theoretical)
-//             .alias(STEREOSPECIFIC_NUMBERS2),
-//         sn13().alias(STEREOSPECIFIC_NUMBERS13),
-//     ])
-//     .alias("Theoretical")
-// }
-
-// fn old_factors(fatty_acid: Expr, sn123: Expr, sn2: Expr) -> Expr {
-//     as_struct(vec![
-//         FattyAcidExpr::enrichment_factor(sn2.clone(), sn123.clone()).alias("Enrichment"),
-//         fatty_acid
-//             .fatty_acid()
-//             .selectivity_factor(sn2, sn123)
-//             .alias("Selectivity"),
-//     ])
-//     .alias("Factors")
-// }
-
-// fn single(mut lazy_frame: LazyFrame, column: &str, key: Key) -> PolarsResult<LazyFrame> {
-//     let fraction = match key.settings.fraction {
-//         Fraction::AsIs => as_is,
-//         Fraction::ToMole => to_mole,
-//         Fraction::ToMass => to_mass,
-//         Fraction::Fraction => fraction,
-//     };
-//     lazy_frame = lazy_frame.with_column(
-//         as_struct(vec![
-//             fraction([column, "TAG"])
-//                 .fill_null(lit(0.0))
-//                 .christie(key.settings.christie.apply)
-//                 .normalize_if(key.settings.normalize.experimental),
-//             fraction([column, "DAG1223"])
-//                 .fill_null(lit(0.0))
-//                 .christie(key.settings.christie.apply)
-//                 .normalize_if(key.settings.normalize.experimental),
-//             fraction([column, "MAG2"])
-//                 .fill_null(lit(0.0))
-//                 .christie(key.settings.christie.apply)
-//                 .normalize_if(key.settings.normalize.experimental),
-//         ])
-//         .alias("Experimental"),
-//     );
-//     // Theoretical
-//     // lazy_frame = lazy_frame.with_column(
-//     //     as_struct(vec![
-//     //         col("Experimental")
-//     //             .experimental()
-//     //             .tag123(key.settings)
-//     //             .alias("TAG"),
-//     //         col("Experimental")
-//     //             .experimental()
-//     //             .dag1223(key.settings)
-//     //             .alias("DAG1223"),
-//     //         col("Experimental")
-//     //             .experimental()
-//     //             .mag2(key.settings)
-//     //             .alias("MAG2"),
-//     //         as_struct(vec![
-//     //             col("Experimental")
-//     //                 .experimental()
-//     //                 .dag13_from_dag1223(key.settings)
-//     //                 .alias("DAG1223"),
-//     //             col("Experimental")
-//     //                 .experimental()
-//     //                 .dag13_from_mag2(key.settings)
-//     //                 .alias("MAG2"),
-//     //         ])
-//     //         .alias("DAG13"),
-//     //     ])
-//     //     .alias("Theoretical"),
-//     // );
-//     // Calculated
-//     // lazy_frame = lazy_frame.with_column(
-//     //     as_struct(vec![
-//     //         col("Experimental")
-//     //             .struct_()
-//     //             .field_by_names(["TAG", "DAG1223", "MAG2"]),
-//     //         col("Theoretical")
-//     //             .struct_()
-//     //             .field_by_name("DAG13")
-//     //             .struct_()
-//     //             .field_by_name(match key.settings.from {
-//     //                 From::Dag1223 => "DAG1223",
-//     //                 From::Mag2 => "MAG2",
-//     //             })
-//     //             .alias("DAG13"),
-//     //     ])
-//     //     .alias("Calculated"),
-//     // );
-//     // Enrichment factor
-//     lazy_frame = lazy_frame.with_column(
-//         as_struct(vec![
-//             col("Calculated").calculated().ef("MAG2").alias("MAG2"),
-//             col("Calculated").calculated().ef("DAG13").alias("DAG13"),
-//         ])
-//         .alias("EF"),
-//     );
-//     // Selectivity factor
-//     lazy_frame = lazy_frame.with_column(
-//         as_struct(vec![
-//             col("Calculated").calculated().sf("MAG2").alias("MAG2"),
-//             col("Calculated").calculated().sf("DAG13").alias("DAG13"),
-//         ])
-//         .alias("SF"),
-//     );
-//     println!("lazy_frame 8: {}", lazy_frame.clone().collect().unwrap());
-//     lazy_frame = lazy_frame.with_column(
-//         as_struct(vec![
-//             col("Experimental"),
-//             col("Theoretical"),
-//             col("Calculated"),
-//             as_struct(vec![col("EF"), col("SF")]).alias("Factors"),
-//         ])
-//         .alias(column),
-//     );
-//     println!("lazy_frame 9: {}", lazy_frame.clone().collect().unwrap());
-//     Ok(lazy_frame)
-// }
 
 // // n = m / M
 // fn to_mole(names: [&str; 2]) -> Expr {
@@ -571,8 +251,9 @@ fn _factors(fatty_acid: Expr, sn123: Expr, sn2: Expr) -> Expr {
 //     destruct(names) / to_mass(names).sum()
 // }
 
-pub(super) mod display;
-pub(super) mod indices;
+pub(crate) mod correlations;
+pub(crate) mod display;
+pub(crate) mod indices;
 
 #[cfg(test)]
 mod test {
