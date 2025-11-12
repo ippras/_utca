@@ -432,7 +432,7 @@ impl Pane {
                 .cache::<CalculationCorrelationsComputed>()
                 .get(CalculationCorrelationsKey::new(&self.target, settings))
         });
-        println!("data_frame: {data_frame}");
+        // println!("data_frame: {data_frame}");
         Ok(())
     }
 

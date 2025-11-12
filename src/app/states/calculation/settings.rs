@@ -5,7 +5,7 @@ use egui::{
     containers::menu::{MenuButton, MenuConfig},
 };
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{ARROWS_CLOCKWISE, DATABASE, FUNNEL};
+use egui_phosphor::regular::{ARROWS_CLOCKWISE, FUNNEL};
 use polars::prelude::AnyValue;
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +32,7 @@ impl Settings {
             percent: true,
             precision: 1,
             significant: false,
-            display_standard_deviation: false,
+            display_standard_deviation: true,
             normalize_factors: false,
             table: Table::new(),
 

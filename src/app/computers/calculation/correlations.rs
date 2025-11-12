@@ -1,7 +1,7 @@
 use crate::{app::states::calculation::Settings, utils::HashedDataFrame};
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
-use polars::prelude::*;
+use polars::prelude::{pivot::pivot, *};
 use std::num::NonZeroI8;
 use tracing::instrument;
 
@@ -97,7 +97,28 @@ fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
 
 fn compute(key: Key, length: u64) -> PolarsResult<Value> {
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    println!("correlation 0: {}", lazy_frame.clone().collect().unwrap());
+    {
+        let lazy_frame = lazy_frame.clone().select([
+            col(LABEL),
+            col(FATTY_ACID),
+            col(STEREOSPECIFIC_NUMBERS123)
+                .struct_()
+                .field_by_name("Array"),
+        ]);
+        println!("correlation 0: {}", lazy_frame.clone().collect().unwrap());
+        let df = lazy_frame.clone().collect().unwrap();
+        pivot(
+            &df,
+            ["foo"],
+            Some(["Label"]),
+            Some(["N"]),
+            false,
+            None,
+            None,
+        )?;
+        println!("correlation 0: {}", lazy_frame.collect().unwrap());
+        // pearson_corr(col("Array").arr().eval(other, as_list), mean(all().as_expr()));
+    }
 
     let fatty_acid = || col(FATTY_ACID).fatty_acid();
     let values = |expr: Expr| {
