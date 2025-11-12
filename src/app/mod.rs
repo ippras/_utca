@@ -1,6 +1,6 @@
 use self::{
     data::Data,
-    identifiers::{CALCULATE, COMPOSE, CONFIGURE, DATA, GITHUB_TOKEN},
+    identifiers::{CALCULATE, COMPOSE, CONFIGURE, DATA},
     panes::{Behavior, Pane},
     states::State,
     widgets::{About, Github, Presets},
@@ -13,7 +13,7 @@ use anyhow::Result;
 use chrono::Local;
 use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
-    Align, Align2, CentralPanel, Color32, Context, DroppedFile, Event, FontDefinitions, Frame, Id,
+    Align, Align2, CentralPanel, Color32, Context, DroppedFile, FontDefinitions, Frame, Id,
     LayerId, Layout, MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle,
     TopBottomPanel, Visuals, Widget as _, Window, util::IdTypeMap, warn_if_debug_build,
 };
@@ -190,19 +190,8 @@ impl App {
                     {
                         // Cache
                         let caches = ui.memory_mut(|memory| memory.caches.clone());
-                        // Data
-                        let data = ui.memory_mut(|memory| {
-                            let mut data = IdTypeMap::default();
-                            // Github token
-                            let id = Id::new(GITHUB_TOKEN);
-                            if let Some(github_token) = memory.data.get_persisted::<String>(id) {
-                                data.insert_persisted(id, github_token)
-                            }
-                            data
-                        });
                         ui.memory_mut(|memory| {
                             memory.caches = caches;
-                            memory.data = data;
                         });
                         ui.ctx().set_localizations();
                     }
