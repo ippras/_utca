@@ -1,3 +1,26 @@
+## Polars
+
+### `explode` `implode`
+
+```rust
+lazy_frame = lazy_frame
+    .group_by_stable([col("Index"), col("Keys"), col("Species")])
+    .agg([as_struct(vec![
+        col("Values").explode().struct_().field_by_name("Mean").percent_if(key.percent),
+        col("Values").explode().struct_().field_by_name("StandardDeviation").percent_if(key.percent),
+        col("Values").explode().struct_().field_by_name("Array").percent_if(key.percent),
+        // col("Values").explode().struct_().field_by_name("Repetitions").percent_if(key.percent),
+    ])
+    .implode()
+    .alias("Values")]);
+```
+
+### `horizontal`
+
+```rust
+use polars::lazy::dsl::sum_horizontal,
+```
+
 = Polars
 
 <https://stackoverflow.com/questions/tagged/rust-polars>
@@ -64,6 +87,8 @@ https://stackoverflow.com/questions/72546690/lightweight-syntax-for-filtering-a-
 
 // link:https://github.com/pola-rs/polars/issues/16110[sort an array of structs]
 // link:https://stackoverflow.com/questions/78440430/sorting-a-polars-liststruct-by-struct-value[Sorting a polars list[struct[]] by struct value]
+
+
 
 == See also
 

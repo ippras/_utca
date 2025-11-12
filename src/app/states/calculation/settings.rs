@@ -1,11 +1,12 @@
 use super::ID_SOURCE;
 use crate::app::{MAX_PRECISION, states::ColumnFilter};
 use egui::{
-    Grid, PopupCloseBehavior, Slider, Ui,
+    Grid, PopupCloseBehavior, Slider, SliderClamping, Ui,
     containers::menu::{MenuButton, MenuConfig},
 };
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::FUNNEL;
+use polars::prelude::AnyValue;
 use serde::{Deserialize, Serialize};
 
 /// Calculation settings
@@ -114,6 +115,32 @@ impl Settings {
             ui.end_row();
 
             // Filter
+            ui.label(ui.localize("FilterTableRows")).on_hover_ui(|ui| {
+                ui.label(ui.localize("FilterTableRows.hover"));
+            });
+            MenuButton::new(FUNNEL)
+                .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+                .ui(ui, |ui| {
+                    ui.add(
+                        Slider::new(&mut self.table.row_filter, 0.0..=1.0)
+                            .clamping(SliderClamping::Always)
+                            .custom_formatter(|mut value, _| {
+                                if self.percent {
+                                    value *= 100.0;
+                                }
+                                AnyValue::Float64(value).to_string()
+                            })
+                            .custom_parser(|value| {
+                                let mut parsed = value.parse::<f64>().ok()?;
+                                if self.percent {
+                                    parsed /= 100.0;
+                                }
+                                Some(parsed)
+                            })
+                            .logarithmic(true),
+                    );
+                });
+            ui.end_row();
             ui.label(ui.localize("FilterTableColumns"))
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("FilterTableColumns.hover"));
@@ -134,6 +161,16 @@ impl Default for Settings {
     }
 }
 
+// /// Calculation table settings
+// #[derive(Clone, Debug, Deserialize, Serialize)]
+// pub(crate) struct Table {
+//     pub(crate) reset_state: bool,
+//     pub(crate) resizable: bool,
+//     pub(crate) sticky_columns: usize,
+//     pub(crate) truncate_headers: bool,
+//     pub(crate) column_filter: ColumnFilter,
+// }
+
 /// Calculation table settings
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct Table {
@@ -141,12 +178,14 @@ pub(crate) struct Table {
     pub(crate) resizable: bool,
     pub(crate) sticky_columns: usize,
     pub(crate) truncate_headers: bool,
+    pub(crate) row_filter: f64,
     pub(crate) column_filter: ColumnFilter,
 }
 
 impl Table {
     pub(crate) fn new() -> Self {
         Self {
+            row_filter: 0.0,
             reset_state: false,
             resizable: false,
             sticky_columns: 0,
@@ -160,7 +199,7 @@ impl Table {
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) struct Parameters {
     pub(crate) weighted: bool,
-    pub(crate) from: From,
+    // pub(crate) from: From,
     pub(crate) normalize: Normalize,
     pub(crate) unsigned: bool,
     pub(crate) christie: bool,
@@ -171,7 +210,7 @@ impl Parameters {
     pub(crate) fn new() -> Self {
         Self {
             weighted: false,
-            from: From::StereospecificNumbers2,
+            // from: From::StereospecificNumbers2,
             normalize: Normalize::new(),
             unsigned: true,
             christie: false,
@@ -186,28 +225,28 @@ impl Default for Parameters {
     }
 }
 
-/// From
-#[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) enum From {
-    StereospecificNumbers12_23,
-    StereospecificNumbers2,
-}
+// /// From
+// #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
+// pub(crate) enum From {
+//     StereospecificNumbers12_23,
+//     StereospecificNumbers2,
+// }
 
-impl From {
-    pub(crate) fn text(self) -> &'static str {
-        match self {
-            Self::StereospecificNumbers12_23 => "CalculateFrom-Sn12Sn23",
-            Self::StereospecificNumbers2 => "CalculateFrom-Sn2",
-        }
-    }
+// impl From {
+//     pub(crate) fn text(self) -> &'static str {
+//         match self {
+//             Self::StereospecificNumbers12_23 => "CalculateFrom-Sn12Sn23",
+//             Self::StereospecificNumbers2 => "CalculateFrom-Sn2",
+//         }
+//     }
 
-    pub(crate) fn hover_text(self) -> &'static str {
-        match self {
-            Self::StereospecificNumbers12_23 => "CalculateFrom-Sn12Sn23.hover",
-            Self::StereospecificNumbers2 => "CalculateFrom-Sn2.hover",
-        }
-    }
-}
+//     pub(crate) fn hover_text(self) -> &'static str {
+//         match self {
+//             Self::StereospecificNumbers12_23 => "CalculateFrom-Sn12Sn23.hover",
+//             Self::StereospecificNumbers2 => "CalculateFrom-Sn2.hover",
+//         }
+//     }
+// }
 
 /// Normalize
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]

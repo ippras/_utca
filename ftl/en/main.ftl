@@ -122,8 +122,10 @@ StandardDeviation = Standard deviation
     .hover = Show standard deviation
 Unsigned = Unsigned
     .hover = Theoretically calculated negative values are replaced with zeros.
-FilterTableColumns = Filter
+FilterTableColumns = Filter columns
     .hover = Filter table columns
+FilterTableRows = Filter rows
+    .hover = Filter table rows
 
 ## Composition
 

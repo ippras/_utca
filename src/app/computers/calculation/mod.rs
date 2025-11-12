@@ -1,8 +1,11 @@
 use crate::{
     app::states::calculation::{Normalize, Settings},
-    utils::{hash_expr, HashedDataFrame, HashedMetaDataFrame},
+    utils::{HashedDataFrame, HashedMetaDataFrame, hash_expr},
 };
-use egui::util::cache::{ComputerMut, FrameCache};
+use egui::{
+    emath::OrderedFloat,
+    util::cache::{ComputerMut, FrameCache},
+};
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_ext::expr::{ExprExt as _, ExprIfExt as _};
@@ -69,6 +72,7 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) normalize_enrichment_factor: bool,
     pub(crate) normalize: Normalize,
+    pub(crate) row_filter: OrderedFloat<f64>,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
 }
@@ -81,6 +85,7 @@ impl<'a> Key<'a> {
             ddof: settings.parameters.ddof,
             normalize_enrichment_factor: settings.normalize_factors,
             normalize: settings.parameters.normalize,
+            row_filter: OrderedFloat(settings.table.row_filter),
             unsigned: settings.parameters.unsigned,
             weighted: settings.parameters.weighted,
         }
@@ -101,7 +106,6 @@ fn compute(data_frame: &DataFrame, key: Key) -> PolarsResult<LazyFrame> {
     //     lazy_frame = christie(lazy_frame);
     // }
     let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, key);
-    // let sn2 = experimental(STEREOSPECIFIC_NUMBERS2, key);
     let sn2 = match data_frame[3].name().as_str() {
         STEREOSPECIFIC_NUMBERS2 => experimental(STEREOSPECIFIC_NUMBERS2, key),
         STEREOSPECIFIC_NUMBERS12_23 => {
@@ -113,6 +117,14 @@ fn compute(data_frame: &DataFrame, key: Key) -> PolarsResult<LazyFrame> {
     let sn13 = sn13(sn123.clone(), sn2.clone(), key);
     // Stereospecific numbers
     lazy_frame = lazy_frame.with_columns([sn123, sn2, sn13]);
+    // Filter
+    lazy_frame = lazy_frame.filter(
+        col(STEREOSPECIFIC_NUMBERS123)
+            .gt_eq(key.row_filter.0)
+            .or(col(STEREOSPECIFIC_NUMBERS2)
+                .fill_nan(lit(0))
+                .gt_eq(key.row_filter.0)),
+    );
     // Factors
     lazy_frame = lazy_frame.with_column(factors(key));
     Ok(lazy_frame)
@@ -255,10 +267,12 @@ fn mean_and_standard_deviations(lazy_frame: LazyFrame, ddof: u8) -> PolarsResult
 
 fn mean(names: &[&str], ddof: u8) -> PolarsResult<Expr> {
     let array = || {
-        concat_arr(vec![all()
-            .exclude_cols([LABEL, FATTY_ACID])
-            .as_expr()
-            .destruct(names)])
+        concat_arr(vec![
+            all()
+                .exclude_cols([LABEL, FATTY_ACID])
+                .as_expr()
+                .destruct(names),
+        ])
     };
     Ok(as_struct(vec![
         array()?.arr().mean().alias("Mean"),

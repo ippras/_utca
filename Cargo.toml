@@ -41,8 +41,6 @@ polars = { version = "0.52.0", default-features = false, features = [
     "dtype-struct",
     "dtype-u8",
     "fmt_no_tty",
-    "ipc",
-    "json",
     "lazy",
     "list_any_all",
     "list_eval",
@@ -56,8 +54,11 @@ polars = { version = "0.52.0", default-features = false, features = [
     "strings",
     #
     "dtype-datetime",
-    "parquet",
     "timezones",
+    #
+    # "json",
+    # "ipc",
+    # "parquet",
     # "diagonal_concat",
     # "list_drop_nulls",
     # "semi_anti_join",
