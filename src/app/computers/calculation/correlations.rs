@@ -1,37 +1,17 @@
-use crate::{app::states::calculation::Settings, utils::HashedDataFrame};
+use crate::{
+    app::states::calculation::{Correlation, Settings},
+    utils::HashedDataFrame,
+};
 use egui::util::cache::{ComputerMut, FrameCache};
-use itertools::Either;
 use lipid::prelude::*;
 use polars::prelude::*;
-use std::{iter::Empty, num::NonZeroI8};
+use polars_ext::expr::ExprExt;
 use tracing::instrument;
 
 const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
     STEREOSPECIFIC_NUMBERS123,
     STEREOSPECIFIC_NUMBERS13,
     STEREOSPECIFIC_NUMBERS2,
-];
-
-const NAMES: [&str; 19] = [
-    "Monounsaturated",
-    "Polyunsaturated",
-    "Saturated",
-    "Trans",
-    "Unsaturated",
-    "Unsaturated-9",
-    "Unsaturated-6",
-    "Unsaturated-3",
-    "Unsaturated9",
-    "EicosapentaenoicAndDocosahexaenoic",
-    "FishLipidQuality",
-    "HealthPromotingIndex",
-    "HypocholesterolemicToHypercholesterolemic",
-    "IndexOfAtherogenicity",
-    "IndexOfThrombogenicity",
-    "LinoleicToAlphaLinolenic",
-    "Polyunsaturated-6ToPolyunsaturated-3",
-    "PolyunsaturatedToSaturated",
-    "UnsaturationIndex",
 ];
 
 /// Calculation correlation computed
@@ -44,7 +24,7 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        compute(key, length(&key.frame)?)
+        compute(key)
     }
 }
 
@@ -58,14 +38,18 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
-    pub(crate) ddof: u8,
+    pub(crate) chaddock: bool,
+    pub(crate) correlation: Correlation,
+    pub(crate) precision: usize,
 }
 
 impl<'a> Key<'a> {
     pub(crate) fn new(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
         Self {
             frame,
-            ddof: settings.parameters.ddof,
+            chaddock: settings.chaddock,
+            correlation: settings.correlation,
+            precision: settings.precision,
         }
     }
 }
@@ -73,212 +57,64 @@ impl<'a> Key<'a> {
 /// Calculation correlation value
 type Value = DataFrame;
 
-fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
-    // FattyAcid
-    let Some(data_type) = data_frame.schema().get(FATTY_ACID) else {
-        polars_bail!(SchemaMismatch: "The `FATTY_ACID` field was not found in the scheme");
-    };
-    polars_ensure!(*data_type == data_type!(FATTY_ACID), SchemaMismatch: "Invalid `FATTY_ACID` data type: expected `FATTY_ACID`, got = `{data_type}`");
-    // Value
-    let Some(data_type) = data_frame.schema().get(STEREOSPECIFIC_NUMBERS123) else {
-        polars_bail!(SchemaMismatch: r#"The "{STEREOSPECIFIC_NUMBERS123}" field was not found in the scheme"#);
-    };
-    let DataType::Struct(fields) = data_type else {
-        polars_bail!(SchemaMismatch: r#"Invalid "{STEREOSPECIFIC_NUMBERS123}" data type: expected `Struct`, got = `{data_type}`"#);
-    };
-    let Some(array) = fields.iter().find(|field| field.name() == "Array") else {
-        polars_bail!(SchemaMismatch: r#"The "STEREOSPECIFIC_NUMBERS123.Array" field was not found in the scheme"#);
-    };
-    let data_type = array.dtype();
-    let &DataType::Array(box DataType::Float64, length) = data_type else {
-        polars_bail!(SchemaMismatch: r#"Invalid "STEREOSPECIFIC_NUMBERS123.Array" data type: expected `Array(Float64)`, got = `{data_type}`"#);
-    };
-    return Ok(length as _);
-}
-
-fn compute(key: Key, length: u64) -> PolarsResult<Value> {
+fn compute(key: Key) -> PolarsResult<Value> {
+    let labels = key.frame.data_frame[LABEL].as_materialized_series();
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    {
-        let lazy_frame = lazy_frame.clone().select([
-            col(LABEL),
-            col(FATTY_ACID),
-            col(STEREOSPECIFIC_NUMBERS123)
-                .struct_()
-                .field_by_name("Array"),
-        ]);
-        println!("correlation 0: {}", lazy_frame.clone().collect().unwrap());
-        let mut lazy_frame = lazy_frame.select([col(LABEL), col("Array")]);
-        for name in lazy_frame.collect_schema()?.iter_names() {}
-        println!("correlation 0: {}", lazy_frame.clone().collect().unwrap());
-        let mut df = lazy_frame.clone().collect().unwrap();
-        // let df = pivot(
-        //     &df,
-        //     ["Label"],
-        //     Some(["Label"]),
-        //     Some(["Array"]),
-        //     false,
-        //     None,
-        //     None,
-        // )?;
-        df = df.transpose(None, Some(Either::Left("Label".to_owned())))?;
-        lazy_frame = df
-            .lazy()
-            .explode(all())
-            .select([pearson_corr(all().as_expr(), nth(0).as_expr())]);
-        println!("correlation 1: {}", lazy_frame.collect()?);
-        // println!("correlation 1: {}", lazy_frame.collect().unwrap());
-        // pearson_corr(col("Array").arr().eval(other, as_list), mean(all().as_expr()));
-    }
-
-    let fatty_acid = || col(FATTY_ACID).fatty_acid();
-    let values = |expr: Expr| {
-        (0..length).map(move |index| {
-            expr.clone()
-                .struct_()
-                .field_by_name("Array")
-                .arr()
-                .get(lit(index), false)
-        })
-    };
-    let stereospecific_numbers = |expr: Expr| -> PolarsResult<Expr> {
-        Ok(as_struct(vec![
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().monounsaturated(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().polyunsaturated(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().saturated(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().trans(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, None))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-9)))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-6)))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-3)))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(9)))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().eicosapentaenoic_and_docosahexaenoic(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().fish_lipid_quality(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().health_promoting_index(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().hypocholesterolemic_to_hypercholesterolemic(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().index_of_atherogenicity(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().index_of_thrombogenicity(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().linoleic_to_alpha_linolenic(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().polyunsaturated_6_to_polyunsaturated_3(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().polyunsaturated_to_saturated(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturation_index(value))
-                    .collect(),
-            )?,
-        ]))
-    };
+    println!("correlation 0: {}", lazy_frame.clone().collect().unwrap());
     lazy_frame = lazy_frame.select([
-        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS123))?.alias(STEREOSPECIFIC_NUMBERS123),
-        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS13))?.alias(STEREOSPECIFIC_NUMBERS13),
-        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS2))?.alias(STEREOSPECIFIC_NUMBERS2),
+        col(LABEL),
+        col(STEREOSPECIFIC_NUMBERS123)
+            .struct_()
+            .field_by_name("Array"),
     ]);
-    // Mean and standard deviation
-    let exprs = STEREOSPECIFIC_NUMBERS
-        .into_iter()
-        .map(|stereospecific_numbers| {
-            as_struct(
-                NAMES
-                    .into_iter()
-                    .map(|name| {
-                        as_struct(vec![
-                            col(stereospecific_numbers)
-                                .struct_()
-                                .field_by_name(name)
-                                .clone()
-                                .arr()
-                                .mean()
-                                .alias("Mean"),
-                            col(stereospecific_numbers)
-                                .struct_()
-                                .field_by_name(name)
-                                .clone()
-                                .arr()
-                                .std(key.ddof)
-                                .alias("StandardDeviation"),
-                            col(stereospecific_numbers)
-                                .struct_()
-                                .field_by_name(name)
-                                .alias("Array"),
-                        ])
-                        .alias(name)
-                    })
-                    .collect(),
-            )
-            .alias(stereospecific_numbers)
-        })
-        .collect::<Vec<_>>();
-    lazy_frame = lazy_frame.select(exprs);
+    println!("correlation 1: {}", lazy_frame.clone().collect().unwrap());
+    lazy_frame = lazy_frame
+        .clone()
+        .select([col(LABEL).name().suffix("[1]"), col("Array").alias("[1]")])
+        .cross_join(
+            lazy_frame.select([col(LABEL).name().suffix("[2]"), col("Array").alias("[2]")]),
+            None,
+        )
+        .explode(cols(["[1]", "[2]"]));
+    println!("correlation 3: {}", lazy_frame.clone().collect()?);
+    lazy_frame = lazy_frame
+        .group_by_stable([col("Label[1]"), col("Label[2]")])
+        .agg([match key.correlation {
+            Correlation::Pearson => pearson_corr(col("[1]"), col("[2]")),
+            Correlation::SpearmanRank => spearman_rank_corr(col("[1]"), col("[2]"), false),
+        }
+        .alias("Correlation")]);
+    println!("correlation 4: {}", lazy_frame.clone().collect()?);
+    lazy_frame = lazy_frame.pivot(
+        by_name(["Label[2]"], true),
+        Arc::new(df! { "" => labels }?),
+        by_name(["Label[1]"], true),
+        by_name(["Correlation"], true),
+        element().item(true),
+        true,
+        PlSmallStr::EMPTY,
+    );
+    // lazy_frame = lazy_frame.fill_null(all().as_expr().backward_fill().back.fill_null(max(name)));
+    println!("correlation 5: {}", lazy_frame.clone().collect()?);
+    // let mut df = lazy_frame.clone().collect().unwrap();
+    // // let df = pivot(
+    // //     &df,
+    // //     ["Label"],
+    // //     Some(["Label"]),
+    // //     Some(["Array"]),
+    // //     false,
+    // //     None,
+    // //     None,
+    // // )?;
+    // df = df.transpose(None, Some(Either::Left("Label".to_owned())))?;
+
+    // Format
+    lazy_frame = lazy_frame.select([
+        col("Label[1]").alias(LABEL),
+        dtype_col(&DataType::Float64)
+            .as_selector()
+            .as_expr()
+            .precision(key.precision, false),
+    ]);
     lazy_frame.collect()
 }

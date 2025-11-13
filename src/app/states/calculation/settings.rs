@@ -1,7 +1,10 @@
 use super::ID_SOURCE;
-use crate::app::{MAX_PRECISION, states::ColumnFilter};
+use crate::{
+    app::{MAX_PRECISION, states::ColumnFilter},
+    text::Text,
+};
 use egui::{
-    Grid, PopupCloseBehavior, Slider, SliderClamping, Ui, Widget,
+    ComboBox, Grid, PopupCloseBehavior, Slider, SliderClamping, Ui, Widget,
     containers::menu::{MenuButton, MenuConfig},
 };
 use egui_l20n::UiExt as _;
@@ -22,6 +25,10 @@ pub(crate) struct Settings {
     pub(crate) table: Table,
 
     pub(crate) parameters: Parameters,
+    // Correlations
+    pub(crate) correlation: Correlation,
+    // Chaddock, R.E. (1925). Principles and methods of statistics. Boston, New York, 1925.
+    pub(crate) chaddock: bool,
 }
 
 impl Settings {
@@ -37,6 +44,8 @@ impl Settings {
             table: Table::new(),
 
             parameters: Parameters::new(),
+            correlation: Correlation::Pearson,
+            chaddock: false,
         }
     }
 }
@@ -166,6 +175,39 @@ impl Settings {
                 });
             ui.checkbox(&mut self.parameters.weighted, ());
             ui.end_row();
+
+            ui.heading("Correlations");
+            ui.separator();
+            ui.end_row();
+
+            ui.label(ui.localize("Correlation"));
+            ComboBox::from_id_salt("Correlation")
+                .selected_text(self.correlation.text())
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(
+                        &mut self.correlation,
+                        Correlation::Pearson,
+                        Correlation::Pearson.text(),
+                    )
+                    .on_hover_text(Correlation::Pearson.hover_text());
+                    ui.selectable_value(
+                        &mut self.correlation,
+                        Correlation::SpearmanRank,
+                        Correlation::SpearmanRank.text(),
+                    )
+                    .on_hover_text(Correlation::SpearmanRank.hover_text());
+                })
+                .response
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(self.correlation.hover_text()));
+                });
+            ui.end_row();
+
+            ui.label(ui.localize("Chaddock")).on_hover_ui(|ui| {
+                ui.label(ui.localize("Chaddock.hover"));
+            });
+            ui.checkbox(&mut self.chaddock, ());
+            ui.end_row();
         });
     }
 }
@@ -173,6 +215,28 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Correlation
+#[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) enum Correlation {
+    Pearson,
+    SpearmanRank,
+}
+
+impl Text for Correlation {
+    fn text(&self) -> &'static str {
+        match self {
+            Self::Pearson => "Pearson",
+            Self::SpearmanRank => "SpearmanRank",
+        }
+    }
+    fn hover_text(&self) -> &'static str {
+        match self {
+            Self::Pearson => "Pearson.hover",
+            Self::SpearmanRank => "SpearmanRank.hover",
+        }
     }
 }
 

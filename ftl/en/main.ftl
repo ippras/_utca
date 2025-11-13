@@ -198,3 +198,14 @@ Filter = { $case ->
 
 Discriminants = Discriminants
     .hover = Discriminants for Gunstone's theory
+
+## Correlations
+
+Correlation = Correlation
+    .hover = Pearson or spearman rank correlation
+Pearson = Pearson
+    .hover = Pearson correlation
+SpearmanRank = Spearman
+    .hover = Spearman rank correlation
+Chaddock = Chaddock
+    .hover = Chaddock scale

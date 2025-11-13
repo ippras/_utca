@@ -10,7 +10,7 @@ use crate::{
         },
         identifiers::COMPOSE,
         states::calculation::{Settings, State},
-        widgets::IndicesWidget,
+        widgets::{CorrelationsWidget, IndicesWidget},
     },
     export::ron,
     utils::{
@@ -433,6 +433,7 @@ impl Pane {
                 .get(CalculationCorrelationsKey::new(&self.target, settings))
         });
         // println!("data_frame: {data_frame}");
+        CorrelationsWidget::new(&data_frame).show(ui);
         Ok(())
     }
 

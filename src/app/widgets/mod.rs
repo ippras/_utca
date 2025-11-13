@@ -1,5 +1,6 @@
 pub(super) use self::{
     about::About,
+    correlations::CorrelationsWidget,
     fatty_acid::FattyAcidWidget,
     float::FloatWidget,
     github::Github,
@@ -9,6 +10,7 @@ pub(super) use self::{
 };
 
 mod about;
+mod correlations;
 mod fatty_acid;
 mod float;
 mod github;

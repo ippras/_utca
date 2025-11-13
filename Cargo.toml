@@ -49,6 +49,8 @@ polars = { git = "https://github.com/pola-rs/polars", rev = "fea5335", default-f
     "list_eval",
     "meta",
     "pivot",
+    "propagate_nans",
+    "rank",
     "regex",
     "round_series",
     "row_hash",
@@ -57,6 +59,7 @@ polars = { git = "https://github.com/pola-rs/polars", rev = "fea5335", default-f
     "sign",
     "strings",
     #
+    # "new_streaming",
     "dtype-datetime",
     "timezones",
     #
