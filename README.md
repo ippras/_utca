@@ -60,4 +60,9 @@ integrity:
 
 == Dedication
 
+== GIT
+
+git branch -d <branch_name>
+git push origin -d <branch_name>
+
 == TODO

@@ -1,8 +1,9 @@
 use crate::{app::states::calculation::Settings, utils::HashedDataFrame};
 use egui::util::cache::{ComputerMut, FrameCache};
+use itertools::Either;
 use lipid::prelude::*;
-use polars::prelude::{pivot::pivot, *};
-use std::num::NonZeroI8;
+use polars::prelude::*;
+use std::{iter::Empty, num::NonZeroI8};
 use tracing::instrument;
 
 const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
@@ -106,17 +107,26 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
                 .field_by_name("Array"),
         ]);
         println!("correlation 0: {}", lazy_frame.clone().collect().unwrap());
-        let df = lazy_frame.clone().collect().unwrap();
-        pivot(
-            &df,
-            ["foo"],
-            Some(["Label"]),
-            Some(["N"]),
-            false,
-            None,
-            None,
-        )?;
-        println!("correlation 0: {}", lazy_frame.collect().unwrap());
+        let mut lazy_frame = lazy_frame.select([col(LABEL), col("Array")]);
+        for name in lazy_frame.collect_schema()?.iter_names() {}
+        println!("correlation 0: {}", lazy_frame.clone().collect().unwrap());
+        let mut df = lazy_frame.clone().collect().unwrap();
+        // let df = pivot(
+        //     &df,
+        //     ["Label"],
+        //     Some(["Label"]),
+        //     Some(["Array"]),
+        //     false,
+        //     None,
+        //     None,
+        // )?;
+        df = df.transpose(None, Some(Either::Left("Label".to_owned())))?;
+        lazy_frame = df
+            .lazy()
+            .explode(all())
+            .select([pearson_corr(all().as_expr(), nth(0).as_expr())]);
+        println!("correlation 1: {}", lazy_frame.collect()?);
+        // println!("correlation 1: {}", lazy_frame.collect().unwrap());
         // pearson_corr(col("Array").arr().eval(other, as_list), mean(all().as_expr()));
     }
 
