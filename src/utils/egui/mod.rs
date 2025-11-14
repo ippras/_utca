@@ -36,7 +36,7 @@ impl UiExt for Ui {
     fn indices(&mut self, selected: &mut bool) {
         self.toggle_value(selected, RichText::new(SIGMA).heading())
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("Indices"));
+                ui.label(ui.localize("Index?PluralCategory=other"));
             });
     }
 

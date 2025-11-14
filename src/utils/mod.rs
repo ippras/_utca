@@ -5,6 +5,7 @@ pub use self::{
     trie::unique_prefixes,
 };
 
+pub mod chaddock;
 pub mod egui;
 pub mod metadata;
 pub mod polars;

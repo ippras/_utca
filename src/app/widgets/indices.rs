@@ -1,3 +1,4 @@
+use crate::app::states::calculation::Settings;
 #[cfg(feature = "markdown")]
 use crate::asset;
 use egui::{Grid, InnerResponse, Response, Ui, Widget};
@@ -14,16 +15,11 @@ pub(crate) struct IndicesWidget<'a> {
 }
 
 impl<'a> IndicesWidget<'a> {
-    pub(crate) fn new(data_frame: &'a DataFrame) -> Self {
+    pub(crate) fn new(data_frame: &'a DataFrame, settings: &Settings) -> Self {
         Self {
             data_frame,
-            precision: 0,
+            precision: settings.precision,
         }
-    }
-
-    pub(crate) fn precision(mut self, precision: usize) -> Self {
-        self.precision = precision;
-        self
     }
 
     pub(crate) fn show(self, ui: &mut Ui) -> InnerResponse<PolarsResult<()>> {

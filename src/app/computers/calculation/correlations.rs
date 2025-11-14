@@ -94,20 +94,6 @@ fn compute(key: Key) -> PolarsResult<Value> {
         true,
         PlSmallStr::EMPTY,
     );
-    // lazy_frame = lazy_frame.fill_null(all().as_expr().backward_fill().back.fill_null(max(name)));
-    println!("correlation 5: {}", lazy_frame.clone().collect()?);
-    // let mut df = lazy_frame.clone().collect().unwrap();
-    // // let df = pivot(
-    // //     &df,
-    // //     ["Label"],
-    // //     Some(["Label"]),
-    // //     Some(["Array"]),
-    // //     false,
-    // //     None,
-    // //     None,
-    // // )?;
-    // df = df.transpose(None, Some(Either::Left("Label".to_owned())))?;
-
     // Format
     lazy_frame = lazy_frame.select([
         col("Label[1]").alias(LABEL),
