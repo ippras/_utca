@@ -3,7 +3,9 @@ use super::ID_SOURCE;
 use crate::asset;
 use crate::{
     app::{
-        computers::{CalculationDisplayComputed, CalculationDisplayKey},
+        computers::calculation::display::{
+            Computed as CalculationDisplayComputed, Key as CalculationDisplayKey,
+        },
         panes::MARGIN,
         states::calculation::State,
     },

@@ -4,11 +4,12 @@ use super::{Behavior, MARGIN};
 use crate::asset;
 use crate::{
     app::{
-        computers::{
-            CalculationComputed, CalculationIndicesComputed, CalculationIndicesKey, CalculationKey,
-            calculation::correlations::{
+        computers::calculation::{
+            Computed as CalculationComputed, Key as CalculationKey,
+            correlations::{
                 Computed as CalculationCorrelationsComputed, Key as CalculationCorrelationsKey,
             },
+            indices::{Computed as CalculationIndicesComputed, Key as CalculationIndicesKey},
         },
         identifiers::COMPOSE,
         states::calculation::{Settings, State},

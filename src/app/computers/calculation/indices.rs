@@ -107,7 +107,6 @@ fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
 
 fn compute(key: Key, length: u64) -> PolarsResult<Value> {
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    println!("Indices 0: {}", lazy_frame.clone().collect().unwrap());
     let fatty_acid = || col(FATTY_ACID).fatty_acid();
     let values = |expr: Expr| {
         (0..length).map(move |index| {
@@ -258,7 +257,6 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         })
         .collect::<Vec<_>>();
     lazy_frame = lazy_frame.select(exprs);
-    println!("Indices 0: {}", lazy_frame.clone().collect().unwrap());
     // Format
     lazy_frame = lazy_frame
         .unnest(all(), Some(PlSmallStr::from_static("_")))
@@ -288,13 +286,5 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         .alias(stereospecific_number)
     });
     lazy_frame = lazy_frame.select(exprs);
-    println!("Indices 1: {}", lazy_frame.clone().collect().unwrap());
-    // lazy_frame = lazy_frame.select([
-    //     col("Label[1]").alias(LABEL),
-    //     dtype_col(&DataType::Float64)
-    //         .as_selector()
-    //         .as_expr()
-    //         .precision(key.precision, false),
-    // ]);
     lazy_frame.collect()
 }

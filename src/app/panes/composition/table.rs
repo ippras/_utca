@@ -1,7 +1,10 @@
 use super::ID_SOURCE;
 use crate::{
     app::{
-        computers::{DisplayCompositionComputed, DisplayCompositionKey, DisplayCompositionKind},
+        computers::composition::display::{
+            Computed as DisplayCompositionComputed, Key as DisplayCompositionKey,
+            Kind as DisplayCompositionKind,
+        },
         panes::MARGIN,
         states::composition::{
             ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,

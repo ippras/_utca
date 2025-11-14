@@ -187,3 +187,5 @@ SpearmanRank = Spearman
     .hover = Spearman rank correlation
 Chaddock = Chaddock
     .hover = Chaddock scale
+Threshold = Threshold
+    .hover = Threshold.

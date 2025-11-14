@@ -109,12 +109,13 @@ impl ColumnFilter {
             .retain(|column| has_columns.contains(&*column.name));
     }
 
-    pub(crate) fn visible_columns(&self) -> impl Iterator<Item = &Column> {
+    pub(crate) fn iter_visible_columns(&self) -> impl Iterator<Item = &Column> {
         self.columns.iter().filter(|column| column.visible)
     }
 
-    pub(crate) fn visible_column_names(&self) -> impl Iterator<Item = &str> {
-        self.visible_columns().map(|column| column.name.as_str())
+    pub(crate) fn iter_visible_column_names(&self) -> impl Iterator<Item = &str> {
+        self.iter_visible_columns()
+            .map(|column| column.name.as_str())
     }
 }
 
@@ -155,6 +156,7 @@ impl ColumnFilter {
     }
 }
 
+/// Column
 #[derive(Clone, Debug, Deserialize, Hash, Serialize)]
 pub(crate) struct Column {
     name: String,

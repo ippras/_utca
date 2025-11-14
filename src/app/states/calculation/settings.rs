@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use super::ID_SOURCE;
 use crate::{
     app::{MAX_PRECISION, states::ColumnFilter},
@@ -11,10 +9,22 @@ use egui::{
 };
 use egui_dnd::dnd;
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{BOOKMARK, DOTS_SIX_VERTICAL, FUNNEL};
-use polars::prelude::AnyValue;
+use egui_phosphor::regular::{ARROWS_CLOCKWISE, BOOKMARK, DOTS_SIX_VERTICAL, FUNNEL};
+use lipid::prelude::*;
+use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
+use std::{
+    fmt::{Display, Formatter},
+    ops::{Deref, DerefMut},
+};
+
+pub(crate) const STEREOSPECIFIC_NUMBERS: [StereospecificNumbers; 4] = [
+    StereospecificNumbers::One,
+    StereospecificNumbers::Two,
+    StereospecificNumbers::Three,
+    StereospecificNumbers::OneAndTwoAndTree,
+];
 
 /// Calculation settings
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -41,8 +51,9 @@ pub(crate) struct Settings {
     pub(crate) fatty_acids: Vec<String>,
 
     // Correlations
-    pub(crate) correlation: Correlation,
     pub(crate) chaddock: bool, // Chaddock, R.E. (1925). Principles and methods of statistics. Boston, New York, 1925.
+    pub(crate) correlation: Correlation,
+    pub(crate) stereospecific_numbers: StereospecificNumbers,
     // Indices
     pub(crate) indices: Indices,
 }
@@ -71,6 +82,7 @@ impl Settings {
             // Correlations
             correlation: Correlation::Pearson,
             chaddock: false,
+            stereospecific_numbers: StereospecificNumbers::OneAndTwoAndTree,
             // Indices
             indices: Indices::new(),
         }
@@ -126,7 +138,7 @@ impl Settings {
             ui.label(ui.localize("ResetTable")).on_hover_ui(|ui| {
                 ui.label(ui.localize("ResetTable.hover"));
             });
-            ui.toggle_value(&mut self.table.reset_state, ());
+            ui.toggle_value(&mut self.table.reset_state, ARROWS_CLOCKWISE);
             ui.end_row();
 
             // Resizable
@@ -189,38 +201,35 @@ impl Settings {
             MenuButton::new(FUNNEL)
                 .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
                 .ui(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        Slider::new(&mut self.table.row_filter, 0.0..=1.0)
-                            .clamping(SliderClamping::Always)
-                            .custom_formatter(|mut value, _| {
-                                if self.percent {
-                                    value *= 100.0;
-                                }
-                                AnyValue::Float64(value).to_string()
-                            })
-                            .custom_parser(|value| {
-                                let mut parsed = value.parse::<f64>().ok()?;
-                                if self.percent {
-                                    parsed /= 100.0;
-                                }
-                                Some(parsed)
-                            })
-                            .logarithmic(true)
-                            .ui(ui);
-                        if ui.button((BOOKMARK, "0.25")).clicked() {
-                            self.table.row_filter = 0.0025;
-                        }
+                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
+                        // Threshold
+                        ui.label(ui.localize("Threshold")).on_hover_ui(|ui| {
+                            ui.label(ui.localize("Threshold.hover"));
+                        });
+                        ui.horizontal(|ui| {
+                            Slider::new(&mut self.table.row_filter, 0.0..=1.0)
+                                .clamping(SliderClamping::Always)
+                                .custom_formatter(|mut value, _| {
+                                    if self.percent {
+                                        value *= 100.0;
+                                    }
+                                    AnyValue::Float64(value).to_string()
+                                })
+                                .custom_parser(|value| {
+                                    let mut parsed = value.parse::<f64>().ok()?;
+                                    if self.percent {
+                                        parsed /= 100.0;
+                                    }
+                                    Some(parsed)
+                                })
+                                .logarithmic(true)
+                                .update_while_editing(false)
+                                .ui(ui);
+                            if ui.button((BOOKMARK, "0.25")).clicked() {
+                                self.table.row_filter = 0.0025;
+                            }
+                        });
                     });
-                });
-            ui.end_row();
-            ui.label(ui.localize("FilterTableColumns"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("FilterTableColumns.hover"));
-                });
-            MenuButton::new(FUNNEL)
-                .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-                .ui(ui, |ui| {
-                    // self.table.filter.show(ui);
                 });
             ui.end_row();
 
@@ -244,13 +253,38 @@ impl Settings {
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
                     });
-                ui.add(Slider::new(&mut self.ddof, 0..=2));
+                ui.add(Slider::new(&mut self.ddof, 0..=2).update_while_editing(false));
                 ui.end_row();
             }
 
             // Correlations
             ui.heading(ui.localize("Correlation"));
             ui.separator();
+            ui.end_row();
+
+            // Stereospecific numbers
+            ui.label(ui.localize("StereospecificNumber?number=many"))
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("StereospecificNumber.abbreviation?number=other"));
+                });
+            ComboBox::from_id_salt(ui.auto_id_with("StereospecificNumbers"))
+                .selected_text(ui.localize(self.stereospecific_numbers.text()))
+                .show_ui(ui, |ui| {
+                    for stereospecific_number in STEREOSPECIFIC_NUMBERS {
+                        ui.selectable_value(
+                            &mut self.stereospecific_numbers,
+                            stereospecific_number,
+                            ui.localize(stereospecific_number.text()),
+                        )
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize(stereospecific_number.hover_text()));
+                        });
+                    }
+                })
+                .response
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(self.stereospecific_numbers.hover_text()));
+                });
             ui.end_row();
 
             ui.label(ui.localize("Correlation?PluralCategory=other"));
@@ -510,6 +544,46 @@ impl Index {
         Self {
             name: name.to_owned(),
             visible: true,
+        }
+    }
+}
+
+/// Stereospecific numbers
+#[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) enum StereospecificNumbers {
+    One,
+    Two,
+    Three,
+    OneAndTwoAndTree,
+}
+
+impl StereospecificNumbers {
+    pub(crate) fn text(&self) -> &'static str {
+        match self {
+            Self::One => "StereospecificNumber.abbreviation?number=1",
+            Self::Two => "StereospecificNumber.abbreviation?number=2",
+            Self::Three => "StereospecificNumber.abbreviation?number=3",
+            Self::OneAndTwoAndTree => "StereospecificNumber.abbreviation?number=123",
+        }
+    }
+
+    pub(crate) fn hover_text(&self) -> &'static str {
+        match self {
+            Self::One => "StereospecificNumber?number=1",
+            Self::Two => "StereospecificNumber?number=2",
+            Self::Three => "StereospecificNumber?number=3",
+            Self::OneAndTwoAndTree => "StereospecificNumber?number=123",
+        }
+    }
+}
+
+impl Display for StereospecificNumbers {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::One => f.write_str(STEREOSPECIFIC_NUMBERS13),
+            Self::Two => f.write_str(STEREOSPECIFIC_NUMBERS2),
+            Self::Three => f.write_str(STEREOSPECIFIC_NUMBERS13),
+            Self::OneAndTwoAndTree => f.write_str(STEREOSPECIFIC_NUMBERS123),
         }
     }
 }
