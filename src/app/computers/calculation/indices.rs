@@ -64,7 +64,7 @@ impl<'a> Key<'a> {
     pub(crate) fn new(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
         Self {
             frame,
-            ddof: settings.parameters.ddof,
+            ddof: settings.ddof,
         }
     }
 }
@@ -246,6 +246,14 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
             .alias(stereospecific_numbers)
         })
         .collect::<Vec<_>>();
+    // // Format
+    // lazy_frame = lazy_frame.select([
+    //     col("Label[1]").alias(LABEL),
+    //     dtype_col(&DataType::Float64)
+    //         .as_selector()
+    //         .as_expr()
+    //         .precision(key.precision, false),
+    // ]);
     lazy_frame = lazy_frame.select(exprs);
     lazy_frame.collect()
 }

@@ -8,7 +8,7 @@ use egui::{
     containers::menu::{MenuButton, MenuConfig},
 };
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{ARROWS_CLOCKWISE, FUNNEL};
+use egui_phosphor::regular::{BOOKMARK, FUNNEL};
 use polars::prelude::AnyValue;
 use serde::{Deserialize, Serialize};
 
@@ -17,33 +17,52 @@ use serde::{Deserialize, Serialize};
 pub(crate) struct Settings {
     pub(crate) index: Option<usize>,
 
+    // Display
+    pub(crate) display_standard_deviation: bool,
+    pub(crate) normalize_factors: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
     pub(crate) significant: bool,
-    pub(crate) display_standard_deviation: bool,
-    pub(crate) normalize_factors: bool,
     pub(crate) table: Table,
 
-    pub(crate) parameters: Parameters,
+    // General parameters
+    pub(crate) ddof: u8,
+    // Special parameters
+    pub(crate) christie: bool,
+    pub(crate) normalize: Normalize,
+    pub(crate) standard: Standard,
+    pub(crate) unsigned: bool,
+    pub(crate) weighted: bool,
+    // Mutable
+    pub(crate) fatty_acids: Vec<String>,
+
     // Correlations
     pub(crate) correlation: Correlation,
-    // Chaddock, R.E. (1925). Principles and methods of statistics. Boston, New York, 1925.
-    pub(crate) chaddock: bool,
+    pub(crate) chaddock: bool, // Chaddock, R.E. (1925). Principles and methods of statistics. Boston, New York, 1925.
 }
 
 impl Settings {
     pub(crate) fn new() -> Self {
         Self {
             index: Some(0),
-
+            // Display
+            display_standard_deviation: true,
+            normalize_factors: false,
             percent: true,
             precision: 1,
             significant: false,
-            display_standard_deviation: true,
-            normalize_factors: false,
             table: Table::new(),
-
-            parameters: Parameters::new(),
+            // General parameters
+            ddof: 1,
+            // Special parameters
+            christie: false,
+            normalize: Normalize::new(),
+            standard: Standard(None),
+            unsigned: true,
+            weighted: false,
+            // Mutable
+            fatty_acids: Vec::new(),
+            // Correlations
             correlation: Correlation::Pearson,
             chaddock: false,
         }
@@ -127,6 +146,34 @@ impl Settings {
             ui.separator();
             ui.end_row();
 
+            ui.label(ui.localize("Standard"));
+            ui.horizontal(|ui| {
+                ComboBox::from_id_salt("Standard")
+                    .selected_text(self.standard.text())
+                    .show_ui(ui, |ui| {
+                        for fatty_acid in &self.fatty_acids {
+                            ui.selectable_value(
+                                &mut self.standard,
+                                Standard(Some(fatty_acid.clone())),
+                                fatty_acid,
+                            )
+                            .on_hover_text(fatty_acid);
+                        }
+                        ui.selectable_value(&mut self.standard, Standard(None), "-")
+                            .on_hover_ui(|ui| {
+                                ui.label(ui.localize("Standard?OptionCategory=none"));
+                            });
+                    })
+                    .response
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(self.standard.hover_text()));
+                    });
+                if ui.button((BOOKMARK, "17:0")).clicked() {
+                    self.standard = Standard(Some("Margaric".to_owned()))
+                };
+            });
+            ui.end_row();
+
             // Filter
             ui.label(ui.localize("FilterTableRows")).on_hover_ui(|ui| {
                 ui.label(ui.localize("FilterTableRows.hover"));
@@ -152,7 +199,7 @@ impl Settings {
                             })
                             .logarithmic(true)
                             .ui(ui);
-                        if ui.button(ARROWS_CLOCKWISE).clicked() {
+                        if ui.button((BOOKMARK, "0.25")).clicked() {
                             self.table.row_filter = 0.0025;
                         }
                     });
@@ -173,7 +220,7 @@ impl Settings {
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("Normalize_Weighted.hover"));
                 });
-            ui.checkbox(&mut self.parameters.weighted, ());
+            ui.checkbox(&mut self.weighted, ());
             ui.end_row();
 
             ui.heading("Correlations");
@@ -264,31 +311,29 @@ impl Table {
     }
 }
 
-/// Calculation parameters
+/// Standard
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) struct Parameters {
-    pub(crate) weighted: bool,
-    pub(crate) normalize: Normalize,
-    pub(crate) unsigned: bool,
-    pub(crate) christie: bool,
-    pub(crate) ddof: u8,
-}
+pub(crate) struct Standard(Option<String>);
 
-impl Parameters {
-    pub(crate) fn new() -> Self {
-        Self {
-            weighted: false,
-            normalize: Normalize::new(),
-            unsigned: true,
-            christie: false,
-            ddof: 1,
-        }
+impl Standard {
+    pub(crate) fn as_deref(&self) -> Option<&str> {
+        self.0.as_deref()
     }
 }
 
-impl Default for Parameters {
-    fn default() -> Self {
-        Self::new()
+impl Text for Standard {
+    fn text(&self) -> &str {
+        match &self.0 {
+            Some(standard) => standard,
+            None => "-",
+        }
+    }
+
+    fn hover_text(&self) -> &str {
+        match &self.0 {
+            Some(standard) => standard,
+            None => "Standard?OptionCategory=none",
+        }
     }
 }
 

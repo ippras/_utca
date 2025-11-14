@@ -8,12 +8,6 @@ use polars::prelude::*;
 use polars_ext::expr::ExprExt;
 use tracing::instrument;
 
-const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
-    STEREOSPECIFIC_NUMBERS123,
-    STEREOSPECIFIC_NUMBERS13,
-    STEREOSPECIFIC_NUMBERS2,
-];
-
 /// Calculation correlation computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
 
@@ -60,14 +54,14 @@ type Value = DataFrame;
 fn compute(key: Key) -> PolarsResult<Value> {
     let labels = key.frame.data_frame[LABEL].as_materialized_series();
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    println!("correlation 0: {}", lazy_frame.clone().collect().unwrap());
+    // Select
     lazy_frame = lazy_frame.select([
         col(LABEL),
         col(STEREOSPECIFIC_NUMBERS123)
             .struct_()
             .field_by_name("Array"),
     ]);
-    println!("correlation 1: {}", lazy_frame.clone().collect().unwrap());
+    // Cross join
     lazy_frame = lazy_frame
         .clone()
         .select([col(LABEL).name().suffix("[1]"), col("Array").alias("[1]")])
@@ -76,7 +70,7 @@ fn compute(key: Key) -> PolarsResult<Value> {
             None,
         )
         .explode(cols(["[1]", "[2]"]));
-    println!("correlation 3: {}", lazy_frame.clone().collect()?);
+    // Correlation
     lazy_frame = lazy_frame
         .group_by_stable([col("Label[1]"), col("Label[2]")])
         .agg([match key.correlation {
@@ -84,7 +78,7 @@ fn compute(key: Key) -> PolarsResult<Value> {
             Correlation::SpearmanRank => spearman_rank_corr(col("[1]"), col("[2]"), false),
         }
         .alias("Correlation")]);
-    println!("correlation 4: {}", lazy_frame.clone().collect()?);
+    // Pivot
     lazy_frame = lazy_frame.pivot(
         by_name(["Label[2]"], true),
         Arc::new(df! { "" => labels }?),

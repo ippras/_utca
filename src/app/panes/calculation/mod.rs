@@ -370,19 +370,26 @@ impl Pane {
         Ok(())
     }
 
-    fn central(&mut self, ui: &mut Ui, state: &mut State) {
-        self.central_content(ui, state);
+    fn central(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
+        self.central_content(ui, state)?;
         self.windows(ui, state);
+        Ok(())
     }
 
-    fn central_content(&mut self, ui: &mut Ui, state: &mut State) {
+    fn central_content(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
         self.target = ui.memory_mut(|memory| {
             memory
                 .caches
                 .cache::<CalculationComputed>()
                 .get(CalculationKey::new(&self.source, &state.settings))
         });
+        state.settings.fatty_acids = self.target[LABEL]
+            .str()?
+            .into_no_null_iter()
+            .map(ToOwned::to_owned)
+            .collect();
         TableView::new(&self.target, state).show(ui);
+        Ok(())
     }
 }
 
