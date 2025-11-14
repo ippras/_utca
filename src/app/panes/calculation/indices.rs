@@ -9,12 +9,12 @@ use itertools::Itertools as _;
 use polars::prelude::*;
 
 /// Indices widget
-pub(crate) struct IndicesWidget<'a> {
+pub(crate) struct Indices<'a> {
     data_frame: &'a DataFrame,
     precision: usize,
 }
 
-impl<'a> IndicesWidget<'a> {
+impl<'a> Indices<'a> {
     pub(crate) fn new(data_frame: &'a DataFrame, settings: &Settings) -> Self {
         Self {
             data_frame,
@@ -75,32 +75,32 @@ impl<'a> IndicesWidget<'a> {
                 });
             ui.end_row();
             // Simple
-            ui.label(ui.localize("Saturated"));
+            ui.label(ui.localize("Indices_Saturated"));
             value(ui, "Saturated")?;
             ui.end_row();
-            ui.label(ui.localize("Monounsaturated"));
+            ui.label(ui.localize("Indices_Monounsaturated"));
             value(ui, "Monounsaturated")?;
             ui.end_row();
-            ui.label(ui.localize("Polyunsaturated"));
+            ui.label(ui.localize("Indices_Polyunsaturated"));
             value(ui, "Polyunsaturated")?;
             ui.end_row();
-            ui.label(ui.localize("Unsaturated"));
+            ui.label(ui.localize("Indices_Unsaturated"));
             value(ui, "Unsaturated")?;
             ui.end_row();
-            ui.label(ui.localize("Omega?index=-9"));
+            ui.label(ui.localize("Indices_Omega?index=-9"));
             value(ui, "Unsaturated-9")?;
             ui.end_row();
-            ui.label(ui.localize("Omega?index=-6"));
+            ui.label(ui.localize("Indices_Omega?index=-6"));
             value(ui, "Unsaturated-6")?;
             ui.end_row();
-            ui.label(ui.localize("Omega?index=-3"));
+            ui.label(ui.localize("Indices_Omega?index=-3"));
             value(ui, "Unsaturated-3")?;
             ui.end_row();
-            ui.label(ui.localize("Delta?index=9"));
+            ui.label(ui.localize("Indices_Delta?index=9"));
             value(ui, "Unsaturated9")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Trans"));
+            let response = ui.label(ui.localize("Indices_Trans"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/en/Indices/Trans.md"));
@@ -109,7 +109,7 @@ impl<'a> IndicesWidget<'a> {
             ui.end_row();
             // Complex
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("EicosapentaenoicAndDocosahexaenoic"));
+            let response = ui.label(ui.localize("Indices_EicosapentaenoicAndDocosahexaenoic"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!(
@@ -119,7 +119,7 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "EicosapentaenoicAndDocosahexaenoic")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("FishLipidQuality"));
+            let response = ui.label(ui.localize("Indices_FishLipidQuality"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/en/Indices/FishLipidQuality.md"));
@@ -127,7 +127,7 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "FishLipidQuality")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("HealthPromotingIndex"));
+            let response = ui.label(ui.localize("Indices_HealthPromotingIndex"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/en/Indices/HealthPromotingIndex.md"));
@@ -135,7 +135,8 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "HealthPromotingIndex")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("HypocholesterolemicToHypercholesterolemic"));
+            let response =
+                ui.label(ui.localize("Indices_HypocholesterolemicToHypercholesterolemic"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!(
@@ -145,7 +146,7 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "HypocholesterolemicToHypercholesterolemic")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("IndexOfAtherogenicity"));
+            let response = ui.label(ui.localize("Indices_IndexOfAtherogenicity"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/en/Indices/IndexOfAtherogenicity.md"));
@@ -153,7 +154,7 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "IndexOfAtherogenicity")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("IndexOfThrombogenicity"));
+            let response = ui.label(ui.localize("Indices_IndexOfThrombogenicity"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/en/Indices/IndexOfThrombogenicity.md"));
@@ -161,7 +162,7 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "IndexOfThrombogenicity")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("LinoleicToAlphaLinolenic"));
+            let response = ui.label(ui.localize("Indices_LinoleicToAlphaLinolenic"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/en/Indices/LinoleicToAlphaLinolenic.md"));
@@ -169,7 +170,7 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "LinoleicToAlphaLinolenic")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Polyunsaturated-6ToPolyunsaturated-3"));
+            let response = ui.label(ui.localize("Indices_Polyunsaturated-6ToPolyunsaturated-3"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!(
@@ -179,7 +180,7 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "Polyunsaturated-6ToPolyunsaturated-3")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("PolyunsaturatedToSaturated"));
+            let response = ui.label(ui.localize("Indices_PolyunsaturatedToSaturated"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/en/Indices/PolyunsaturatedToSaturated.md"));
@@ -187,7 +188,7 @@ impl<'a> IndicesWidget<'a> {
             value(ui, "PolyunsaturatedToSaturated")?;
             ui.end_row();
             #[allow(unused_variables)]
-            let response = ui.label(ui.localize("UnsaturationIndex"));
+            let response = ui.label(ui.localize("Indices_UnsaturationIndex"));
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(asset!("/doc/en/Indices/UnsaturationIndex.md"));
@@ -198,7 +199,7 @@ impl<'a> IndicesWidget<'a> {
     }
 }
 
-impl Widget for IndicesWidget<'_> {
+impl Widget for Indices<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
         self.show(ui).response
     }

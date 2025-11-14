@@ -11,12 +11,12 @@ use egui_extras::{Column, TableBuilder};
 use polars::prelude::*;
 
 /// Correlations widget
-pub(crate) struct CorrelationsWidget<'a> {
+pub(crate) struct Correlations<'a> {
     data_frame: &'a DataFrame,
     chaddock: bool,
 }
 
-impl<'a> CorrelationsWidget<'a> {
+impl<'a> Correlations<'a> {
     pub(crate) fn new(data_frame: &'a DataFrame, settings: &Settings) -> Self {
         Self {
             data_frame,
@@ -109,7 +109,7 @@ impl<'a> CorrelationsWidget<'a> {
 //     .on_hover_text(value.to_string())
 //     .on_hover_text(format!("{sign:?}"));
 
-impl Widget for CorrelationsWidget<'_> {
+impl Widget for Correlations<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
         self.show(ui)
     }

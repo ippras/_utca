@@ -1,15 +1,19 @@
+use std::ops::{Deref, DerefMut};
+
 use super::ID_SOURCE;
 use crate::{
     app::{MAX_PRECISION, states::ColumnFilter},
     text::Text,
 };
 use egui::{
-    ComboBox, Grid, PopupCloseBehavior, Slider, SliderClamping, Ui, Widget,
+    ComboBox, Grid, Popup, PopupCloseBehavior, RichText, Slider, SliderClamping, Ui, Widget,
     containers::menu::{MenuButton, MenuConfig},
 };
+use egui_dnd::dnd;
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{BOOKMARK, FUNNEL};
+use egui_phosphor::regular::{BOOKMARK, DOTS_SIX_VERTICAL, FUNNEL};
 use polars::prelude::AnyValue;
+use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 
 /// Calculation settings
@@ -39,6 +43,8 @@ pub(crate) struct Settings {
     // Correlations
     pub(crate) correlation: Correlation,
     pub(crate) chaddock: bool, // Chaddock, R.E. (1925). Principles and methods of statistics. Boston, New York, 1925.
+    // Indices
+    pub(crate) indices: Indices,
 }
 
 impl Settings {
@@ -65,6 +71,8 @@ impl Settings {
             // Correlations
             correlation: Correlation::Pearson,
             chaddock: false,
+            // Indices
+            indices: Indices::new(),
         }
     }
 }
@@ -223,11 +231,29 @@ impl Settings {
             ui.checkbox(&mut self.weighted, ());
             ui.end_row();
 
-            ui.heading("Correlations");
+            if self.index.is_none() {
+                ui.label(ui.localize("Statistics"));
+                ui.separator();
+                ui.end_row();
+
+                // https://numpy.org/devdocs/reference/generated/numpy.std.html
+                ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("DeltaDegreesOfFreedom"));
+                    })
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
+                    });
+                ui.add(Slider::new(&mut self.ddof, 0..=2));
+                ui.end_row();
+            }
+
+            // Correlations
+            ui.heading(ui.localize("Correlation"));
             ui.separator();
             ui.end_row();
 
-            ui.label(ui.localize("Correlation"));
+            ui.label(ui.localize("Correlation?PluralCategory=other"));
             ComboBox::from_id_salt("Correlation")
                 .selected_text(self.correlation.text())
                 .show_ui(ui, |ui| {
@@ -254,6 +280,28 @@ impl Settings {
                 ui.label(ui.localize("Chaddock.hover"));
             });
             ui.checkbox(&mut self.chaddock, ());
+            ui.end_row();
+
+            // Indices
+            ui.heading(ui.localize("Index?PluralCategory=other"));
+            ui.separator();
+            ui.end_row();
+
+            ui.label(ui.localize("Indices")).on_hover_ui(|ui| {
+                ui.label(ui.localize("Indices.hover"));
+            });
+            let selected_text = format_list_truncated!(
+                self.indices
+                    .0
+                    .iter()
+                    .filter(|index| index.visible)
+                    .map(|index| ui.localize(&format!("Indices_{}", index.name))),
+                1
+            );
+            ComboBox::from_id_salt(ui.auto_id_with("Indices"))
+                .selected_text(selected_text)
+                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                .show_ui(ui, |ui| self.indices.show(ui));
             ui.end_row();
         });
     }
@@ -356,5 +404,106 @@ impl Normalize {
 impl Default for Normalize {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Indices
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) struct Indices(Vec<Index>);
+
+impl Indices {
+    pub(crate) fn new() -> Self {
+        Self(vec![
+            Index::new("Saturated"),
+            Index::new("Monounsaturated"),
+            Index::new("Polyunsaturated"),
+            Index::new("Unsaturated"),
+            Index::new("Omega?index=-9"),
+            Index::new("Omega?index=-6"),
+            Index::new("Omega?index=-3"),
+            Index::new("Delta?index=9"),
+            Index::new("Trans"),
+            Index::new("EicosapentaenoicAndDocosahexaenoic"),
+            Index::new("FishLipidQuality"),
+            Index::new("HealthPromotingIndex"),
+            Index::new("HypocholesterolemicToHypercholesterolemic"),
+            Index::new("IndexOfAtherogenicity"),
+            Index::new("IndexOfThrombogenicity"),
+            Index::new("LinoleicToAlphaLinolenic"),
+            Index::new("Polyunsaturated-6ToPolyunsaturated-3"),
+            Index::new("PolyunsaturatedToSaturated"),
+            Index::new("UnsaturationIndex"),
+        ])
+    }
+}
+
+impl Deref for Indices {
+    type Target = Vec<Index>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Indices {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Indices {
+    fn show(&mut self, ui: &mut Ui) {
+        let mut visible_all = None;
+        let response = dnd(ui, ui.auto_id_with("Indices")).show(
+            self.iter_mut(),
+            |ui, index, handle, _state| {
+                ui.horizontal(|ui| {
+                    let visible = index.visible;
+                    handle.ui(ui, |ui| {
+                        ui.label(DOTS_SIX_VERTICAL);
+                    });
+                    ui.checkbox(&mut index.visible, "");
+                    let mut text = RichText::new(ui.localize(&format!("Indices_{}", index.name)));
+                    if !visible {
+                        text = text.weak();
+                    }
+                    let response = ui.label(text);
+                    Popup::context_menu(&response)
+                        .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                        .show(|ui| {
+                            if ui.button("Show all").clicked() {
+                                visible_all = Some(true);
+                            }
+                            if ui.button("Hide all").clicked() {
+                                visible_all = Some(false);
+                            }
+                        });
+                });
+            },
+        );
+        if response.is_drag_finished() {
+            response.update_vec(self.as_mut_slice());
+        }
+        if let Some(visible) = visible_all {
+            for index in &mut self.0 {
+                index.visible = visible;
+            }
+        }
+    }
+}
+
+/// Index
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) struct Index {
+    pub(crate) name: String,
+    pub(crate) visible: bool,
+}
+
+impl Index {
+    fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            visible: true,
+        }
     }
 }
