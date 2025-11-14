@@ -1,15 +1,17 @@
 use super::ID_SOURCE;
 use crate::{
     app::{
-        computers::{ConfigurationDisplayComputed, ConfigurationDisplayKey},
+        computers::configuration::display::{
+            Computed as ConfigurationDisplayComputed, Key as ConfigurationDisplayKey,
+        },
         panes::MARGIN,
         states::configuration::State,
         widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
     },
-    utils::{HashedDataFrame, hash_data_frame},
+    utils::HashedDataFrame,
 };
 use anyhow::Result;
-use egui::{Context, Event, Frame, Id, Margin, Response, TextStyle, TextWrapMode, Ui};
+use egui::{Context, Event, Frame, Id, Margin, TextStyle, TextWrapMode, Ui};
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{ARROW_FAT_UP, HASH, MINUS, PLUS};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
@@ -79,7 +81,7 @@ impl TableView<'_> {
             self.state.delete_row = None;
         }
         if let Some(index) = self.state.row_up {
-            // self.data.row_up(index)?;
+            self.data.new_from_index(index, )?;
             self.data.rehash()?;
             self.state.delete_row = None;
         }
@@ -204,7 +206,7 @@ impl TableView<'_> {
         if row != self.data.height() {
             self.body_cell_content_ui(ui, row, column)?;
         } else {
-            self.footer_cell_content_ui(ui, row, column)?;
+            self.footer_cell_content_ui(ui, column)?;
         }
         Ok(())
     }
@@ -220,6 +222,9 @@ impl TableView<'_> {
                 if self.state.settings.edit_table {
                     if ui.button(MINUS).clicked() {
                         self.state.delete_row = Some(row);
+                    }
+                    if ui.button(ARROW_FAT_UP).clicked() {
+                        self.state.row_up = Some(row);
                     }
                 }
                 ui.label(row.to_string());
@@ -300,20 +305,12 @@ impl TableView<'_> {
         Ok(())
     }
 
-    fn footer_cell_content_ui(
-        &mut self,
-        ui: &mut Ui,
-        row: usize,
-        column: Range<usize>,
-    ) -> PolarsResult<()> {
+    fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         match column {
             INDEX => {
                 if self.state.settings.edit_table {
                     if ui.button(PLUS).clicked() {
                         self.state.add_row = true;
-                    }
-                    if ui.button(ARROW_FAT_UP).clicked() {
-                        self.state.row_up = Some(row);
                     }
                 }
             }

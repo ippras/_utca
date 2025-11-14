@@ -1,5 +1,5 @@
 use crate::{
-    app::states::calculation::{Correlation, Settings},
+    app::states::calculation::{Correlation, Settings, StereospecificNumbers},
     utils::HashedDataFrame,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -35,6 +35,7 @@ pub(crate) struct Key<'a> {
     pub(crate) chaddock: bool,
     pub(crate) correlation: Correlation,
     pub(crate) precision: usize,
+    pub(crate) stereospecific_numbers: StereospecificNumbers,
 }
 
 impl<'a> Key<'a> {
@@ -44,6 +45,7 @@ impl<'a> Key<'a> {
             chaddock: settings.chaddock,
             correlation: settings.correlation,
             precision: settings.precision,
+            stereospecific_numbers: settings.stereospecific_numbers,
         }
     }
 }
@@ -57,7 +59,7 @@ fn compute(key: Key) -> PolarsResult<Value> {
     // Select
     lazy_frame = lazy_frame.select([
         col(LABEL),
-        col(STEREOSPECIFIC_NUMBERS123)
+        col(key.stereospecific_numbers.to_string())
             .struct_()
             .field_by_name("Array"),
     ]);

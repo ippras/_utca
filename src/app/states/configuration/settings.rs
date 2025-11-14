@@ -12,10 +12,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub(crate) struct Settings {
     pub(crate) index: usize,
-    pub(crate) precision: usize,
 
-    pub(crate) edit_table: bool,
     pub(crate) column_filter: ColumnFilter,
+    pub(crate) edit_table: bool,
+    pub(crate) precision: usize,
     pub(crate) resize_table: bool,
     pub(crate) sticky_columns: usize,
     pub(crate) truncate_headers: bool,
@@ -28,14 +28,14 @@ impl Settings {
     pub(crate) fn new() -> Self {
         Self {
             index: 0,
-            precision: 1,
 
+            column_filter: ColumnFilter::new(),
             edit_table: false,
+            precision: 1,
             resize_table: false,
             sticky_columns: 0,
             truncate_headers: false,
-            column_filter: ColumnFilter::new(),
-
+            // Hover
             hover_names: true,
             hover_properties: true,
         }

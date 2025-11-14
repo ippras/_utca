@@ -1,9 +1,8 @@
-use std::fmt::Display;
-
 use crate::utils::HashedMetaDataFrame;
-use egui::{Response, Ui, Vec2, WidgetText, vec2};
+use egui::{Ui, Vec2, WidgetText, vec2};
 use egui_tiles::{TileId, UiResponse};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 const MARGIN: Vec2 = vec2(4.0, 2.0);
 

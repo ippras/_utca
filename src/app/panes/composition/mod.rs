@@ -1,15 +1,19 @@
+// CompositionComputed, CompositionKey, CompositionSpeciesComputed, CompositionSpeciesKey,
+// FilteredCompositionComputed, FilteredCompositionKey, UniqueCompositionComputed,
+// UniqueCompositionKey,
 use self::{plot::PlotView, table::TableView};
 use super::{Behavior, MARGIN};
 use crate::{
     app::{
-        computers::{
-            CompositionComputed, CompositionKey, CompositionSpeciesComputed, CompositionSpeciesKey,
-            FilteredCompositionComputed, FilteredCompositionKey, UniqueCompositionComputed,
-            UniqueCompositionKey,
+        computers::composition::{
+            Computed as CompositionComputed, Key as CompositionKey,
+            filtered::{Computed as FilteredCompositionComputed, Key as FilteredCompositionKey},
+            species::{Computed as CompositionSpeciesComputed, Key as CompositionSpeciesKey},
+            unique::{Computed as UniqueCompositionComputed, Key as UniqueCompositionKey},
         },
-        states::composition::{Settings, State, View},
+        states::composition::{State, View},
     },
-    export::{self, ron, xlsx},
+    export::{ron, xlsx},
     text::Text,
     utils::{
         HashedDataFrame, HashedMetaDataFrame,
