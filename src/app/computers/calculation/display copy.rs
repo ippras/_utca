@@ -103,11 +103,22 @@ impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
+        println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
         let length = schema(&key.frame)?;
+        println!("Display length: {length}");
         let body = lazy_frame.clone().select(format(key)?);
+        println!("Display body: {}", lazy_frame.clone().collect().unwrap());
         let sum = lazy_frame.select(format_sum(key, length)?);
-        lazy_frame = concat_lf_diagonal([body, sum], Default::default())?;
-        let data_frame = lazy_frame.collect()?;
+        lazy_frame = concat_lf_diagonal(
+            [body, sum],
+            UnionArgs {
+                rechunk: true,
+                ..Default::default()
+            },
+        )?;
+        // println!("Display 1: {}", lazy_frame.clone().collect().unwrap());
+        let mut data_frame = lazy_frame.collect()?;
+        data_frame.align_chunks();
         Ok(data_frame)
     }
 }

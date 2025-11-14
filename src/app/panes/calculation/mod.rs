@@ -1,5 +1,7 @@
 use self::table::TableView;
 use super::{Behavior, MARGIN};
+#[cfg(feature = "markdown")]
+use crate::asset;
 use crate::{
     app::{
         computers::{
@@ -24,6 +26,8 @@ use egui::{
     CentralPanel, CursorIcon, Frame, Id, MenuBar, Response, RichText, ScrollArea, TextStyle,
     TopBottomPanel, Ui, Window, util::hash,
 };
+#[cfg(feature = "markdown")]
+use egui_ext::Markdown as _;
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
     CALCULATOR, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS, SIGMA,
@@ -185,21 +189,21 @@ impl Pane {
                 &mut state.windows.open_indices,
                 (
                     RichText::new(SIGMA).heading(),
-                    RichText::new(ui.localize("Indices")).heading(),
+                    RichText::new(ui.localize("Index?PluralCategory=other")).heading(),
                 ),
             )
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("Indices.hover"));
+                ui.label(ui.localize("Index.hover"));
             });
             ui.toggle_value(
                 &mut state.windows.open_correlations,
                 (
                     RichText::new(SIGMA).heading(),
-                    RichText::new(ui.localize("Correlations")).heading(),
+                    RichText::new(ui.localize("Correlation?PluralCategory=other")).heading(),
                 ),
             )
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("Correlations.hover"));
+                ui.label(ui.localize("Correlation.hover"));
             });
         });
         ui.separator();
@@ -416,12 +420,19 @@ impl Pane {
     }
 
     fn correlations(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SLIDERS_HORIZONTAL} Calculation correlations"))
+        let response = Window::new(format!("{SLIDERS_HORIZONTAL} Calculation correlations"))
             .id(ui.auto_id_with(ID_SOURCE).with("Correlations"))
             .open(&mut state.windows.open_correlations)
             .show(ui.ctx(), |ui| {
                 self.correlations_content(ui, &state.settings)
             });
+        #[allow(unused_variables)]
+        if let Some(inner_response) = response {
+            #[cfg(feature = "markdown")]
+            inner_response.response.on_hover_ui(|ui| {
+                ui.markdown(asset!("/doc/en/Correlations/Correlations.md"));
+            });
+        }
     }
 
     #[instrument(skip_all, err)]
@@ -432,8 +443,7 @@ impl Pane {
                 .cache::<CalculationCorrelationsComputed>()
                 .get(CalculationCorrelationsKey::new(&self.target, settings))
         });
-        // println!("data_frame: {data_frame}");
-        CorrelationsWidget::new(&data_frame).show(ui);
+        CorrelationsWidget::new(&data_frame, settings).show(ui);
         Ok(())
     }
 
@@ -452,10 +462,7 @@ impl Pane {
                 .cache::<CalculationIndicesComputed>()
                 .get(CalculationIndicesKey::new(&self.target, settings))
         });
-        IndicesWidget::new(&data_frame)
-            .precision(settings.precision)
-            .show(ui)
-            .inner
+        IndicesWidget::new(&data_frame, settings).show(ui).inner
     }
 
     fn settings(&mut self, ui: &mut Ui, state: &mut State) {
