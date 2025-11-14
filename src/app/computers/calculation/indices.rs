@@ -1,4 +1,7 @@
-use crate::{app::states::calculation::Settings, utils::HashedDataFrame};
+use crate::{
+    app::states::calculation::{Indices, Settings},
+    utils::HashedDataFrame,
+};
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
@@ -12,27 +15,27 @@ const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
     STEREOSPECIFIC_NUMBERS2,
 ];
 
-const NAMES: [&str; 19] = [
-    "Monounsaturated",
-    "Polyunsaturated",
-    "Saturated",
-    "Trans",
-    "Unsaturated",
-    "Unsaturated-9",
-    "Unsaturated-6",
-    "Unsaturated-3",
-    "Unsaturated9",
-    "EicosapentaenoicAndDocosahexaenoic",
-    "FishLipidQuality",
-    "HealthPromotingIndex",
-    "HypocholesterolemicToHypercholesterolemic",
-    "IndexOfAtherogenicity",
-    "IndexOfThrombogenicity",
-    "LinoleicToAlphaLinolenic",
-    "Polyunsaturated-6ToPolyunsaturated-3",
-    "PolyunsaturatedToSaturated",
-    "UnsaturationIndex",
-];
+// const NAMES: [&str; 19] = [
+//     "Monounsaturated",
+//     "Polyunsaturated",
+//     "Saturated",
+//     "Trans",
+//     "Unsaturated",
+//     "Unsaturated-9",
+//     "Unsaturated-6",
+//     "Unsaturated-3",
+//     "Unsaturated9",
+//     "EicosapentaenoicAndDocosahexaenoic",
+//     "FishLipidQuality",
+//     "HealthPromotingIndex",
+//     "HypocholesterolemicToHypercholesterolemic",
+//     "IndexOfAtherogenicity",
+//     "IndexOfThrombogenicity",
+//     "LinoleicToAlphaLinolenic",
+//     "Polyunsaturated-6ToPolyunsaturated-3",
+//     "PolyunsaturatedToSaturated",
+//     "UnsaturationIndex",
+// ];
 
 /// Calculation indices computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -59,15 +62,17 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
     pub(crate) ddof: u8,
+    pub(crate) indices: &'a Indices,
     pub(crate) precision: usize,
     pub(crate) significant: bool,
 }
 
 impl<'a> Key<'a> {
-    pub(crate) fn new(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
+    pub(crate) fn new(frame: &'a HashedDataFrame, settings: &'a Settings) -> Self {
         Self {
             frame,
             ddof: settings.ddof,
+            indices: &settings.indices,
             precision: settings.precision,
             significant: settings.significant,
         }
@@ -222,8 +227,8 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         .into_iter()
         .map(|stereospecific_numbers| {
             as_struct(
-                NAMES
-                    .into_iter()
+                key.indices
+                    .iter_visible()
                     .map(|name| {
                         as_struct(vec![
                             col(stereospecific_numbers)
@@ -267,7 +272,8 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         ]);
     let exprs = STEREOSPECIFIC_NUMBERS.map(|stereospecific_number| {
         as_struct(
-            NAMES
+            key.indices
+                .iter_visible()
                 .map(|name| {
                     as_struct(vec![
                         col(format!("{stereospecific_number}_{name}_Mean")).alias("Mean"),
@@ -277,7 +283,7 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
                     ])
                     .alias(name)
                 })
-                .to_vec(),
+                .collect(),
         )
         .alias(stereospecific_number)
     });

@@ -13,10 +13,10 @@ Indices_Trans = Trans
 Indices_Unsaturated = Unsaturated
     .abbreviation = UFA
     .hover = Sum of unsaturated fatty acids.
-
-Indices_Delta = Delta { $index }
-Indices_Omega = Omega { $index }
-
+Indices_Unsaturated-9 = Omega -9
+Indices_Unsaturated-6 = Omega -6
+Indices_Unsaturated-3 = Omega -3
+Indices_Unsaturated9 = Delta 9
 Indices_EicosapentaenoicAndDocosahexaenoic = Eicosapentaenoic and Docosahexaenoic
     .hover = Sum of Eicosapentaenoic and Docosahexaenoic.
 Indices_FishLipidQuality = Fish Lipid Quality

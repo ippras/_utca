@@ -87,16 +87,16 @@ impl<'a> Indices<'a> {
             ui.label(ui.localize("Indices_Unsaturated"));
             value(ui, "Unsaturated")?;
             ui.end_row();
-            ui.label(ui.localize("Indices_Omega?index=-9"));
+            ui.label(ui.localize("Indices_Unsaturated-9"));
             value(ui, "Unsaturated-9")?;
             ui.end_row();
-            ui.label(ui.localize("Indices_Omega?index=-6"));
+            ui.label(ui.localize("Indices_Unsaturated-6"));
             value(ui, "Unsaturated-6")?;
             ui.end_row();
-            ui.label(ui.localize("Indices_Omega?index=-3"));
+            ui.label(ui.localize("Indices_Unsaturated-3"));
             value(ui, "Unsaturated-3")?;
             ui.end_row();
-            ui.label(ui.localize("Indices_Delta?index=9"));
+            ui.label(ui.localize("Indices_Unsaturated9"));
             value(ui, "Unsaturated9")?;
             ui.end_row();
             #[allow(unused_variables)]

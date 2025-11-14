@@ -418,10 +418,10 @@ impl Indices {
             Index::new("Monounsaturated"),
             Index::new("Polyunsaturated"),
             Index::new("Unsaturated"),
-            Index::new("Omega?index=-9"),
-            Index::new("Omega?index=-6"),
-            Index::new("Omega?index=-3"),
-            Index::new("Delta?index=9"),
+            Index::new("Unsaturated?index=-9"),
+            Index::new("Unsaturated?index=-6"),
+            Index::new("Unsaturated?index=-3"),
+            Index::new("Unsaturated?index=9"),
             Index::new("Trans"),
             Index::new("EicosapentaenoicAndDocosahexaenoic"),
             Index::new("FishLipidQuality"),
@@ -434,6 +434,12 @@ impl Indices {
             Index::new("PolyunsaturatedToSaturated"),
             Index::new("UnsaturationIndex"),
         ])
+    }
+
+    pub(crate) fn iter_visible(&self) -> impl Iterator<Item = &str> {
+        self.0
+            .iter()
+            .filter_map(|index| index.visible.then_some(&*index.name))
     }
 }
 
