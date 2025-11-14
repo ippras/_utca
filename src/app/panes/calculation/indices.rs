@@ -11,14 +11,14 @@ use polars::prelude::*;
 /// Indices widget
 pub(crate) struct Indices<'a> {
     data_frame: &'a DataFrame,
-    precision: usize,
+    settings: &'a Settings,
 }
 
 impl<'a> Indices<'a> {
-    pub(crate) fn new(data_frame: &'a DataFrame, settings: &Settings) -> Self {
+    pub(crate) fn new(data_frame: &'a DataFrame, settings: &'a Settings) -> Self {
         Self {
             data_frame,
-            precision: settings.precision,
+            settings,
         }
     }
 
@@ -28,7 +28,7 @@ impl<'a> Indices<'a> {
                 let series = column.struct_()?.field_by_name(name)?;
                 if let Some(mean) = series.struct_()?.field_by_name("Mean")?.f64()?.first() {
                     let mut response = ui
-                        .label(format!("{mean:.0$}", self.precision))
+                        .label(format!("{mean:.0$}", self.settings.precision))
                         .on_hover_text(mean.to_string());
                     if response.hovered() {
                         if let Some(standard_deviation) = series
@@ -74,126 +74,131 @@ impl<'a> Indices<'a> {
                     ui.label(ui.localize("StereospecificNumber?number=2"));
                 });
             ui.end_row();
-            // Simple
-            ui.label(ui.localize("Indices_Saturated"));
-            value(ui, "Saturated")?;
-            ui.end_row();
-            ui.label(ui.localize("Indices_Monounsaturated"));
-            value(ui, "Monounsaturated")?;
-            ui.end_row();
-            ui.label(ui.localize("Indices_Polyunsaturated"));
-            value(ui, "Polyunsaturated")?;
-            ui.end_row();
-            ui.label(ui.localize("Indices_Unsaturated"));
-            value(ui, "Unsaturated")?;
-            ui.end_row();
-            ui.label(ui.localize("Indices_Unsaturated-9"));
-            value(ui, "Unsaturated-9")?;
-            ui.end_row();
-            ui.label(ui.localize("Indices_Unsaturated-6"));
-            value(ui, "Unsaturated-6")?;
-            ui.end_row();
-            ui.label(ui.localize("Indices_Unsaturated-3"));
-            value(ui, "Unsaturated-3")?;
-            ui.end_row();
-            ui.label(ui.localize("Indices_Unsaturated9"));
-            value(ui, "Unsaturated9")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_Trans"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Indices/Trans.md"));
-            });
-            value(ui, "Trans")?;
-            ui.end_row();
-            // Complex
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_EicosapentaenoicAndDocosahexaenoic"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!(
-                    "/doc/en/Indices/EicosapentaenoicAndDocosahexaenoic.md"
-                ));
-            });
-            value(ui, "EicosapentaenoicAndDocosahexaenoic")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_FishLipidQuality"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Indices/FishLipidQuality.md"));
-            });
-            value(ui, "FishLipidQuality")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_HealthPromotingIndex"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Indices/HealthPromotingIndex.md"));
-            });
-            value(ui, "HealthPromotingIndex")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response =
-                ui.label(ui.localize("Indices_HypocholesterolemicToHypercholesterolemic"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!(
-                    "/doc/en/Indices/HypocholesterolemicToHypercholesterolemic.md"
-                ));
-            });
-            value(ui, "HypocholesterolemicToHypercholesterolemic")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_IndexOfAtherogenicity"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Indices/IndexOfAtherogenicity.md"));
-            });
-            value(ui, "IndexOfAtherogenicity")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_IndexOfThrombogenicity"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Indices/IndexOfThrombogenicity.md"));
-            });
-            value(ui, "IndexOfThrombogenicity")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_LinoleicToAlphaLinolenic"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Indices/LinoleicToAlphaLinolenic.md"));
-            });
-            value(ui, "LinoleicToAlphaLinolenic")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_Polyunsaturated-6ToPolyunsaturated-3"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!(
-                    "/doc/en/Indices/Polyunsaturated-6ToPolyunsaturated-3.md"
-                ));
-            });
-            value(ui, "Polyunsaturated-6ToPolyunsaturated-3")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_PolyunsaturatedToSaturated"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Indices/PolyunsaturatedToSaturated.md"));
-            });
-            value(ui, "PolyunsaturatedToSaturated")?;
-            ui.end_row();
-            #[allow(unused_variables)]
-            let response = ui.label(ui.localize("Indices_UnsaturationIndex"));
-            #[cfg(feature = "markdown")]
-            response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Indices/UnsaturationIndex.md"));
-            });
-            value(ui, "UnsaturationIndex")?;
+            for index in self.settings.indices.iter_visible() {
+                ui.label(ui.localize(&format!("Indices_{index}")));
+                value(ui, index)?;
+                ui.end_row();
+            }
+            // // Simple
+            // ui.label(ui.localize("Indices_Saturated"));
+            // value(ui, "Saturated")?;
+            // ui.end_row();
+            // ui.label(ui.localize("Indices_Monounsaturated"));
+            // value(ui, "Monounsaturated")?;
+            // ui.end_row();
+            // ui.label(ui.localize("Indices_Polyunsaturated"));
+            // value(ui, "Polyunsaturated")?;
+            // ui.end_row();
+            // ui.label(ui.localize("Indices_Unsaturated"));
+            // value(ui, "Unsaturated")?;
+            // ui.end_row();
+            // ui.label(ui.localize("Indices_Unsaturated-9"));
+            // value(ui, "Unsaturated-9")?;
+            // ui.end_row();
+            // ui.label(ui.localize("Indices_Unsaturated-6"));
+            // value(ui, "Unsaturated-6")?;
+            // ui.end_row();
+            // ui.label(ui.localize("Indices_Unsaturated-3"));
+            // value(ui, "Unsaturated-3")?;
+            // ui.end_row();
+            // ui.label(ui.localize("Indices_Unsaturated9"));
+            // value(ui, "Unsaturated9")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_Trans"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!("/doc/en/Indices/Trans.md"));
+            // });
+            // value(ui, "Trans")?;
+            // ui.end_row();
+            // // Complex
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_EicosapentaenoicAndDocosahexaenoic"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!(
+            //         "/doc/en/Indices/EicosapentaenoicAndDocosahexaenoic.md"
+            //     ));
+            // });
+            // value(ui, "EicosapentaenoicAndDocosahexaenoic")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_FishLipidQuality"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!("/doc/en/Indices/FishLipidQuality.md"));
+            // });
+            // value(ui, "FishLipidQuality")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_HealthPromotingIndex"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!("/doc/en/Indices/HealthPromotingIndex.md"));
+            // });
+            // value(ui, "HealthPromotingIndex")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response =
+            //     ui.label(ui.localize("Indices_HypocholesterolemicToHypercholesterolemic"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!(
+            //         "/doc/en/Indices/HypocholesterolemicToHypercholesterolemic.md"
+            //     ));
+            // });
+            // value(ui, "HypocholesterolemicToHypercholesterolemic")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_IndexOfAtherogenicity"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!("/doc/en/Indices/IndexOfAtherogenicity.md"));
+            // });
+            // value(ui, "IndexOfAtherogenicity")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_IndexOfThrombogenicity"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!("/doc/en/Indices/IndexOfThrombogenicity.md"));
+            // });
+            // value(ui, "IndexOfThrombogenicity")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_LinoleicToAlphaLinolenic"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!("/doc/en/Indices/LinoleicToAlphaLinolenic.md"));
+            // });
+            // value(ui, "LinoleicToAlphaLinolenic")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_Polyunsaturated-6ToPolyunsaturated-3"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!(
+            //         "/doc/en/Indices/Polyunsaturated-6ToPolyunsaturated-3.md"
+            //     ));
+            // });
+            // value(ui, "Polyunsaturated-6ToPolyunsaturated-3")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_PolyunsaturatedToSaturated"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!("/doc/en/Indices/PolyunsaturatedToSaturated.md"));
+            // });
+            // value(ui, "PolyunsaturatedToSaturated")?;
+            // ui.end_row();
+            // #[allow(unused_variables)]
+            // let response = ui.label(ui.localize("Indices_UnsaturationIndex"));
+            // #[cfg(feature = "markdown")]
+            // response.on_hover_ui(|ui| {
+            //     ui.markdown(asset!("/doc/en/Indices/UnsaturationIndex.md"));
+            // });
+            // value(ui, "UnsaturationIndex")?;
             Ok(())
         })
     }
