@@ -140,9 +140,9 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             ]);
         }
         None => {
-            let sn13 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS13}\[\d]$"#));
-            let enrichment_factors = col(format!(r#"^EnrichmentFactor\[\d]$"#));
-            let selectivity_factors = col(format!(r#"^SelectivityFactor\[\d]$"#));
+            let sn13 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS13}\[\d+\]$"#));
+            let enrichment_factors = col(format!(r#"^EnrichmentFactor\[\d+\]$"#));
+            let selectivity_factors = col(format!(r#"^SelectivityFactor\[\d+\]$"#));
             lazy_frame = lazy_frame.select([
                 col(LABEL),
                 col(FATTY_ACID),
