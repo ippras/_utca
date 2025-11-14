@@ -19,9 +19,9 @@ use utca::App;
 async fn main() -> eframe::Result<()> {
     use eframe::run_native;
 
-    unsafe { std::env::set_var("POLARS_FMT_MAX_COLS", "256") };
+    // unsafe { std::env::set_var("POLARS_FMT_MAX_COLS", "256") };
     // unsafe { std::env::set_var("POLARS_FMT_MAX_ROWS", "32") };
-    unsafe { std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "256") };
+    // unsafe { std::env::set_var("POLARS_FMT_TABLE_CELL_LIST_LEN", "256") };
     unsafe { std::env::set_var("POLARS_FMT_STR_LEN", "256") };
 
     // Log to stdout (if you run with `RUST_LOG=debug`).

@@ -1,4 +1,4 @@
-use self::table::TableView;
+use self::{correlations::Correlations, indices::Indices, table::TableView};
 use super::{Behavior, MARGIN};
 #[cfg(feature = "markdown")]
 use crate::asset;
@@ -12,7 +12,6 @@ use crate::{
         },
         identifiers::COMPOSE,
         states::calculation::{Settings, State},
-        widgets::{CorrelationsWidget, IndicesWidget},
     },
     export::ron,
     utils::{
@@ -30,14 +29,11 @@ use egui::{
 use egui_ext::Markdown as _;
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
-    CALCULATOR, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, MATH_OPERATIONS, SIGMA,
-    SLIDERS_HORIZONTAL, X,
+    CALCULATOR, FLOPPY_DISK, INTERSECT_THREE, LIST, MATH_OPERATIONS, SIGMA, SLIDERS_HORIZONTAL, X,
 };
 use egui_tiles::{TileId, UiResponse};
 use lipid::prelude::*;
-use metadata::{
-    AUTHORS, DATE, DEFAULT_DATE, DEFAULT_VERSION, Metadata, NAME, VERSION, polars::MetaDataFrame,
-};
+use metadata::{AUTHORS, DATE, DEFAULT_VERSION, Metadata, NAME, VERSION, polars::MetaDataFrame};
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
@@ -122,7 +118,7 @@ impl Pane {
         CentralPanel::default()
             .frame(Frame::central_panel(&ui.style()))
             .show_inside(ui, |ui| {
-                self.central(ui, &mut state);
+                let _ = self.central(ui, &mut state);
             });
         if let Some(id) = behavior.close {
             state.remove(ui.ctx(), Id::new(id));
@@ -183,18 +179,8 @@ impl Pane {
         // Settings
         ui.settings(&mut state.windows.open_settings);
         ui.separator();
-        // Indices
+        // Sum tables
         ui.menu_button(RichText::new(SIGMA).heading(), |ui| {
-            ui.toggle_value(
-                &mut state.windows.open_indices,
-                (
-                    RichText::new(SIGMA).heading(),
-                    RichText::new(ui.localize("Index?PluralCategory=other")).heading(),
-                ),
-            )
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Index.hover"));
-            });
             ui.toggle_value(
                 &mut state.windows.open_correlations,
                 (
@@ -204,6 +190,16 @@ impl Pane {
             )
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("Correlation.hover"));
+            });
+            ui.toggle_value(
+                &mut state.windows.open_indices,
+                (
+                    RichText::new(SIGMA).heading(),
+                    RichText::new(ui.localize("Index?PluralCategory=other")).heading(),
+                ),
+            )
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Index.hover"));
             });
         });
         ui.separator();
@@ -370,19 +366,26 @@ impl Pane {
         Ok(())
     }
 
-    fn central(&mut self, ui: &mut Ui, state: &mut State) {
-        self.central_content(ui, state);
+    fn central(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
+        self.central_content(ui, state)?;
         self.windows(ui, state);
+        Ok(())
     }
 
-    fn central_content(&mut self, ui: &mut Ui, state: &mut State) {
+    fn central_content(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
         self.target = ui.memory_mut(|memory| {
             memory
                 .caches
                 .cache::<CalculationComputed>()
                 .get(CalculationKey::new(&self.source, &state.settings))
         });
+        state.settings.fatty_acids = self.target[LABEL]
+            .str()?
+            .into_no_null_iter()
+            .map(ToOwned::to_owned)
+            .collect();
         TableView::new(&self.target, state).show(ui);
+        Ok(())
     }
 }
 
@@ -443,7 +446,7 @@ impl Pane {
                 .cache::<CalculationCorrelationsComputed>()
                 .get(CalculationCorrelationsKey::new(&self.target, settings))
         });
-        CorrelationsWidget::new(&data_frame, settings).show(ui);
+        Correlations::new(&data_frame, settings).show(ui);
         Ok(())
     }
 
@@ -462,7 +465,7 @@ impl Pane {
                 .cache::<CalculationIndicesComputed>()
                 .get(CalculationIndicesKey::new(&self.target, settings))
         });
-        IndicesWidget::new(&data_frame, settings).show(ui).inner
+        Indices::new(&data_frame, settings).show(ui).inner
     }
 
     fn settings(&mut self, ui: &mut Ui, state: &mut State) {
@@ -475,4 +478,6 @@ impl Pane {
     }
 }
 
+mod correlations;
+mod indices;
 mod table;

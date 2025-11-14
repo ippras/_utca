@@ -1,7 +1,11 @@
-use crate::{app::states::calculation::Settings, utils::HashedDataFrame};
+use crate::{
+    app::states::calculation::{Indices, Settings},
+    utils::HashedDataFrame,
+};
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
+use polars_ext::expr::ExprExt;
 use std::num::NonZeroI8;
 use tracing::instrument;
 
@@ -11,27 +15,27 @@ const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
     STEREOSPECIFIC_NUMBERS2,
 ];
 
-const NAMES: [&str; 19] = [
-    "Monounsaturated",
-    "Polyunsaturated",
-    "Saturated",
-    "Trans",
-    "Unsaturated",
-    "Unsaturated-9",
-    "Unsaturated-6",
-    "Unsaturated-3",
-    "Unsaturated9",
-    "EicosapentaenoicAndDocosahexaenoic",
-    "FishLipidQuality",
-    "HealthPromotingIndex",
-    "HypocholesterolemicToHypercholesterolemic",
-    "IndexOfAtherogenicity",
-    "IndexOfThrombogenicity",
-    "LinoleicToAlphaLinolenic",
-    "Polyunsaturated-6ToPolyunsaturated-3",
-    "PolyunsaturatedToSaturated",
-    "UnsaturationIndex",
-];
+// const NAMES: [&str; 19] = [
+//     "Monounsaturated",
+//     "Polyunsaturated",
+//     "Saturated",
+//     "Trans",
+//     "Unsaturated",
+//     "Unsaturated-9",
+//     "Unsaturated-6",
+//     "Unsaturated-3",
+//     "Unsaturated9",
+//     "EicosapentaenoicAndDocosahexaenoic",
+//     "FishLipidQuality",
+//     "HealthPromotingIndex",
+//     "HypocholesterolemicToHypercholesterolemic",
+//     "IndexOfAtherogenicity",
+//     "IndexOfThrombogenicity",
+//     "LinoleicToAlphaLinolenic",
+//     "Polyunsaturated-6ToPolyunsaturated-3",
+//     "PolyunsaturatedToSaturated",
+//     "UnsaturationIndex",
+// ];
 
 /// Calculation indices computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -58,13 +62,19 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
     pub(crate) ddof: u8,
+    pub(crate) indices: &'a Indices,
+    pub(crate) precision: usize,
+    pub(crate) significant: bool,
 }
 
 impl<'a> Key<'a> {
-    pub(crate) fn new(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
+    pub(crate) fn new(frame: &'a HashedDataFrame, settings: &'a Settings) -> Self {
         Self {
             frame,
-            ddof: settings.parameters.ddof,
+            ddof: settings.ddof,
+            indices: &settings.indices,
+            precision: settings.precision,
+            significant: settings.significant,
         }
     }
 }
@@ -97,6 +107,7 @@ fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
 
 fn compute(key: Key, length: u64) -> PolarsResult<Value> {
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
+    println!("Indices 0: {}", lazy_frame.clone().collect().unwrap());
     let fatty_acid = || col(FATTY_ACID).fatty_acid();
     let values = |expr: Expr| {
         (0..length).map(move |index| {
@@ -216,8 +227,8 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         .into_iter()
         .map(|stereospecific_numbers| {
             as_struct(
-                NAMES
-                    .into_iter()
+                key.indices
+                    .iter_visible()
                     .map(|name| {
                         as_struct(vec![
                             col(stereospecific_numbers)
@@ -247,5 +258,43 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         })
         .collect::<Vec<_>>();
     lazy_frame = lazy_frame.select(exprs);
+    println!("Indices 0: {}", lazy_frame.clone().collect().unwrap());
+    // Format
+    lazy_frame = lazy_frame
+        .unnest(all(), Some(PlSmallStr::from_static("_")))
+        .unnest(all(), Some(PlSmallStr::from_static("_")))
+        .with_columns([
+            col(r#"^.*_Mean$"#).precision(key.precision, key.significant),
+            col(r#"^.*_StandardDeviation$"#).precision(key.precision, key.significant),
+            col(r#"^.*_Array$"#)
+                .arr()
+                .eval(element().precision(key.precision, key.significant), false),
+        ]);
+    let exprs = STEREOSPECIFIC_NUMBERS.map(|stereospecific_number| {
+        as_struct(
+            key.indices
+                .iter_visible()
+                .map(|name| {
+                    as_struct(vec![
+                        col(format!("{stereospecific_number}_{name}_Mean")).alias("Mean"),
+                        col(format!("{stereospecific_number}_{name}_StandardDeviation"))
+                            .alias("StandardDeviation"),
+                        col(format!("{stereospecific_number}_{name}_Array")).alias("Array"),
+                    ])
+                    .alias(name)
+                })
+                .collect(),
+        )
+        .alias(stereospecific_number)
+    });
+    lazy_frame = lazy_frame.select(exprs);
+    println!("Indices 1: {}", lazy_frame.clone().collect().unwrap());
+    // lazy_frame = lazy_frame.select([
+    //     col("Label[1]").alias(LABEL),
+    //     dtype_col(&DataType::Float64)
+    //         .as_selector()
+    //         .as_expr()
+    //         .precision(key.precision, false),
+    // ]);
     lazy_frame.collect()
 }

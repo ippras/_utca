@@ -1,3 +1,9 @@
+Standard = { $OptionCategory ->
+    *[some] Standard
+    [none] Without a standard
+}
+    .hover = Fatty acid added as a standard.
+
 Correlation = { $PluralCategory ->
     *[one] Correlation
     [other] Correlations

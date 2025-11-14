@@ -58,21 +58,23 @@ pub(crate) struct Key<'a> {
     pub(crate) normalize_factors: bool,
     pub(crate) normalize: Normalize,
     pub(crate) row_filter: OrderedFloat<f64>,
+    pub(crate) standard: Option<&'a str>,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
 }
 
 impl<'a> Key<'a> {
-    pub(crate) fn new(frames: &'a [HashedMetaDataFrame], settings: &Settings) -> Self {
+    pub(crate) fn new(frames: &'a [HashedMetaDataFrame], settings: &'a Settings) -> Self {
         Self {
             frames,
             index: settings.index,
-            ddof: settings.parameters.ddof,
+            ddof: settings.ddof,
             normalize_factors: settings.normalize_factors,
-            normalize: settings.parameters.normalize,
+            normalize: settings.normalize,
             row_filter: OrderedFloat(settings.table.row_filter),
-            unsigned: settings.parameters.unsigned,
-            weighted: settings.parameters.weighted,
+            standard: settings.standard.as_deref(),
+            unsigned: settings.unsigned,
+            weighted: settings.weighted,
         }
     }
 
@@ -102,6 +104,10 @@ fn exprs(index: usize) -> [Expr; 3] {
 fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let sn123 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS123}\[\d+\]$"#));
     let sn2 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS2}\[\d+\]$"#));
+    // Standard
+    if let Some(standard) = key.standard {
+        lazy_frame = lazy_frame.filter(col(LABEL).neq(lit(standard)));
+    }
     // Normalize
     lazy_frame = lazy_frame.with_columns([
         experimental(sn123.clone(), key),
