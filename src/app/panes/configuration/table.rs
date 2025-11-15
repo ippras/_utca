@@ -81,9 +81,22 @@ impl TableView<'_> {
             self.state.delete_row = None;
         }
         if let Some(index) = self.state.row_up {
-            self.data.new_from_index(index, )?;
+            let indices = (0..index - 1)
+                .chain(Some(index))
+                .chain(Some(index - 1))
+                .chain(index + 1..self.data.height())
+                .map(|index| index as u32);
+            self.data.data_frame = self
+                .data
+                .data_frame
+                .clone()
+                .lazy()
+                .with_columns([lit(Series::from_iter(indices)).alias("Index")])
+                .sort_by_exprs([col("Index")], Default::default())
+                .drop(cols(["Index"]))
+                .collect()?;
             self.data.rehash()?;
-            self.state.delete_row = None;
+            self.state.row_up = None;
         }
         Ok(())
     }
