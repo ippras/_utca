@@ -285,7 +285,7 @@ impl TableView<'_> {
                 let value = data_frame[STEREOSPECIFIC_NUMBERS123].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
                     .editable(self.state.settings.edit_table)
-                    .precision(Some(self.state.settings.precision))
+                    .precision(Some(self.state.settings.float_precision))
                     .hover(true)
                     .show(ui);
                 if let Some(value) = inner_response.inner {
@@ -305,7 +305,7 @@ impl TableView<'_> {
                 let value = data_frame[name].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
                     .editable(self.state.settings.edit_table)
-                    .precision(Some(self.state.settings.precision))
+                    .precision(Some(self.state.settings.float_precision))
                     .hover(true)
                     .show(ui);
                 if let Some(value) = inner_response.inner {
