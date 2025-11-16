@@ -1,6 +1,6 @@
 use super::ID_SOURCE;
 #[cfg(feature = "markdown")]
-use crate::asset;
+use crate::r#const::markdown::{ENRICHMENT_FACTOR, SELECTIVITY_FACTOR};
 use crate::{
     app::{
         computers::calculation::display::{
@@ -22,12 +22,8 @@ use polars::prelude::*;
 use std::ops::Range;
 use tracing::instrument;
 
-const ID: Range<usize> = 0..3;
-const SN: Range<usize> = ID.end..ID.end + 3;
-const FACTORS: Range<usize> = SN.end..SN.end + 2;
-const LEN: usize = FACTORS.end;
-
-const TOP: &[Range<usize>] = &[ID, SN, FACTORS];
+const LEN: usize = top::FS.end;
+const TOP: &[Range<usize>] = &[top::ID, top::SN, top::FS];
 
 /// Calculation table
 pub(crate) struct TableView<'a> {
@@ -77,63 +73,65 @@ impl TableView<'_> {
         }
         match (row, column) {
             // Top
-            (0, ID) => {
+            (0, top::ID) => {
                 ui.heading(ui.localize("Identifier.abbreviation"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("Identifier"));
                     });
             }
-            (0, SN) => {
+            (0, top::SN) => {
                 ui.heading(ui.localize("StereospecificNumber?number=many"));
             }
-            (0, FACTORS) => {
+            (0, top::FS) => {
                 ui.heading(ui.localize("Factors"));
             }
             // Bottom
-            (1, identifier::INDEX) => {
+            (1, bottom::INDEX) => {
                 ui.heading(HASH).on_hover_ui(|ui| {
                     ui.label(ui.localize("Index"));
                 });
             }
-            (1, identifier::LABEL) => {
+            (1, bottom::LABEL) => {
                 ui.heading(ui.localize("Label"));
             }
-            (1, identifier::FA) => {
+            (1, bottom::FA) => {
                 ui.heading(ui.localize("FattyAcid.abbreviation"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("FattyAcid"));
                     });
             }
-            (1, stereospecific_numbers::SN123) => {
+            (1, bottom::SN123) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=123"));
                     });
             }
-            (1, stereospecific_numbers::SN2) => {
+            (1, bottom::SN2) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=2"));
                     });
             }
-            (1, stereospecific_numbers::SN13) => {
+            (1, bottom::SN13) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize("StereospecificNumber?number=13"));
                     });
             }
-            (1, factors::EF) => {
+            (1, bottom::EF) => {
+                #[allow(unused_variables)]
                 let response = ui.heading(ui.localize("EnrichmentFactor.abbreviation"));
                 #[cfg(feature = "markdown")]
                 response.on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/en/Factors/EnrichmentFactor.md"));
+                    ui.markdown(ENRICHMENT_FACTOR);
                 });
             }
-            (1, factors::SF) => {
+            (1, bottom::SF) => {
+                #[allow(unused_variables)]
                 let response = ui.heading(ui.localize("SelectivityFactor.abbreviation"));
                 #[cfg(feature = "markdown")]
                 response.on_hover_ui(|ui| {
-                    ui.markdown(asset!("/doc/en/Factors/SelectivityFactor.md"));
+                    ui.markdown(SELECTIVITY_FACTOR);
                 });
             }
             _ => {}
@@ -162,20 +160,20 @@ impl TableView<'_> {
         column: Range<usize>,
     ) -> PolarsResult<()> {
         match (row, column) {
-            (row, identifier::INDEX) => {
+            (row, bottom::INDEX) => {
                 ui.label(row.to_string());
             }
-            (row, identifier::LABEL) => {
+            (row, bottom::LABEL) => {
                 let labels = self.data_frame[LABEL].str()?;
                 let label = labels.get(row).unwrap();
                 Label::new(label).truncate().ui(ui);
             }
-            (row, identifier::FA) => {
+            (row, bottom::FA) => {
                 if let Some(fatty_acid) = self.data_frame.try_fatty_acid()?.delta()?.get(row) {
                     Label::new(fatty_acid).truncate().ui(ui);
                 }
             }
-            (row, stereospecific_numbers::SN123) => {
+            (row, bottom::SN123) => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<CalculationDisplayComputed>().get(
                         CalculationDisplayKey::stereospecific_numbers123(
@@ -199,7 +197,7 @@ impl TableView<'_> {
                     }
                 }
             }
-            (row, stereospecific_numbers::SN2) => {
+            (row, bottom::SN2) => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<CalculationDisplayComputed>().get(
                         CalculationDisplayKey::stereospecific_numbers2(
@@ -223,7 +221,7 @@ impl TableView<'_> {
                     }
                 }
             }
-            (row, stereospecific_numbers::SN13) => {
+            (row, bottom::SN13) => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<CalculationDisplayComputed>().get(
                         CalculationDisplayKey::stereospecific_numbers13(
@@ -248,7 +246,7 @@ impl TableView<'_> {
                     }
                 }
             }
-            (row, factors::EF) => {
+            (row, bottom::EF) => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<CalculationDisplayComputed>().get(
                         CalculationDisplayKey::enrichment_factor(
@@ -273,7 +271,7 @@ impl TableView<'_> {
                     }
                 }
             }
-            (row, factors::SF) => {
+            (row, bottom::SF) => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<CalculationDisplayComputed>().get(
                         CalculationDisplayKey::selectivity_factor(
@@ -305,7 +303,7 @@ impl TableView<'_> {
 
     fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         match column {
-            stereospecific_numbers::SN123 => {
+            bottom::SN123 => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<CalculationDisplayComputed>().get(
                         CalculationDisplayKey::stereospecific_numbers123(
@@ -328,7 +326,7 @@ impl TableView<'_> {
                     }
                 }
             }
-            stereospecific_numbers::SN2 => {
+            bottom::SN2 => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<CalculationDisplayComputed>().get(
                         CalculationDisplayKey::stereospecific_numbers2(
@@ -351,7 +349,7 @@ impl TableView<'_> {
                     }
                 }
             }
-            stereospecific_numbers::SN13 => {
+            bottom::SN13 => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory.caches.cache::<CalculationDisplayComputed>().get(
                         CalculationDisplayKey::stereospecific_numbers13(
@@ -446,38 +444,24 @@ impl ResponseExt for Response {
     }
 }
 
-// mod columns {
-//     use super::*;
-
-//     const ID: Range<usize> = 0..3;
-//     const SN: Range<usize> = ID.end..ID.end + 3;
-//     pub(super) const SN123: Range<usize> = SN.start..SN.start + 1;
-//     pub(super) const SN2: Range<usize> = SN123.end..SN123.end + 1;
-//     pub(super) const SN13: Range<usize> = SN2.end..SN2.end + 1;
-
-//     const FACTORS: Range<usize> = SN.end..SN.end + 2;
-//     const LEN: usize = FACTORS.end;
-// }
-
-mod identifier {
+mod top {
     use super::*;
 
-    pub(super) const INDEX: Range<usize> = ID.start..ID.start + 1;
+    pub(super) const ID: Range<usize> = 0..3;
+    pub(super) const SN: Range<usize> = ID.end..ID.end + 3;
+    pub(super) const FS: Range<usize> = SN.end..SN.end + 2;
+}
+
+// ENRICHMENT_FACTOR, SELECTIVITY_FACTOR
+mod bottom {
+    use super::*;
+
+    pub(super) const INDEX: Range<usize> = top::ID.start..top::ID.start + 1;
     pub(super) const LABEL: Range<usize> = INDEX.end..INDEX.end + 1;
     pub(super) const FA: Range<usize> = LABEL.end..LABEL.end + 1;
-}
-
-mod stereospecific_numbers {
-    use super::*;
-
-    pub(super) const SN123: Range<usize> = SN.start..SN.start + 1;
+    pub(super) const SN123: Range<usize> = top::SN.start..top::SN.start + 1;
     pub(super) const SN2: Range<usize> = SN123.end..SN123.end + 1;
     pub(super) const SN13: Range<usize> = SN2.end..SN2.end + 1;
-}
-
-mod factors {
-    use super::*;
-
-    pub(super) const EF: Range<usize> = FACTORS.start..FACTORS.start + 1;
+    pub(super) const EF: Range<usize> = top::FS.start..top::FS.start + 1;
     pub(super) const SF: Range<usize> = EF.end..EF.end + 1;
 }

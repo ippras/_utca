@@ -1,7 +1,7 @@
 use self::{correlations::Correlations, indices::Indices, table::TableView};
 use super::{Behavior, MARGIN};
 #[cfg(feature = "markdown")]
-use crate::asset;
+use crate::r#const::markdown::CORRELATIONS;
 use crate::{
     app::{
         computers::calculation::{
@@ -392,35 +392,9 @@ impl Pane {
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
-        self.christie(ui, state);
         self.correlations(ui, state);
         self.indices(ui, state);
         self.settings(ui, state);
-    }
-
-    fn christie(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{MATH_OPERATIONS} Christie"))
-            .default_pos(ui.next_widget_position())
-            .id(ui.auto_id_with("Christie"))
-            .open(&mut state.windows.open_christie)
-            .show(ui.ctx(), |ui| {
-                // ScrollArea::vertical().show(ui, |ui| {
-                //     Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                //         ui.heading("Fatty Acid");
-                //         ui.heading("Value");
-                //         ui.end_row();
-                //         for index in 0..CHRISTIE.data.height() {
-                //             let fatty_acid = CHRISTIE.data.fatty_acid().get(index).unwrap();
-                //             FattyAcidWidget::new(fatty_acid.as_ref())
-                //                 .hover(true)
-                //                 .show(ui);
-                //             FloatWidget::new(CHRISTIE.data["Christie"].f64().unwrap().get(index))
-                //                 .show(ui);
-                //             ui.end_row();
-                //         }
-                //     });
-                // });
-            });
     }
 
     fn correlations(&mut self, ui: &mut Ui, state: &mut State) {
@@ -428,19 +402,19 @@ impl Pane {
             .id(ui.auto_id_with(ID_SOURCE).with("Correlations"))
             .open(&mut state.windows.open_correlations)
             .show(ui.ctx(), |ui| {
-                self.correlations_content(ui, &state.settings)
+                self.correlations_content(ui, &mut state.settings)
             });
         #[allow(unused_variables)]
         if let Some(inner_response) = response {
             #[cfg(feature = "markdown")]
             inner_response.response.on_hover_ui(|ui| {
-                ui.markdown(asset!("/doc/en/Correlations/Correlations.md"));
+                ui.markdown(CORRELATIONS);
             });
         }
     }
 
     #[instrument(skip_all, err)]
-    fn correlations_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
+    fn correlations_content(&mut self, ui: &mut Ui, settings: &mut Settings) -> PolarsResult<()> {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches

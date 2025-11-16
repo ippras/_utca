@@ -105,11 +105,19 @@ impl Github {
         });
         ui.menu_button("Lunaria rediviva", |ui| {
             ui.heading("Lunaria rediviva");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[1].2024-05-16.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[2].2024-05-16.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[3].2024-05-16.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[4].2024-05-17.utca.ron");
-            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petalum[5].2024-05-17.utca.ron");
+            // Petal
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petal[1].2024-05-16.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petal[2].2024-05-16.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petal[3].2024-05-16.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petal[4].2024-05-17.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petal[5].2024-05-17.utca.ron");
+            // Seed
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 0mm[1].2024-05-27.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 0mm[2].2024-05-27.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 0mm[3].2024-05-27.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 1mm[1].2024-05-29.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 1mm[2].2024-05-29.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 1mm[3].2024-05-29.utca.ron");
         });
         ui.menu_button("Sidorov (2014)", |ui| {
             ui.doi("10.1007/s11746-014-2553-8");

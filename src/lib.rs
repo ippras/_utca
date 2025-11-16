@@ -1,5 +1,3 @@
-// #![feature(hash_set_entry)]
-// #![feature(debug_closure_helpers)]
 #![feature(box_patterns)]
 #![feature(debug_closure_helpers)]
 #![feature(decl_macro)]
@@ -17,8 +15,5 @@ mod localization;
 mod macros;
 mod presets;
 mod text;
-
-// mod properties;
-// mod widgets;
 
 mod utils;
