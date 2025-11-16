@@ -44,7 +44,7 @@ impl<'a> Key<'a> {
             frame,
             chaddock: settings.chaddock,
             correlation: settings.correlation,
-            precision: settings.precision,
+            precision: settings.float_precision,
             stereospecific_numbers: settings.stereospecific_numbers,
         }
     }

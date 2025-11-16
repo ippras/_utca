@@ -9,12 +9,6 @@ pub trait UiExt {
     /// Edit
     fn edit(&mut self, selected: &mut bool);
 
-    /// Indices
-    fn indices(&mut self, selected: &mut bool);
-
-    /// Parameters
-    fn parameters(&mut self, selected: &mut bool);
-
     /// Reset
     fn reset(&mut self, selected: &mut bool);
 
@@ -30,20 +24,6 @@ impl UiExt for Ui {
         self.toggle_value(selected, RichText::new(PENCIL).heading())
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("Edit"));
-            });
-    }
-
-    fn indices(&mut self, selected: &mut bool) {
-        self.toggle_value(selected, RichText::new(SIGMA).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Index?PluralCategory=other"));
-            });
-    }
-
-    fn parameters(&mut self, selected: &mut bool) {
-        self.toggle_value(selected, RichText::new(GEAR).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Parameters"));
             });
     }
 

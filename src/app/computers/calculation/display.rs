@@ -136,7 +136,7 @@ impl<'a> Key<'a> {
             kind,
             ddof: 1,
             percent: settings.percent,
-            precision: settings.precision,
+            precision: settings.float_precision,
             significant: settings.significant,
         }
     }

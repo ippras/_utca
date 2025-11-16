@@ -71,20 +71,20 @@ impl Settings {
         });
     }
 
-    // Precision
+    // Float precision
     fn float_precision(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
             ui.label(ui.localize("Precision.hover"));
         });
         ui.horizontal(|ui| {
-            ui.add(Slider::new(&mut self.float_precision, 0..=MAX_PRECISION));
+            Slider::new(&mut self.float_precision, 0..=MAX_PRECISION).ui(ui);
             if ui.button((BOOKMARK, "3")).clicked() {
                 self.float_precision = 3;
             }
         });
     }
 
-    /// Sticky
+    /// Sticky columns
     fn sticky_columns(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
             ui.label(ui.localize("StickyColumns.hover"));
@@ -92,7 +92,7 @@ impl Settings {
         Slider::new(&mut self.sticky_columns, 0..=8).ui(ui);
     }
 
-    /// Truncate
+    /// Truncate headers
     fn truncate_headers(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("TruncateHeaders")).on_hover_ui(|ui| {
             ui.label(ui.localize("TruncateHeaders.hover"));

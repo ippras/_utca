@@ -102,6 +102,7 @@ impl Pane {
             .frame(Frame::central_panel(&ui.style()))
             .show_inside(ui, |ui| {
                 self.central(ui, &mut state);
+                self.windows(ui, &mut state);
             });
         if let Some(id) = behavior.close {
             state.remove(ui.ctx(), Id::new(id));
@@ -116,18 +117,6 @@ impl Pane {
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        self.top_content(ui, state)
-    }
-
-    fn central(&mut self, ui: &mut Ui, state: &mut State) {
-        if state.settings.edit_table {
-            self.meta(ui, state);
-        }
-        self.data(ui, state);
-        self.windows(ui, state);
-    }
-
-    fn top_content(&mut self, ui: &mut Ui, state: &mut State) -> Response {
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Configuration"));
         });
@@ -233,6 +222,13 @@ impl Pane {
         }
         ui.separator();
         response
+    }
+
+    fn central(&mut self, ui: &mut Ui, state: &mut State) {
+        if state.settings.edit_table {
+            self.meta(ui, state);
+        }
+        self.data(ui, state);
     }
 
     fn meta(&mut self, ui: &mut Ui, state: &mut State) {
