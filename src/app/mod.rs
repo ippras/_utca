@@ -318,33 +318,6 @@ impl App {
         if let Some(frame) =
             ctx.data_mut(|data| data.remove_temp::<HashedMetaDataFrame>(Id::new(DATA)))
         {
-            println!("frame: {frame:?}");
-            // let name = frame.meta.format(".");
-            // let mut meta = frame.meta.clone();
-            // meta.retain(|key, _| key != "ARROW:schema");
-            // let mut frame = MetaDataFrame::new(
-            //     meta,
-            //     frame
-            //         .data
-            //         .data_frame
-            //         .clone()
-            //         .lazy()
-            //         .select([
-            //             col(LABEL),
-            //             col(FATTY_ACID),
-            //             // //
-            //             // col(STEREOSPECIFIC_NUMBERS123),
-            //             // // col(STEREOSPECIFIC_NUMBERS2),
-            //             // col(STEREOSPECIFIC_NUMBERS12_23),
-            //             //
-            //             col("Triacylglycerol").alias(STEREOSPECIFIC_NUMBERS123),
-            //             col("Monoacylglycerol2").alias(STEREOSPECIFIC_NUMBERS2),
-            //             // col("Diacylglycerol1223").alias(STEREOSPECIFIC_NUMBERS12_23),
-            //         ])
-            //         .collect()
-            //         .unwrap(),
-            // );
-            // let _ = parquet::save(&mut frame, &format!("{name}.utca.parquet"));
             self.data.add(frame);
             self.left_panel = true;
         }

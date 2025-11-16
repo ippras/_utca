@@ -7,6 +7,7 @@ pub(crate) use self::{
     filter::{Filter, FilterWidget},
 };
 
+use super::ID_SOURCE;
 use crate::{
     app::MAX_PRECISION,
     r#const::relative_atomic_mass::{H, LI, NA, NH4},
@@ -14,10 +15,9 @@ use crate::{
     utils::HashedDataFrame,
 };
 use egui::{
-    ComboBox, DragValue, Grid, Id, Key, KeyboardShortcut, Modifiers, PopupCloseBehavior, RichText,
-    ScrollArea, Slider, Ui, Vec2b, emath::Float,
+    ComboBox, DragValue, Grid, Id, Key, KeyboardShortcut, Modifiers, PopupCloseBehavior,
+    ScrollArea, Slider, Ui, Vec2b, Widget as _, emath::Float,
 };
-use egui_ext::LabeledSeparator;
 use egui_l20n::UiExt;
 use egui_phosphor::regular::{CHART_BAR, ERASER, MINUS, PLUS, TABLE};
 use indexmap::IndexMap;
@@ -32,7 +32,7 @@ use std::{
 pub(crate) struct Settings {
     pub(crate) index: Option<usize>,
     pub(crate) percent: bool,
-    pub(crate) precision: usize,
+    pub(crate) float_precision: usize,
     pub(crate) resizable: bool,
     pub(crate) sticky_columns: usize,
 
@@ -44,8 +44,9 @@ impl Settings {
     pub(crate) fn new() -> Self {
         Self {
             index: Some(0),
+
             percent: true,
-            precision: 1,
+            float_precision: 1,
             resizable: false,
             sticky_columns: 0,
 
@@ -56,23 +57,12 @@ impl Settings {
 
     pub(crate) fn show(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
         ScrollArea::vertical().show(ui, |ui| {
-            Grid::new("Composition").show(ui, |ui| {
-                // Percent
-                ui.label(ui.localize("Percent"));
-                ui.checkbox(&mut self.percent, "");
+            Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
+                self.percent(ui);
                 ui.end_row();
-
-                // Precision
-                ui.label(ui.localize("Precision"));
-                ui.add(Slider::new(&mut self.precision, 1..=MAX_PRECISION));
+                self.float_precision(ui);
                 ui.end_row();
-
-                // Sticky
-                ui.label(ui.localize("StickyColumns"));
-                ui.add(Slider::new(
-                    &mut self.sticky_columns,
-                    0..=self.parameters.selections.len() * 2 + 1,
-                ));
+                self.sticky_columns(ui);
                 ui.end_row();
 
                 ui.separator();
@@ -169,7 +159,9 @@ impl Settings {
                             .get(index)
                         {
                             let series = series.unique().unwrap().sort(Default::default()).unwrap();
-                            ui.add(FilterWidget::new(selection, &series).percent(self.percent));
+                            FilterWidget::new(selection, &series)
+                                .percent(self.percent)
+                                .ui(ui);
                         }
                     });
                     ui.end_row();
@@ -202,98 +194,21 @@ impl Settings {
                 //     );
                 // }
 
-                // Method
-                ui.label(ui.localize("Method"));
-                if ui.input_mut(|input| {
-                    input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::G))
-                }) {
-                    self.parameters.method = Method::Gunstone;
-                }
-                if ui.input_mut(|input| {
-                    input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::W))
-                }) {
-                    self.parameters.method = Method::VanderWal;
-                }
-                ComboBox::from_id_salt("Method")
-                    .selected_text(ui.localize(self.parameters.method.text()))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.parameters.method,
-                            Method::Gunstone,
-                            ui.localize(Method::Gunstone.text()),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize(Method::Gunstone.hover_text()));
-                        });
-                        ui.selectable_value(
-                            &mut self.parameters.method,
-                            Method::MartinezForce,
-                            ui.localize(Method::MartinezForce.text()),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize(Method::MartinezForce.hover_text()));
-                        });
-                        ui.selectable_value(
-                            &mut self.parameters.method,
-                            Method::VanderWal,
-                            ui.localize(Method::VanderWal.text()),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize(Method::VanderWal.hover_text()));
-                        });
-                    })
-                    .response
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize(self.parameters.method.hover_text()));
-                    });
+                self.method(ui);
                 ui.end_row();
 
                 ui.label(ui.localize("Discriminants"));
                 self.parameters.discriminants.show(ui);
                 ui.end_row();
 
-                // Adduct
-                ui.label(ui.localize("Adduct"));
-                ui.horizontal(|ui| {
-                    let adduct = &mut self.parameters.adduct;
-                    ui.add(
-                        DragValue::new(adduct)
-                            .range(0.0..=f64::MAX)
-                            .speed(1.0 / 10f64.powi(self.parameters.round_mass as _))
-                            .custom_formatter(|n, _| {
-                                format!("{n:.*}", self.parameters.round_mass as _)
-                            }),
-                    )
-                    .on_hover_text(format!("{adduct}"));
-                    ComboBox::from_id_salt(ui.auto_id_with("Adduct"))
-                        .selected_text(match *adduct {
-                            H => "H",
-                            NH4 => "NH4",
-                            NA => "Na",
-                            LI => "Li",
-                            _ => "",
-                        })
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(adduct, 0.0, "None");
-                            ui.selectable_value(adduct, H, "H");
-                            ui.selectable_value(adduct, NH4, "NH4");
-                            ui.selectable_value(adduct, NA, "Na");
-                            ui.selectable_value(adduct, LI, "Li");
-                        });
-                });
+                self.adduct(ui);
                 ui.end_row();
-
-                // Round mass
-                ui.label(ui.localize("RoundMass"));
-                ui.add(Slider::new(
-                    &mut self.parameters.round_mass,
-                    0..=MAX_PRECISION as _,
-                ));
+                self.round_mass(ui);
                 ui.end_row();
 
                 // View
+                ui.heading(ui.localize("View"));
                 ui.separator();
-                ui.labeled_separator(RichText::new(ui.localize("View")).heading());
                 ui.end_row();
 
                 ui.label(ui.localize("ShowFiltered")).on_hover_ui(|ui| {
@@ -318,81 +233,209 @@ impl Settings {
                 //     .on_hover_ui(|ui| {self.join.hover_text();});
                 // ui.end_row();
 
+                ui.heading(ui.localize("Sort"));
                 ui.separator();
-                ui.labeled_separator(RichText::new(ui.localize("Sort")).heading());
                 ui.end_row();
 
-                // Sort
-                ui.label(ui.localize("Sort"));
-                ComboBox::from_id_salt("Sort")
-                    .selected_text(ui.localize(self.parameters.sort.text()))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.parameters.sort,
-                            Sort::Key,
-                            ui.localize(Sort::Key.text()),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize(Sort::Key.hover_text()));
-                        });
-                        ui.selectable_value(
-                            &mut self.parameters.sort,
-                            Sort::Value,
-                            ui.localize(Sort::Value.text()),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize(Sort::Value.hover_text()));
-                        });
-                    })
-                    .response
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize(self.parameters.sort.hover_text()));
-                    });
+                self.sort(ui);
                 ui.end_row();
-                // Order
-                ui.label(ui.localize("Order"));
-                ComboBox::from_id_salt("Order")
-                    .selected_text(ui.localize(self.parameters.order.text()))
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.parameters.order,
-                            Order::Ascending,
-                            Order::Ascending.text(),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize(Order::Ascending.hover_text()));
-                        });
-                        ui.selectable_value(
-                            &mut self.parameters.order,
-                            Order::Descending,
-                            ui.localize(Order::Descending.text()),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize(Order::Descending.hover_text()));
-                        });
-                    })
-                    .response
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize(self.parameters.order.hover_text()));
-                    });
+                self.order(ui);
                 ui.end_row();
 
                 if self.index.is_none() {
                     // Statistic
+                    ui.label(ui.localize("Statistic"));
                     ui.separator();
-                    ui.labeled_separator(RichText::new(ui.localize("Statistic")).heading());
                     ui.end_row();
 
-                    // https://numpy.org/devdocs/reference/generated/numpy.std.html
-                    ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("DeltaDegreesOfFreedom"));
-                        });
-                    ui.add(Slider::new(&mut self.parameters.ddof, 0..=2));
+                    self.ddof(ui);
                     ui.end_row();
                 }
             });
         });
+    }
+
+    /// Float precision
+    fn float_precision(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Precision.hover"));
+        });
+        Slider::new(&mut self.float_precision, 1..=MAX_PRECISION).ui(ui);
+    }
+
+    /// Percent
+    fn percent(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Percent")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Percent.hover"));
+        });
+        ui.checkbox(&mut self.percent, ());
+    }
+
+    /// Sticky columns
+    fn sticky_columns(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
+            ui.label(ui.localize("StickyColumns.hover"));
+        });
+        Slider::new(
+            &mut self.sticky_columns,
+            0..=self.parameters.selections.len() * 2 + 1,
+        )
+        .ui(ui);
+    }
+
+    /// Method
+    fn method(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Method"));
+        if ui.input_mut(|input| {
+            input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::G))
+        }) {
+            self.parameters.method = Method::Gunstone;
+        }
+        if ui.input_mut(|input| {
+            input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::W))
+        }) {
+            self.parameters.method = Method::VanderWal;
+        }
+        ComboBox::from_id_salt("Method")
+            .selected_text(ui.localize(self.parameters.method.text()))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(
+                    &mut self.parameters.method,
+                    Method::Gunstone,
+                    ui.localize(Method::Gunstone.text()),
+                )
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(Method::Gunstone.hover_text()));
+                });
+                ui.selectable_value(
+                    &mut self.parameters.method,
+                    Method::MartinezForce,
+                    ui.localize(Method::MartinezForce.text()),
+                )
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(Method::MartinezForce.hover_text()));
+                });
+                ui.selectable_value(
+                    &mut self.parameters.method,
+                    Method::VanderWal,
+                    ui.localize(Method::VanderWal.text()),
+                )
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(Method::VanderWal.hover_text()));
+                });
+            })
+            .response
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize(self.parameters.method.hover_text()));
+            });
+    }
+
+    /// Adduct
+    fn adduct(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Adduct"));
+        ui.horizontal(|ui| {
+            let adduct = &mut self.parameters.adduct;
+            DragValue::new(adduct)
+                .range(0.0..=f64::MAX)
+                .speed(1.0 / 10f64.powi(self.parameters.round_mass as _))
+                .custom_formatter(|n, _| format!("{n:.*}", self.parameters.round_mass as _))
+                .ui(ui)
+                .on_hover_text(format!("{adduct}"));
+            ComboBox::from_id_salt(ui.auto_id_with("Adduct"))
+                .selected_text(match *adduct {
+                    H => "H",
+                    NH4 => "NH4",
+                    NA => "Na",
+                    LI => "Li",
+                    _ => "",
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(adduct, 0.0, "None");
+                    ui.selectable_value(adduct, H, "H");
+                    ui.selectable_value(adduct, NH4, "NH4");
+                    ui.selectable_value(adduct, NA, "Na");
+                    ui.selectable_value(adduct, LI, "Li");
+                });
+        });
+    }
+
+    /// Round mass
+    fn round_mass(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("RoundMass"));
+        Slider::new(&mut self.parameters.round_mass, 0..=MAX_PRECISION as _).ui(ui);
+    }
+
+    /// Sort
+    fn sort(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Sort"));
+        ComboBox::from_id_salt("Sort")
+            .selected_text(ui.localize(self.parameters.sort.text()))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(
+                    &mut self.parameters.sort,
+                    Sort::Key,
+                    ui.localize(Sort::Key.text()),
+                )
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(Sort::Key.hover_text()));
+                });
+                ui.selectable_value(
+                    &mut self.parameters.sort,
+                    Sort::Value,
+                    ui.localize(Sort::Value.text()),
+                )
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(Sort::Value.hover_text()));
+                });
+            })
+            .response
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize(self.parameters.sort.hover_text()));
+            });
+    }
+
+    /// Order
+    fn order(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Order"));
+        ComboBox::from_id_salt("Order")
+            .selected_text(ui.localize(self.parameters.order.text()))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(
+                    &mut self.parameters.order,
+                    Order::Ascending,
+                    Order::Ascending.text(),
+                )
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(Order::Ascending.hover_text()));
+                });
+                ui.selectable_value(
+                    &mut self.parameters.order,
+                    Order::Descending,
+                    ui.localize(Order::Descending.text()),
+                )
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(Order::Descending.hover_text()));
+                });
+            })
+            .response
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize(self.parameters.order.hover_text()));
+            });
+    }
+
+    // https://numpy.org/devdocs/reference/generated/numpy.std.html
+    /// DDOF
+    fn ddof(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("DeltaDegreesOfFreedom"));
+            })
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
+            });
+        Slider::new(&mut self.parameters.ddof, 0..=2)
+            .update_while_editing(false)
+            .ui(ui);
     }
 }
 
@@ -477,21 +520,18 @@ impl Discriminants {
                     Grid::new("Composition").show(ui, |ui| {
                         for (key, values) in &mut self.0 {
                             ui.label(key);
-                            ui.add(
-                                DragValue::new(&mut values[0])
-                                    .range(0.0..=f64::MAX)
-                                    .speed(0.1),
-                            );
-                            ui.add(
-                                DragValue::new(&mut values[1])
-                                    .range(0.0..=f64::MAX)
-                                    .speed(0.1),
-                            );
-                            ui.add(
-                                DragValue::new(&mut values[2])
-                                    .range(0.0..=f64::MAX)
-                                    .speed(0.1),
-                            );
+                            DragValue::new(&mut values[0])
+                                .range(0.0..=f64::MAX)
+                                .speed(0.1)
+                                .ui(ui);
+                            DragValue::new(&mut values[1])
+                                .range(0.0..=f64::MAX)
+                                .speed(0.1)
+                                .ui(ui);
+                            DragValue::new(&mut values[2])
+                                .range(0.0..=f64::MAX)
+                                .speed(0.1)
+                                .ui(ui);
                             ui.end_row();
                         }
                     });

@@ -38,7 +38,7 @@ pub(crate) struct Settings {
     pub(crate) display_standard_deviation: bool,
     pub(crate) normalize_factors: bool,
     pub(crate) percent: bool,
-    pub(crate) precision: usize,
+    pub(crate) float_precision: usize,
     pub(crate) significant: bool,
     pub(crate) table: Table,
 
@@ -70,7 +70,7 @@ impl Settings {
             display_standard_deviation: true,
             normalize_factors: false,
             percent: true,
-            precision: 1,
+            float_precision: 1,
             significant: false,
             table: Table::new(),
             // General parameters
@@ -99,7 +99,7 @@ impl Settings {
         Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
             ui.visuals_mut().button_frame = true;
 
-            self.precision(ui);
+            self.float_precision(ui);
             ui.end_row();
             self.significant(ui);
             ui.end_row();
@@ -110,9 +110,9 @@ impl Settings {
             self.normalize_factors(ui);
             ui.end_row();
 
-            self.sticky(ui);
+            self.sticky_columns(ui);
             ui.end_row();
-            self.truncate(ui);
+            self.truncate_headers(ui);
             ui.end_row();
 
             ui.heading("Parameters");
@@ -162,14 +162,14 @@ impl Settings {
     }
 
     // Precision
-    fn precision(&mut self, ui: &mut Ui) {
+    fn float_precision(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
             ui.label(ui.localize("Precision.hover"));
         });
-        ui.add(Slider::new(&mut self.precision, 1..=MAX_PRECISION));
+        Slider::new(&mut self.float_precision, 1..=MAX_PRECISION).ui(ui);
     }
 
-    // Significant
+    // Float precision
     fn significant(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Significant")).on_hover_ui(|ui| {
             ui.label(ui.localize("Significant.hover"));
@@ -202,16 +202,16 @@ impl Settings {
         ui.checkbox(&mut self.normalize_factors, ());
     }
 
-    /// Sticky
-    fn sticky(&mut self, ui: &mut Ui) {
+    /// Sticky columns
+    fn sticky_columns(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
             ui.label(ui.localize("StickyColumns.hover"));
         });
         Slider::new(&mut self.table.sticky_columns, 0..=8).ui(ui);
     }
 
-    /// Truncate
-    fn truncate(&mut self, ui: &mut Ui) {
+    /// Truncate headers
+    fn truncate_headers(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("TruncateHeaders")).on_hover_ui(|ui| {
             ui.label(ui.localize("TruncateHeaders.hover"));
         });
@@ -353,7 +353,9 @@ impl Settings {
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
             });
-        ui.add(Slider::new(&mut self.ddof, 0..=2).update_while_editing(false));
+        Slider::new(&mut self.ddof, 0..=2)
+            .update_while_editing(false)
+            .ui(ui);
     }
 
     /// Stereospecific numbers

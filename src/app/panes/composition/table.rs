@@ -250,7 +250,7 @@ impl TableView<'_> {
                     let mean = value.struct_()?.field_by_name("Mean")?;
                     if let Some(mean) = mean.f64()?.get(row) {
                         let response = ui
-                            .label(format!("{mean:.0$}", self.state.settings.precision))
+                            .label(format!("{mean:.0$}", self.state.settings.float_precision))
                             .on_hover_text(mean.to_string());
                         if response.hovered() {
                             response
@@ -295,7 +295,7 @@ impl TableView<'_> {
         };
         let response = FloatWidget::new(value)
             .percent(self.state.settings.percent)
-            .precision(Some(self.state.settings.precision))
+            .precision(Some(self.state.settings.float_precision))
             .hover(true)
             .show(ui)
             .response

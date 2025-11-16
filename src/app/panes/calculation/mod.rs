@@ -120,6 +120,7 @@ impl Pane {
             .frame(Frame::central_panel(&ui.style()))
             .show_inside(ui, |ui| {
                 let _ = self.central(ui, &mut state);
+                self.windows(ui, &mut state);
             });
         if let Some(id) = behavior.close {
             state.remove(ui.ctx(), Id::new(id));
@@ -134,10 +135,6 @@ impl Pane {
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        self.top_content(ui, state)
-    }
-
-    fn top_content(&mut self, ui: &mut Ui, state: &mut State) -> Response {
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));
         });
@@ -367,13 +364,8 @@ impl Pane {
         Ok(())
     }
 
+    #[instrument(skip_all, err)]
     fn central(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
-        self.central_content(ui, state)?;
-        self.windows(ui, state);
-        Ok(())
-    }
-
-    fn central_content(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
         self.target = ui.memory_mut(|memory| {
             memory
                 .caches

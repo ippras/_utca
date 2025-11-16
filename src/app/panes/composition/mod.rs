@@ -28,7 +28,8 @@ use egui::{
 };
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
-    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, FLOPPY_DISK, GEAR, INTERSECT_THREE, LIST, SIGMA, X,
+    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, FLOPPY_DISK, INTERSECT_THREE, LIST, SIGMA,
+    SLIDERS_HORIZONTAL, X,
 };
 use egui_tiles::{TileId, UiResponse};
 use metadata::{
@@ -45,6 +46,7 @@ const ID_SOURCE: &str = "Composition";
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
     source: Vec<HashedMetaDataFrame>,
+    #[serde(skip)]
     target: HashedDataFrame,
 }
 
@@ -119,6 +121,7 @@ impl Pane {
             .frame(Frame::central_panel(&ui.style()))
             .show_inside(ui, |ui| {
                 self.central(ui, &mut state);
+                self.windows(ui, &mut state);
             });
         if let Some(id) = behavior.close {
             state.remove(ui.ctx(), Id::new(id));
@@ -133,10 +136,6 @@ impl Pane {
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        self.top_content(ui, state)
-    }
-
-    fn top_content(&mut self, ui: &mut Ui, state: &mut State) -> Response {
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Composition"));
         });
@@ -178,8 +177,8 @@ impl Pane {
         // Resize
         ui.resize(&mut state.settings.resizable);
         ui.separator();
-        // Settings Parameters
-        ui.parameters(&mut state.windows.open_settings);
+        // Settings
+        ui.settings(&mut state.windows.open_settings);
         ui.separator();
         // Save
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
@@ -309,11 +308,6 @@ impl Pane {
     }
 
     fn central(&mut self, ui: &mut Ui, state: &mut State) {
-        self.central_content(ui, state);
-        self.windows(ui, state);
-    }
-
-    fn central_content(&mut self, ui: &mut Ui, state: &mut State) {
         // Species
         let data_frame = ui.memory_mut(|memory| {
             memory
@@ -363,7 +357,7 @@ impl Pane {
             });
             state.settings.parameters.discriminants = unique.into_iter().collect();
         }
-        Window::new(format!("{GEAR} Composition settings"))
+        Window::new(format!("{SLIDERS_HORIZONTAL} Composition settings"))
             .id(ui.auto_id_with(ID_SOURCE))
             .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_settings)

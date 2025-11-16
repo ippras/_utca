@@ -73,7 +73,7 @@ impl<'a> Key<'a> {
             frame,
             ddof: settings.ddof,
             indices: &settings.indices,
-            precision: settings.precision,
+            precision: settings.float_precision,
             significant: settings.significant,
         }
     }
