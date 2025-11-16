@@ -15,7 +15,7 @@ fn parse(bytes: &[u8]) -> Result<HashedMetaDataFrame> {
     })
 }
 
-// https://raw.githubusercontent.com/ippras/_utca/refs/heads/main/src/presets/Acer/Acer%20Ginnala.2025-07-08.0.0.1.utca.ron
+pub(crate) static CHRISTIE: LazyLock<HashedMetaDataFrame> = preset!("Christie.ron");
 
 /// IPPRAS
 #[rustfmt::skip]

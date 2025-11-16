@@ -1,15 +1,17 @@
 use super::ID_SOURCE;
 use crate::{
     app::{MAX_PRECISION, states::ColumnFilter},
+    presets::CHRISTIE,
     text::Text,
 };
 use egui::{
-    ComboBox, Grid, Popup, PopupCloseBehavior, RichText, Slider, SliderClamping, Ui, Widget,
+    ComboBox, Grid, Popup, PopupCloseBehavior, Response, RichText, ScrollArea, Slider,
+    SliderClamping, Ui, Widget,
     containers::menu::{MenuButton, MenuConfig},
 };
 use egui_dnd::dnd;
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{ARROWS_CLOCKWISE, BOOKMARK, DOTS_SIX_VERTICAL, FUNNEL};
+use egui_phosphor::regular::{ARROWS_CLOCKWISE, BOOKMARK, BROWSERS, DOTS_SIX_VERTICAL, FUNNEL};
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
@@ -18,6 +20,7 @@ use std::{
     fmt::{Display, Formatter},
     ops::{Deref, DerefMut},
 };
+use tracing::instrument;
 
 pub(crate) const STEREOSPECIFIC_NUMBERS: [StereospecificNumbers; 4] = [
     StereospecificNumbers::One,
@@ -51,6 +54,7 @@ pub(crate) struct Settings {
     pub(crate) fatty_acids: Vec<String>,
 
     // Correlations
+    pub(crate) auto_size_correlations_table: bool,
     pub(crate) chaddock: bool, // Chaddock, R.E. (1925). Principles and methods of statistics. Boston, New York, 1925.
     pub(crate) correlation: Correlation,
     pub(crate) stereospecific_numbers: StereospecificNumbers,
@@ -80,6 +84,7 @@ impl Settings {
             // Mutable
             fatty_acids: Vec::new(),
             // Correlations
+            auto_size_correlations_table: false,
             correlation: Correlation::Pearson,
             chaddock: false,
             stereospecific_numbers: StereospecificNumbers::OneAndTwoAndTree,
@@ -94,150 +99,33 @@ impl Settings {
         Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
             ui.visuals_mut().button_frame = true;
 
-            // Precision
-            ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Precision.hover"));
-            });
-            ui.add(Slider::new(&mut self.precision, 1..=MAX_PRECISION));
+            self.precision(ui);
+            ui.end_row();
+            self.significant(ui);
+            ui.end_row();
+            self.percent(ui);
+            ui.end_row();
+            self.standard_deviation(ui);
+            ui.end_row();
+            self.normalize_factors(ui);
             ui.end_row();
 
-            // Significant
-            ui.label(ui.localize("Significant")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Significant.hover"));
-            });
-            ui.checkbox(&mut self.significant, ());
+            self.sticky(ui);
             ui.end_row();
-
-            // Percent
-            ui.label(ui.localize("Percent")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Percent.hover"));
-            });
-            ui.checkbox(&mut self.percent, ());
-            ui.end_row();
-
-            // Standard deviation
-            ui.label(ui.localize("StandardDeviation"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StandardDeviation.hover"));
-                });
-            ui.checkbox(&mut self.display_standard_deviation, ());
-            ui.end_row();
-
-            // Normalize factors
-            ui.label(ui.localize("NormalizeFactors")).on_hover_ui(|ui| {
-                ui.label(ui.localize("NormalizeFactors.hover"));
-            });
-            ui.checkbox(&mut self.normalize_factors, ());
-            ui.end_row();
-
-            ui.heading("Table");
-            ui.separator();
-            ui.end_row();
-
-            // Reset
-            ui.label(ui.localize("ResetTable")).on_hover_ui(|ui| {
-                ui.label(ui.localize("ResetTable.hover"));
-            });
-            ui.toggle_value(&mut self.table.reset_state, ARROWS_CLOCKWISE);
-            ui.end_row();
-
-            // Resizable
-            ui.label(ui.localize("Resizable")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Resizable.hover"));
-            });
-            ui.checkbox(&mut self.table.resizable, ());
-            ui.end_row();
-
-            // Sticky
-            ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
-                ui.label(ui.localize("StickyColumns.hover"));
-            });
-            Slider::new(&mut self.table.sticky_columns, 0..=8).ui(ui);
-            ui.end_row();
-
-            // Truncate
-            ui.label(ui.localize("TruncateHeaders")).on_hover_ui(|ui| {
-                ui.label(ui.localize("TruncateHeaders.hover"));
-            });
-            ui.checkbox(&mut self.table.truncate_headers, ());
+            self.truncate(ui);
             ui.end_row();
 
             ui.heading("Parameters");
             ui.separator();
             ui.end_row();
 
-            ui.label(ui.localize("Standard"));
-            ui.horizontal(|ui| {
-                ComboBox::from_id_salt("Standard")
-                    .selected_text(self.standard.text())
-                    .show_ui(ui, |ui| {
-                        for fatty_acid in &self.fatty_acids {
-                            ui.selectable_value(
-                                &mut self.standard,
-                                Standard(Some(fatty_acid.clone())),
-                                fatty_acid,
-                            )
-                            .on_hover_text(fatty_acid);
-                        }
-                        ui.selectable_value(&mut self.standard, Standard(None), "-")
-                            .on_hover_ui(|ui| {
-                                ui.label(ui.localize("Standard?OptionCategory=none"));
-                            });
-                    })
-                    .response
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize(self.standard.hover_text()));
-                    });
-                if ui.button((BOOKMARK, "17:0")).clicked() {
-                    self.standard = Standard(Some("Margaric".to_owned()))
-                };
-            });
+            self.standard(ui);
             ui.end_row();
-
-            // Filter
-            ui.label(ui.localize("FilterTableRows")).on_hover_ui(|ui| {
-                ui.label(ui.localize("FilterTableRows.hover"));
-            });
-            MenuButton::new(FUNNEL)
-                .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-                .ui(ui, |ui| {
-                    Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                        // Threshold
-                        ui.label(ui.localize("Threshold")).on_hover_ui(|ui| {
-                            ui.label(ui.localize("Threshold.hover"));
-                        });
-                        ui.horizontal(|ui| {
-                            Slider::new(&mut self.table.row_filter, 0.0..=1.0)
-                                .clamping(SliderClamping::Always)
-                                .custom_formatter(|mut value, _| {
-                                    if self.percent {
-                                        value *= 100.0;
-                                    }
-                                    AnyValue::Float64(value).to_string()
-                                })
-                                .custom_parser(|value| {
-                                    let mut parsed = value.parse::<f64>().ok()?;
-                                    if self.percent {
-                                        parsed /= 100.0;
-                                    }
-                                    Some(parsed)
-                                })
-                                .logarithmic(true)
-                                .update_while_editing(false)
-                                .ui(ui);
-                            if ui.button((BOOKMARK, "0.25")).clicked() {
-                                self.table.row_filter = 0.0025;
-                            }
-                        });
-                    });
-                });
+            self.filter(ui);
             ui.end_row();
-
-            ui.label(ui.localize("Normalize_Weighted"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("Normalize_Weighted.hover"));
-                });
-            ui.checkbox(&mut self.weighted, ());
+            self.weighted(ui);
+            ui.end_row();
+            self.christie(ui);
             ui.end_row();
 
             if self.index.is_none() {
@@ -245,15 +133,7 @@ impl Settings {
                 ui.separator();
                 ui.end_row();
 
-                // https://numpy.org/devdocs/reference/generated/numpy.std.html
-                ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("DeltaDegreesOfFreedom"));
-                    })
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
-                    });
-                ui.add(Slider::new(&mut self.ddof, 0..=2).update_while_editing(false));
+                self.ddof(ui);
                 ui.end_row();
             }
 
@@ -262,58 +142,13 @@ impl Settings {
             ui.separator();
             ui.end_row();
 
-            // Stereospecific numbers
-            ui.label(ui.localize("StereospecificNumber?number=many"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StereospecificNumber.abbreviation?number=other"));
-                });
-            ComboBox::from_id_salt(ui.auto_id_with("StereospecificNumbers"))
-                .selected_text(ui.localize(self.stereospecific_numbers.text()))
-                .show_ui(ui, |ui| {
-                    for stereospecific_number in STEREOSPECIFIC_NUMBERS {
-                        ui.selectable_value(
-                            &mut self.stereospecific_numbers,
-                            stereospecific_number,
-                            ui.localize(stereospecific_number.text()),
-                        )
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize(stereospecific_number.hover_text()));
-                        });
-                    }
-                })
-                .response
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize(self.stereospecific_numbers.hover_text()));
-                });
+            self.auto_size_correlations_table(ui);
             ui.end_row();
-
-            ui.label(ui.localize("Correlation?PluralCategory=other"));
-            ComboBox::from_id_salt("Correlation")
-                .selected_text(self.correlation.text())
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.correlation,
-                        Correlation::Pearson,
-                        Correlation::Pearson.text(),
-                    )
-                    .on_hover_text(Correlation::Pearson.hover_text());
-                    ui.selectable_value(
-                        &mut self.correlation,
-                        Correlation::SpearmanRank,
-                        Correlation::SpearmanRank.text(),
-                    )
-                    .on_hover_text(Correlation::SpearmanRank.hover_text());
-                })
-                .response
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize(self.correlation.hover_text()));
-                });
+            self.stereospecific_numbers(ui);
             ui.end_row();
-
-            ui.label(ui.localize("Chaddock")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Chaddock.hover"));
-            });
-            ui.checkbox(&mut self.chaddock, ());
+            self.correlation(ui);
+            ui.end_row();
+            self.chaddock(ui);
             ui.end_row();
 
             // Indices
@@ -321,23 +156,291 @@ impl Settings {
             ui.separator();
             ui.end_row();
 
-            ui.label(ui.localize("Indices")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Indices.hover"));
-            });
-            let selected_text = format_list_truncated!(
-                self.indices
-                    .0
-                    .iter()
-                    .filter(|index| index.visible)
-                    .map(|index| ui.localize(&format!("Indices_{}", index.name))),
-                1
-            );
-            ComboBox::from_id_salt(ui.auto_id_with("Indices"))
-                .selected_text(selected_text)
-                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-                .show_ui(ui, |ui| self.indices.show(ui));
+            self.indices(ui);
             ui.end_row();
         });
+    }
+
+    // Precision
+    fn precision(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Precision.hover"));
+        });
+        ui.add(Slider::new(&mut self.precision, 1..=MAX_PRECISION));
+    }
+
+    // Significant
+    fn significant(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Significant")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Significant.hover"));
+        });
+        ui.checkbox(&mut self.significant, ());
+    }
+
+    /// Percent
+    fn percent(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Percent")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Percent.hover"));
+        });
+        ui.checkbox(&mut self.percent, ());
+    }
+
+    /// Standard deviation
+    fn standard_deviation(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("StandardDeviation"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("StandardDeviation.hover"));
+            });
+        ui.checkbox(&mut self.display_standard_deviation, ());
+    }
+
+    /// Normalize factors
+    fn normalize_factors(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("NormalizeFactors")).on_hover_ui(|ui| {
+            ui.label(ui.localize("NormalizeFactors.hover"));
+        });
+        ui.checkbox(&mut self.normalize_factors, ());
+    }
+
+    /// Sticky
+    fn sticky(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
+            ui.label(ui.localize("StickyColumns.hover"));
+        });
+        Slider::new(&mut self.table.sticky_columns, 0..=8).ui(ui);
+    }
+
+    /// Truncate
+    fn truncate(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("TruncateHeaders")).on_hover_ui(|ui| {
+            ui.label(ui.localize("TruncateHeaders.hover"));
+        });
+        ui.checkbox(&mut self.table.truncate_headers, ());
+    }
+
+    /// Standard
+    fn standard(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Standard")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Standard.hover"));
+        });
+        ui.horizontal(|ui| {
+            ComboBox::from_id_salt("Standard")
+                .selected_text(self.standard.text())
+                .show_ui(ui, |ui| {
+                    for fatty_acid in &self.fatty_acids {
+                        ui.selectable_value(
+                            &mut self.standard,
+                            Standard(Some(fatty_acid.clone())),
+                            fatty_acid,
+                        )
+                        .on_hover_text(fatty_acid);
+                    }
+                    ui.selectable_value(&mut self.standard, Standard(None), "-")
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize("Standard?OptionCategory=none"));
+                        });
+                })
+                .response
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(self.standard.hover_text()));
+                });
+            if ui.button((BOOKMARK, "17:0")).clicked() {
+                self.standard = Standard(Some("Margaric".to_owned()))
+            };
+        });
+    }
+
+    /// Filter
+    fn filter(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("FilterTableRows")).on_hover_ui(|ui| {
+            ui.label(ui.localize("FilterTableRows.hover"));
+        });
+        MenuButton::new(FUNNEL)
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+            .ui(ui, |ui| {
+                Grid::new(ui.next_auto_id()).show(ui, |ui| {
+                    // Threshold
+                    ui.label(ui.localize("Threshold")).on_hover_ui(|ui| {
+                        ui.label(ui.localize("Threshold.hover"));
+                    });
+                    ui.horizontal(|ui| {
+                        Slider::new(&mut self.table.row_filter, 0.0..=1.0)
+                            .clamping(SliderClamping::Always)
+                            .custom_formatter(|mut value, _| {
+                                if self.percent {
+                                    value *= 100.0;
+                                }
+                                AnyValue::Float64(value).to_string()
+                            })
+                            .custom_parser(|value| {
+                                let mut parsed = value.parse::<f64>().ok()?;
+                                if self.percent {
+                                    parsed /= 100.0;
+                                }
+                                Some(parsed)
+                            })
+                            .logarithmic(true)
+                            .update_while_editing(false)
+                            .ui(ui);
+                        if ui.button((BOOKMARK, "0.25")).clicked() {
+                            self.table.row_filter = 0.0025;
+                        }
+                    });
+                });
+            });
+    }
+
+    /// Weighted
+    fn weighted(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Normalize_Weighted"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Normalize_Weighted.hover"));
+            });
+        ui.checkbox(&mut self.weighted, ());
+    }
+
+    /// Christie factors
+    fn christie(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Normalize_Christie"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Normalize_Christie.hover"));
+            });
+        ui.horizontal(|ui| {
+            ui.checkbox(&mut self.christie, ());
+            ui.add_enabled_ui(self.christie, |ui| {
+                MenuButton::new(BROWSERS)
+                    .config(
+                        MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside),
+                    )
+                    .ui(ui, |ui| {
+                        ScrollArea::vertical().show(ui, |ui| {
+                            let _ = self.christie_content(ui);
+                        });
+                    });
+            });
+        });
+    }
+
+    #[instrument(skip(self, ui), err)]
+    fn christie_content(&mut self, ui: &mut Ui) -> PolarsResult<Response> {
+        let height = CHRISTIE.data.data_frame.height();
+        let fatty_acid = CHRISTIE.data.data_frame[FATTY_ACID].fatty_acid();
+        let factor = CHRISTIE.data.data_frame["Factor"].f64()?;
+        let inner_response =
+            Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| -> PolarsResult<()> {
+                for index in 0..height {
+                    ui.label(fatty_acid.delta()?.get(index).unwrap_or_default());
+                    ui.label(
+                        factor
+                            .get(index)
+                            .map_or_default(|factor| factor.to_string()),
+                    );
+                    ui.end_row();
+                }
+                Ok(())
+            });
+        inner_response.inner?;
+        Ok(inner_response.response)
+    }
+
+    // https://numpy.org/devdocs/reference/generated/numpy.std.html
+    /// DDOF
+    fn ddof(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("DeltaDegreesOfFreedom"));
+            })
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
+            });
+        ui.add(Slider::new(&mut self.ddof, 0..=2).update_while_editing(false));
+    }
+
+    /// Stereospecific numbers
+    fn stereospecific_numbers(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("StereospecificNumber?number=many"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("StereospecificNumber.abbreviation?number=other"));
+            });
+        ComboBox::from_id_salt(ui.auto_id_with("StereospecificNumbers"))
+            .selected_text(ui.localize(self.stereospecific_numbers.text()))
+            .show_ui(ui, |ui| {
+                for stereospecific_number in STEREOSPECIFIC_NUMBERS {
+                    ui.selectable_value(
+                        &mut self.stereospecific_numbers,
+                        stereospecific_number,
+                        ui.localize(stereospecific_number.text()),
+                    )
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(stereospecific_number.hover_text()));
+                    });
+                }
+            })
+            .response
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize(self.stereospecific_numbers.hover_text()));
+            });
+    }
+
+    /// Auto size correlations table
+    fn auto_size_correlations_table(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("AutoSizeCorrelationsTable"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("AutoSizeCorrelationsTable.hover"));
+            });
+        ui.toggle_value(&mut self.auto_size_correlations_table, ARROWS_CLOCKWISE);
+    }
+
+    /// Correlation
+    fn correlation(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Correlation?PluralCategory=other"));
+        ComboBox::from_id_salt("Correlation")
+            .selected_text(self.correlation.text())
+            .show_ui(ui, |ui| {
+                ui.selectable_value(
+                    &mut self.correlation,
+                    Correlation::Pearson,
+                    Correlation::Pearson.text(),
+                )
+                .on_hover_text(Correlation::Pearson.hover_text());
+                ui.selectable_value(
+                    &mut self.correlation,
+                    Correlation::SpearmanRank,
+                    Correlation::SpearmanRank.text(),
+                )
+                .on_hover_text(Correlation::SpearmanRank.hover_text());
+            })
+            .response
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize(self.correlation.hover_text()));
+            });
+    }
+
+    /// Chaddock
+    fn chaddock(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Chaddock")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Chaddock.hover"));
+        });
+        ui.checkbox(&mut self.chaddock, ());
+    }
+
+    /// Indices
+    fn indices(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Indices")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Indices.hover"));
+        });
+        let selected_text = format_list_truncated!(
+            self.indices
+                .0
+                .iter()
+                .filter(|index| index.visible)
+                .map(|index| ui.localize(&format!("Indices_{}", index.name))),
+            1
+        );
+        ComboBox::from_id_salt(ui.auto_id_with("Indices"))
+            .selected_text(selected_text)
+            .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+            .show_ui(ui, |ui| self.indices.show(ui));
     }
 }
 
@@ -361,6 +464,7 @@ impl Text for Correlation {
             Self::SpearmanRank => "SpearmanRank",
         }
     }
+
     fn hover_text(&self) -> &'static str {
         match self {
             Self::Pearson => "Pearson.hover",

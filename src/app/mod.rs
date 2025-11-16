@@ -92,14 +92,7 @@ impl App {
         cc.storage
             .and_then(|storage| get_value(storage, APP_KEY))
             .unwrap_or_default()
-        // Self::load(cc).unwrap_or_default()
     }
-
-    // fn load(cc: &CreationContext) -> Option<Self> {
-    //     let storage = cc.storage?;
-    //     let value = get_value(storage, APP_KEY)?;
-    //     Some(value)
-    // }
 }
 
 // Panels

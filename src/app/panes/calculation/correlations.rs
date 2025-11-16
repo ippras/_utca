@@ -1,26 +1,24 @@
-#[cfg(feature = "markdown")]
-use crate::asset;
 use crate::{app::states::calculation::Settings, utils::chaddock::Sign};
-use egui::{
-    Grid, InnerResponse, Label, Response, RichText, TextStyle, TextWrapMode, Ui, Widget,
-    text::TextWrapping,
-};
+use egui::{Label, Response, RichText, TextStyle, TextWrapMode, Ui, Widget};
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
 use egui_extras::{Column, TableBuilder};
 use polars::prelude::*;
+use std::mem::take;
 
 /// Correlations widget
 pub(crate) struct Correlations<'a> {
     data_frame: &'a DataFrame,
     chaddock: bool,
+    auto_size: bool,
 }
 
 impl<'a> Correlations<'a> {
-    pub(crate) fn new(data_frame: &'a DataFrame, settings: &Settings) -> Self {
+    pub(crate) fn new(data_frame: &'a DataFrame, settings: &mut Settings) -> Self {
         Self {
             data_frame,
             chaddock: settings.chaddock,
+            auto_size: take(&mut settings.auto_size_correlations_table),
         }
     }
 
@@ -34,12 +32,14 @@ impl<'a> Correlations<'a> {
             .striped(true)
             .column(Column::auto().resizable(true))
             .columns(
-                Column::remainder().at_least(width / 2.0),
+                Column::remainder()
+                    .at_least(width / 2.0)
+                    .auto_size_this_frame(self.auto_size),
                 self.data_frame.width() - 1,
             )
-            .header(height, |mut roe| {
+            .header(height, |mut row| {
                 for name in self.data_frame.get_column_names_str() {
-                    roe.col(|ui| {
+                    row.col(|ui| {
                         ui.heading(name);
                     });
                 }
@@ -71,43 +71,8 @@ impl<'a> Correlations<'a> {
             })
             .inner_rect;
         response
-        // Grid::new(ui.auto_id_with("Indices")).show(ui, |ui| -> PolarsResult<()> {
-        //     ui.heading(ui.localize("Index"));
-        //     ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
-        //         .on_hover_ui(|ui| {
-        //             ui.label(ui.localize("StereospecificNumber?number=123"));
-        //         });
-        //     ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
-        //         .on_hover_ui(|ui| {
-        //             ui.label(ui.localize("StereospecificNumber?number=13"));
-        //         });
-        //     ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-        //         .on_hover_ui(|ui| {
-        //             ui.label(ui.localize("StereospecificNumber?number=2"));
-        //         });
-        //     ui.end_row();
-        //     // Simple
-        //     ui.label(ui.localize("Saturated"));
-        //     value(ui, "Saturated")?;
-        //     ui.end_row();
-        //     Ok(())
-        // })
     }
 }
-
-// let sign = Sign::from(value);
-// let mut color = ui.style().visuals.text_color();
-// if self.settings.parameters.metric.is_finite() {
-//     if self.settings.chaddock {
-//         color = sign.chaddock().color(color);
-//     } else {
-//         color = sign.color(color);
-//     }
-// }
-// Label::new(RichText::new(text).color(color))
-//     .ui(ui)
-//     .on_hover_text(value.to_string())
-//     .on_hover_text(format!("{sign:?}"));
 
 impl Widget for Correlations<'_> {
     fn ui(self, ui: &mut Ui) -> Response {

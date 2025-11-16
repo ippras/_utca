@@ -1,9 +1,27 @@
-pub(crate) mod atoms {
-    use atom::prelude::isotopes::*;
+#[cfg(feature = "markdown")]
+#[rustfmt::skip]
+pub(crate) mod markdown {
+    use crate::asset;
 
-    pub(crate) const C: C = C::Twelve;
-    pub(crate) const H: H = H::One;
-    pub(crate) const O: O = O::Sixteen;
+    // Factors
+    pub const ENRICHMENT_FACTOR: &str = asset!("/doc/en/Factors/EnrichmentFactor.md");
+    pub const SELECTIVITY_FACTOR: &str = asset!("/doc/en/Factors/SelectivityFactor.md");
+
+    // Correlations
+    pub const CORRELATIONS: &str = asset!("/doc/en/Correlations/Correlations.md");
+
+    // Indices
+    pub const EICOSAPENTAENOIC_AND_DOCOSAHEXAENOIC: &str = asset!("/doc/en/Indices/EicosapentaenoicAndDocosahexaenoic.md");
+    pub const FISH_LIPID_QUALITY: &str = asset!("/doc/en/Indices/FishLipidQuality.md");
+    pub const HEALTH_PROMOTING_INDEX: &str = asset!("/doc/en/Indices/HealthPromotingIndex.md");
+    pub const HYPOCHOLESTEROLEMIC_TO_HYPERCHOLESTEROLEMIC: &str = asset!("/doc/en/Indices/HypocholesterolemicToHypercholesterolemic.md");
+    pub const INDEX_OF_ATHEROGENICITY: &str = asset!("/doc/en/Indices/IndexOfAtherogenicity.md");
+    pub const INDEX_OF_THROMBOGENICITY: &str = asset!("/doc/en/Indices/IndexOfThrombogenicity.md");
+    pub const LINOLEIC_TO_ALPHA_LINOLENIC: &str = asset!("/doc/en/Indices/LinoleicToAlphaLinolenic.md");
+    pub const POLYUNSATURATED_6_TO_POLYUNSATURATED_3: &str = asset!("/doc/en/Indices/Polyunsaturated-6ToPolyunsaturated-3.md");
+    pub const POLYUNSATURATED_TO_SATURATED: &str = asset!("/doc/en/Indices/PolyunsaturatedToSaturated.md");
+    pub const TRANS: &str = asset!("/doc/en/Indices/Trans.md");
+    pub const UNSATURATION_INDEX: &str = asset!("/doc/en/Indices/UnsaturationIndex.md");
 }
 
 #[rustfmt::skip]

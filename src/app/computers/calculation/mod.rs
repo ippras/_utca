@@ -1,5 +1,6 @@
 use crate::{
     app::states::calculation::{Normalize, Settings},
+    presets::CHRISTIE,
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use egui::{
@@ -54,6 +55,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 pub(crate) struct Key<'a> {
     pub(crate) frames: &'a [HashedMetaDataFrame],
     pub(crate) index: Option<usize>,
+    pub(crate) christie: bool,
     pub(crate) ddof: u8,
     pub(crate) normalize_factors: bool,
     pub(crate) normalize: Normalize,
@@ -68,6 +70,7 @@ impl<'a> Key<'a> {
         Self {
             frames,
             index: settings.index,
+            christie: settings.christie,
             ddof: settings.ddof,
             normalize_factors: settings.normalize_factors,
             normalize: settings.normalize,
@@ -102,6 +105,9 @@ fn exprs(index: usize) -> [Expr; 3] {
 }
 
 fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    if key.christie {
+        lazy_frame = christie(lazy_frame);
+    }
     let sn123 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS123}\[\d+\]$"#));
     let sn2 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS2}\[\d+\]$"#));
     // Standard
@@ -164,34 +170,25 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             ]);
         }
     }
-
-    // Christie
-    // if parameters.christie {
-    //     lazy_frame = christie(lazy_frame);
-    // }
-    // let sn123 = experimental(STEREOSPECIFIC_NUMBERS123, key);
-    // let sn2 = match data_frame[3].name().as_str() {
-    //     STEREOSPECIFIC_NUMBERS2 => experimental(STEREOSPECIFIC_NUMBERS2, key),
-    //     STEREOSPECIFIC_NUMBERS12_23 => {
-    //         let sn_1223 = experimental(STEREOSPECIFIC_NUMBERS12_23, key);
-    //         sn1223(sn123.clone(), sn_1223, key)
-    //     }
-    //     _ => lit(NULL),
-    // };
-    // let sn13 = sn13(sn123.clone(), sn2.clone(), key);
-    // // Stereospecific numbers
-    // lazy_frame = lazy_frame.with_columns([sn123, sn2, sn13]);
-    // // Filter
-    // lazy_frame = lazy_frame.filter(
-    //     col(STEREOSPECIFIC_NUMBERS123)
-    //         .gt_eq(key.row_filter.0)
-    //         .or(col(STEREOSPECIFIC_NUMBERS2)
-    //             .fill_nan(lit(0))
-    //             .gt_eq(key.row_filter.0)),
-    // );
-    // // Factors
-    // lazy_frame = lazy_frame.with_column(factors(key));
     Ok(lazy_frame)
+}
+
+// Christie factors
+fn christie(mut lazy_frame: LazyFrame) -> LazyFrame {
+    lazy_frame = lazy_frame
+        .join(
+            CHRISTIE.data.data_frame.clone().lazy(),
+            [col(FATTY_ACID)],
+            [col(FATTY_ACID)],
+            JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+        )
+        .with_columns([dtype_col(&DataType::Float64)
+            .as_selector()
+            .exclude_cols(["Factor"])
+            .as_expr()
+            * col("Factor").fill_null(lit(1.0))])
+        .drop(cols(["Factor"]));
+    lazy_frame
 }
 
 fn experimental(mut expr: Expr, key: Key) -> Expr {
