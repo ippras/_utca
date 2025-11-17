@@ -89,6 +89,7 @@ const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
                 ),
             ]),
         ),
+        Field::new(PlSmallStr::from_static("Filter"), DataType::Boolean),
     ]))
 });
 

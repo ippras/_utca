@@ -11,7 +11,7 @@ use crate::{
     },
     utils::HashedDataFrame,
 };
-use egui::{Frame, Id, Label, Margin, Response, TextStyle, TextWrapMode, Ui, Widget};
+use egui::{Frame, Id, Label, Margin, Response, RichText, TextStyle, TextWrapMode, Ui, Widget};
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
 use egui_l20n::UiExt;
@@ -170,7 +170,14 @@ impl TableView<'_> {
             }
             (row, bottom::FA) => {
                 if let Some(fatty_acid) = self.data_frame.try_fatty_acid()?.delta()?.get(row) {
-                    Label::new(fatty_acid).truncate().ui(ui);
+                    let mut text = RichText::new(fatty_acid);
+                    // Strong standard and weak filtered
+                    text = match self.data_frame["Filter"].bool()?.get(row) {
+                        Some(true) => text,
+                        Some(false) => text.weak(),
+                        None => text.strong(),
+                    };
+                    Label::new(text).truncate().ui(ui);
                 }
             }
             (row, bottom::SN123) => {
