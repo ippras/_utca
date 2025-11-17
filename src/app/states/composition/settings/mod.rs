@@ -31,6 +31,7 @@ use std::{
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub(crate) struct Settings {
     pub(crate) index: Option<usize>,
+
     pub(crate) percent: bool,
     pub(crate) float_precision: usize,
     pub(crate) resizable: bool,
@@ -343,6 +344,7 @@ impl Settings {
                 .on_hover_text(format!("{adduct}"));
             ComboBox::from_id_salt(ui.auto_id_with("Adduct"))
                 .selected_text(match *adduct {
+                    0.0 => "-",
                     H => "H",
                     NH4 => "NH4",
                     NA => "Na",
@@ -350,7 +352,7 @@ impl Settings {
                     _ => "",
                 })
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(adduct, 0.0, "None");
+                    ui.selectable_value(adduct, 0.0, "-");
                     ui.selectable_value(adduct, H, "H");
                     ui.selectable_value(adduct, NH4, "NH4");
                     ui.selectable_value(adduct, NA, "Na");
