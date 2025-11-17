@@ -112,17 +112,36 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let sn2 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS2}\[\d+\]$"#));
     // Standard
     if let Some(standard) = key.standard {
-        lazy_frame = lazy_frame.filter(col(LABEL).neq(lit(standard)));
+        // lazy_frame = lazy_frame.filter(col(LABEL).neq(lit(standard)));
+        // lazy_frame = lazy_frame.with_column(col(LABEL).neq(lit(standard)).alias("Filter"));
+        lazy_frame = lazy_frame.with_column(
+            ternary_expr(col(LABEL).neq(lit(standard)), lit(true), lit(NULL)).alias("Filter"),
+        );
+        println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
     }
     // Normalize
     lazy_frame = lazy_frame.with_columns([
-        experimental(sn123.clone(), key),
-        experimental(sn2.clone(), key),
+        ternary_expr(
+            col("Filter"),
+            experimental(sn123.clone().nullify(col("Filter")), key),
+            experimental(sn123.clone(), key),
+        ),
+        ternary_expr(
+            col("Filter"),
+            experimental(sn2.clone().nullify(col("Filter")), key),
+            experimental(sn2.clone(), key),
+        ),
     ]);
     // Filter
-    lazy_frame = lazy_frame.filter(any_horizontal([sn123.clone().gt_eq(key.row_filter.0)])?.or(
-        any_horizontal([sn2.clone().fill_nan(lit(0)).gt_eq(key.row_filter.0)])?,
+    // lazy_frame = lazy_frame.filter(any_horizontal([sn123.clone().gt_eq(key.row_filter.0)])?.or(
+    //     any_horizontal([sn2.clone().fill_nan(lit(0)).gt_eq(key.row_filter.0)])?,
+    // ));
+    lazy_frame = lazy_frame.with_column(col("Filter").and(
+        any_horizontal([sn123.clone().gt_eq(key.row_filter.0)])?.or(any_horizontal([
+            sn2.clone().fill_nan(lit(0)).gt_eq(key.row_filter.0),
+        ])?),
     ));
+    println!("lazy_frame 1: {}", lazy_frame.clone().collect().unwrap());
     // Calculate
     lazy_frame = lazy_frame.with_columns([
         sn13(sn123.clone(), sn2.clone(), key),
@@ -149,6 +168,7 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                         .alias("Selectivity"),
                 ])
                 .alias("Factors"),
+                col("Filter"),
             ]);
         }
         None => {
@@ -167,6 +187,7 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                         .alias("Selectivity"),
                 ])
                 .alias("Factors"),
+                col("Filter"),
             ]);
         }
     }
@@ -194,9 +215,8 @@ fn christie(mut lazy_frame: LazyFrame) -> LazyFrame {
 fn experimental(mut expr: Expr, key: Key) -> Expr {
     if key.weighted {
         expr = expr * col(FATTY_ACID).fatty_acid().relative_atomic_mass(None);
-        expr = expr.clone() / expr.sum()
-    };
-    expr.normalize()
+    }
+    expr.clone() / expr.sum()
 }
 
 /// 2 * DAG1(3) = 3 * TAG - MAG2 (стр. 116)
