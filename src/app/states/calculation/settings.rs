@@ -264,7 +264,7 @@ impl Settings {
                         ui.label(ui.localize("Threshold.hover"));
                     });
                     ui.horizontal(|ui| {
-                        Slider::new(&mut self.table.row_filter, 0.0..=1.0)
+                        Slider::new(&mut self.table.threshold, 0.0..=1.0)
                             .clamping(SliderClamping::Always)
                             .custom_formatter(|mut value, _| {
                                 if self.percent {
@@ -283,7 +283,7 @@ impl Settings {
                             .update_while_editing(false)
                             .ui(ui);
                         if ui.button((BOOKMARK, "0.25")).clicked() {
-                            self.table.row_filter = 0.0025;
+                            self.table.threshold = 0.0025;
                         }
                     });
                 });
@@ -482,14 +482,14 @@ pub(crate) struct Table {
     pub(crate) resizable: bool,
     pub(crate) sticky_columns: usize,
     pub(crate) truncate_headers: bool,
-    pub(crate) row_filter: f64,
+    pub(crate) threshold: f64,
     pub(crate) column_filter: ColumnFilter,
 }
 
 impl Table {
     pub(crate) fn new() -> Self {
         Self {
-            row_filter: 0.0,
+            threshold: 0.0,
             reset_state: false,
             resizable: false,
             sticky_columns: 0,
