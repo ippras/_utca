@@ -59,7 +59,7 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) normalize_factors: bool,
     pub(crate) normalize: Normalize,
-    pub(crate) row_filter: OrderedFloat<f64>,
+    pub(crate) threshold: OrderedFloat<f64>,
     pub(crate) standard: Option<&'a str>,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
@@ -74,7 +74,7 @@ impl<'a> Key<'a> {
             ddof: settings.ddof,
             normalize_factors: settings.normalize_factors,
             normalize: settings.normalize,
-            row_filter: OrderedFloat(settings.table.row_filter),
+            threshold: OrderedFloat(settings.table.threshold),
             standard: settings.standard.as_deref(),
             unsigned: settings.unsigned,
             weighted: settings.weighted,
@@ -111,14 +111,14 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let sn123 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS123}\[\d+\]$"#));
     let sn2 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS2}\[\d+\]$"#));
     // Standard
-    if let Some(standard) = key.standard {
-        // lazy_frame = lazy_frame.filter(col(LABEL).neq(lit(standard)));
-        // lazy_frame = lazy_frame.with_column(col(LABEL).neq(lit(standard)).alias("Filter"));
-        lazy_frame = lazy_frame.with_column(
-            ternary_expr(col(LABEL).neq(lit(standard)), lit(true), lit(NULL)).alias("Filter"),
-        );
-        println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
-    }
+    lazy_frame = lazy_frame.with_column(
+        match key.standard {
+            Some(standard) => ternary_expr(col(LABEL).eq(lit(standard)), lit(NULL), lit(true)),
+            None => lit(true),
+        }
+        .alias("Filter"),
+    );
+    println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
     // Normalize
     lazy_frame = lazy_frame.with_columns([
         ternary_expr(
@@ -133,12 +133,9 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         ),
     ]);
     // Filter
-    // lazy_frame = lazy_frame.filter(any_horizontal([sn123.clone().gt_eq(key.row_filter.0)])?.or(
-    //     any_horizontal([sn2.clone().fill_nan(lit(0)).gt_eq(key.row_filter.0)])?,
-    // ));
     lazy_frame = lazy_frame.with_column(col("Filter").and(
-        any_horizontal([sn123.clone().gt_eq(key.row_filter.0)])?.or(any_horizontal([
-            sn2.clone().fill_nan(lit(0)).gt_eq(key.row_filter.0),
+        any_horizontal([sn123.clone().gt_eq(key.threshold.0)])?.or(any_horizontal([
+            sn2.clone().fill_nan(lit(0)).gt_eq(key.threshold.0),
         ])?),
     ));
     println!("lazy_frame 1: {}", lazy_frame.clone().collect().unwrap());
@@ -148,6 +145,7 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         enrichment_factors(sn2.clone(), sn123.clone(), key),
         selectivity_factors(sn2.clone(), sn123.clone(), key),
     ]);
+    println!("lazy_frame 2: {}", lazy_frame.clone().collect().unwrap());
     // Mean and standard deviation
     match key.index {
         Some(index) => {
@@ -191,6 +189,7 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             ]);
         }
     }
+    println!("lazy_frame 3: {}", lazy_frame.clone().collect().unwrap());
     Ok(lazy_frame)
 }
 
