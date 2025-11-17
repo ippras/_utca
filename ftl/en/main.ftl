@@ -188,4 +188,6 @@ SpearmanRank = Spearman
 Chaddock = Chaddock
     .hover = Chaddock scale
 Threshold = Threshold
-    .hover = Threshold.
+    .hover = Values greater than or equal to the threshold value are major, values less than the threshold value are minor.
+DisplayMinor = Display minor
+    .hover = Show/hide minor fatty acids.

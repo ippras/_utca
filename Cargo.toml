@@ -9,7 +9,7 @@ ahash = "0.8.12"
 anyhow = "1.0.100"
 base64 = "0.22.1"
 chrono = "0.4.42"
-constcat = "0.6.1"
+const_format = "0.2.35"
 eframe = { version = "0.33.0", features = [
     "accesskit",
     "default_fonts",
@@ -18,7 +18,7 @@ eframe = { version = "0.33.0", features = [
     "wayland",
 ] }
 egui = "0.33.2"
-egui-phosphor = { git = "https://github.com/bircni/egui-phosphor", branch = "feature/egui-0.33" }
+egui-phosphor = { git = "https://github.com/ItsEthra/egui-phosphor", branch = "egui-0.33" }
 egui_dnd = "0.14.0"
 egui_extras = { version = "0.33.0", features = ["datepicker", "serde", "svg"] }
 egui_plot = "0.34.0"

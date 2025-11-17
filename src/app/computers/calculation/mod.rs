@@ -3,6 +3,7 @@ use crate::{
     presets::CHRISTIE,
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
+use const_format::formatcp;
 use egui::{
     emath::OrderedFloat,
     util::cache::{ComputerMut, FrameCache},
@@ -59,8 +60,8 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) normalize_factors: bool,
     pub(crate) normalize: Normalize,
-    pub(crate) threshold: OrderedFloat<f64>,
     pub(crate) standard: Option<&'a str>,
+    pub(crate) threshold: OrderedFloat<f64>,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
 }
@@ -74,15 +75,11 @@ impl<'a> Key<'a> {
             ddof: settings.ddof,
             normalize_factors: settings.normalize_factors,
             normalize: settings.normalize,
-            threshold: OrderedFloat(settings.table.threshold),
             standard: settings.standard.as_deref(),
+            threshold: OrderedFloat(settings.table.threshold),
             unsigned: settings.unsigned,
             weighted: settings.weighted,
         }
-    }
-
-    pub(crate) fn with_index(self, index: Option<usize>) -> Self {
-        Self { index, ..self }
     }
 }
 
@@ -108,9 +105,10 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     if key.christie {
         lazy_frame = christie(lazy_frame);
     }
-    let sn123 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS123}\[\d+\]$"#));
-    let sn2 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS2}\[\d+\]$"#));
+    let sn123 = col(formatcp!(r#"^{STEREOSPECIFIC_NUMBERS123}\[\d+\]$"#));
+    let sn2 = col(formatcp!(r#"^{STEREOSPECIFIC_NUMBERS2}\[\d+\]$"#));
     // Standard
+    // Стандарт - null, все остальные на данном этапе true.
     lazy_frame = lazy_frame.with_column(
         match key.standard {
             Some(standard) => ternary_expr(col(LABEL).eq(lit(standard)), lit(NULL), lit(true)),
@@ -118,20 +116,25 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         }
         .alias("Filter"),
     );
-    println!("lazy_frame: {}", lazy_frame.clone().collect().unwrap());
-    // Normalize
+    println!("lazy_frame 00: {}", lazy_frame.clone().collect().unwrap());
+    // Normalize  
+    // Значения стандарта - теоретически расчитанное (как если бы он был
+    // включен), но все остальные значения расчитывабтся без учета стандарта.
     lazy_frame = lazy_frame.with_columns([
-        ternary_expr(
-            col("Filter"),
-            experimental(sn123.clone().nullify(col("Filter")), key),
-            experimental(sn123.clone(), key),
-        ),
-        ternary_expr(
-            col("Filter"),
-            experimental(sn2.clone().nullify(col("Filter")), key),
-            experimental(sn2.clone(), key),
-        ),
+        // ternary_expr(
+        //     col("Filter"),
+        //     experimental(sn123.clone().nullify(col("Filter")), key),
+        //     experimental(sn123.clone(), key),
+        // ),
+        // ternary_expr(
+        //     col("Filter"),
+        //     experimental(sn2.clone().nullify(col("Filter")), key),
+        //     experimental(sn2.clone(), key),
+        // ),
+        experimental(sn123.clone().nullify(col("Filter")), key),
+        experimental(sn2.clone().nullify(col("Filter")), key),
     ]);
+    println!("lazy_frame 01: {}", lazy_frame.clone().collect().unwrap());
     // Filter
     lazy_frame = lazy_frame.with_column(col("Filter").and(
         any_horizontal([sn123.clone().gt_eq(key.threshold.0)])?.or(any_horizontal([
@@ -145,7 +148,6 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         enrichment_factors(sn2.clone(), sn123.clone(), key),
         selectivity_factors(sn2.clone(), sn123.clone(), key),
     ]);
-    println!("lazy_frame 2: {}", lazy_frame.clone().collect().unwrap());
     // Mean and standard deviation
     match key.index {
         Some(index) => {
@@ -170,9 +172,9 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             ]);
         }
         None => {
-            let sn13 = col(format!(r#"^{STEREOSPECIFIC_NUMBERS13}\[\d+\]$"#));
-            let enrichment_factors = col(format!(r#"^EnrichmentFactor\[\d+\]$"#));
-            let selectivity_factors = col(format!(r#"^SelectivityFactor\[\d+\]$"#));
+            let sn13 = col(formatcp!(r#"^{STEREOSPECIFIC_NUMBERS13}\[\d+\]$"#));
+            let enrichment_factors = col(formatcp!(r#"^EnrichmentFactor\[\d+\]$"#));
+            let selectivity_factors = col(formatcp!(r#"^SelectivityFactor\[\d+\]$"#));
             lazy_frame = lazy_frame.select([
                 col(LABEL),
                 col(FATTY_ACID),
@@ -189,7 +191,6 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             ]);
         }
     }
-    println!("lazy_frame 3: {}", lazy_frame.clone().collect().unwrap());
     Ok(lazy_frame)
 }
 

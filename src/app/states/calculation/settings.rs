@@ -38,9 +38,10 @@ pub(crate) struct Settings {
     pub(crate) display_standard_deviation: bool,
     pub(crate) normalize_factors: bool,
     pub(crate) percent: bool,
-    pub(crate) float_precision: usize,
+    pub(crate) precision: usize,
     pub(crate) significant: bool,
     pub(crate) table: Table,
+    pub(crate) display_minor: bool,
 
     // General parameters
     pub(crate) ddof: u8,
@@ -52,6 +53,7 @@ pub(crate) struct Settings {
     pub(crate) weighted: bool,
     // Mutable
     pub(crate) fatty_acids: Vec<String>,
+    // pub(crate) fatty_acids: Vec<(String, AnyValue)>,
 
     // Correlations
     pub(crate) auto_size_correlations_table: bool,
@@ -70,9 +72,10 @@ impl Settings {
             display_standard_deviation: true,
             normalize_factors: false,
             percent: true,
-            float_precision: 1,
+            precision: 1,
             significant: false,
             table: Table::new(),
+            display_minor: true,
             // General parameters
             ddof: 1,
             // Special parameters
@@ -99,20 +102,20 @@ impl Settings {
         Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
             ui.visuals_mut().button_frame = true;
 
-            self.float_precision(ui);
+            self.precision(ui);
             ui.end_row();
             self.significant(ui);
             ui.end_row();
             self.percent(ui);
             ui.end_row();
-            self.standard_deviation(ui);
+            self.display_standard_deviation(ui);
             ui.end_row();
             self.normalize_factors(ui);
             ui.end_row();
 
-            self.sticky_columns(ui);
+            self.sticky(ui);
             ui.end_row();
-            self.truncate_headers(ui);
+            self.truncate(ui);
             ui.end_row();
 
             ui.heading("Parameters");
@@ -162,11 +165,11 @@ impl Settings {
     }
 
     // Precision
-    fn float_precision(&mut self, ui: &mut Ui) {
+    fn precision(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
             ui.label(ui.localize("Precision.hover"));
         });
-        Slider::new(&mut self.float_precision, 1..=MAX_PRECISION).ui(ui);
+        Slider::new(&mut self.precision, 1..=MAX_PRECISION).ui(ui);
     }
 
     // Float precision
@@ -186,7 +189,7 @@ impl Settings {
     }
 
     /// Standard deviation
-    fn standard_deviation(&mut self, ui: &mut Ui) {
+    fn display_standard_deviation(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("StandardDeviation"))
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("StandardDeviation.hover"));
@@ -203,7 +206,7 @@ impl Settings {
     }
 
     /// Sticky columns
-    fn sticky_columns(&mut self, ui: &mut Ui) {
+    fn sticky(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
             ui.label(ui.localize("StickyColumns.hover"));
         });
@@ -211,7 +214,7 @@ impl Settings {
     }
 
     /// Truncate headers
-    fn truncate_headers(&mut self, ui: &mut Ui) {
+    fn truncate(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("TruncateHeaders")).on_hover_ui(|ui| {
             ui.label(ui.localize("TruncateHeaders.hover"));
         });
@@ -286,6 +289,13 @@ impl Settings {
                             self.table.threshold = 0.0025;
                         }
                     });
+                    ui.end_row();
+
+                    // Display minor
+                    ui.label(ui.localize("DisplayMinor")).on_hover_ui(|ui| {
+                        ui.label(ui.localize("DisplayMinor.hover"));
+                    });
+                    ui.checkbox(&mut self.display_minor, ());
                 });
             });
     }

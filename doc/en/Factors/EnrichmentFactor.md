@@ -1,6 +1,6 @@
 # Enrichment factor
 
-$$\frac{2}{3} EF - 1$$
+$$\frac{1}{3} EF$$
 
 $$\frac{X_{\{2:I\}}}{X_{\{1:I | 2:I | 3:I\}}}$$
 
