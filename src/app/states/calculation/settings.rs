@@ -41,6 +41,7 @@ pub(crate) struct Settings {
     pub(crate) float_precision: usize,
     pub(crate) significant: bool,
     pub(crate) table: Table,
+    pub(crate) display_minor: bool,
 
     // General parameters
     pub(crate) ddof: u8,
@@ -52,6 +53,7 @@ pub(crate) struct Settings {
     pub(crate) weighted: bool,
     // Mutable
     pub(crate) fatty_acids: Vec<String>,
+    // pub(crate) fatty_acids: Vec<(String, AnyValue)>,
 
     // Correlations
     pub(crate) auto_size_correlations_table: bool,
@@ -73,6 +75,7 @@ impl Settings {
             float_precision: 1,
             significant: false,
             table: Table::new(),
+            display_minor: true,
             // General parameters
             ddof: 1,
             // Special parameters
@@ -286,6 +289,13 @@ impl Settings {
                             self.table.threshold = 0.0025;
                         }
                     });
+                    ui.end_row();
+
+                    // Display minor
+                    ui.label(ui.localize("DisplayMinor")).on_hover_ui(|ui| {
+                        ui.label(ui.localize("DisplayMinor.hover"));
+                    });
+                    ui.checkbox(&mut self.display_minor, ());
                 });
             });
     }

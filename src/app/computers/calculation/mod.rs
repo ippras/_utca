@@ -59,8 +59,8 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) normalize_factors: bool,
     pub(crate) normalize: Normalize,
-    pub(crate) threshold: OrderedFloat<f64>,
     pub(crate) standard: Option<&'a str>,
+    pub(crate) threshold: OrderedFloat<f64>,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
 }
@@ -74,8 +74,8 @@ impl<'a> Key<'a> {
             ddof: settings.ddof,
             normalize_factors: settings.normalize_factors,
             normalize: settings.normalize,
-            threshold: OrderedFloat(settings.table.threshold),
             standard: settings.standard.as_deref(),
+            threshold: OrderedFloat(settings.table.threshold),
             unsigned: settings.unsigned,
             weighted: settings.weighted,
         }
