@@ -2,7 +2,6 @@ use crate::utils::HashedMetaDataFrame;
 use egui::{Ui, Vec2, WidgetText, vec2};
 use egui_tiles::{TileId, UiResponse};
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
 
 const MARGIN: Vec2 = vec2(4.0, 2.0);
 
@@ -35,13 +34,12 @@ impl Pane {
         }
     }
 
-    pub(crate) fn title(&self) -> impl Display {
-        // match self {
-        //     Self::Configuration(pane) => pane.title(),
-        //     Self::Calculation(pane) => pane.title(),
-        //     Self::Composition(pane) => pane.title(),
-        // }
-        "pane.title()"
+    pub(crate) fn title(&self) -> String {
+        match self {
+            Self::Configuration(pane) => pane.title(None),
+            Self::Calculation(pane) => pane.title(None),
+            Self::Composition(pane) => pane.title(None),
+        }
     }
 }
 

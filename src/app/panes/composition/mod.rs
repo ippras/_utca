@@ -1,3 +1,5 @@
+use std::fmt::{Display, from_fn};
+
 // CompositionComputed, CompositionKey, CompositionSpeciesComputed, CompositionSpeciesKey,
 // FilteredCompositionComputed, FilteredCompositionKey, UniqueCompositionComputed,
 // UniqueCompositionKey,
@@ -45,7 +47,8 @@ const ID_SOURCE: &str = "Composition";
 /// Composition pane
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
-    source: Vec<HashedMetaDataFrame>,
+    id: Option<Id>,
+    frames: Vec<HashedMetaDataFrame>,
     #[serde(skip)]
     target: HashedDataFrame,
 }
@@ -53,16 +56,13 @@ pub(crate) struct Pane {
 impl Pane {
     pub(crate) fn new(frames: Vec<HashedMetaDataFrame>) -> Self {
         Self {
-            source: frames,
+            id: None,
+            frames,
             target: HashedDataFrame {
                 data_frame: DataFrame::empty(),
                 hash: 0,
             },
         }
-    }
-
-    pub(crate) const fn icon() -> &'static str {
-        INTERSECT_THREE
     }
 
     pub(crate) fn title(&self, index: Option<usize>) -> String {
@@ -71,20 +71,23 @@ impl Pane {
 
     fn title_with_separator(&self, index: Option<usize>, separator: &str) -> String {
         match index {
-            Some(index) => self.source[index].meta.format(separator).to_string(),
+            Some(index) => self.frames[index].meta.format(separator).to_string(),
             None => {
                 format_list_truncated!(
-                    self.source
-                        .iter()
-                        .map(|frame| frame.meta.format(separator).to_string()),
+                    self.frames.iter().map(|frame| frame.meta.format(separator)),
                     2
                 )
             }
         }
     }
 
-    pub(super) fn hash(&self) -> u64 {
-        hash(&self.source)
+    fn id(&self) -> impl Display {
+        from_fn(|f| {
+            if let Some(id) = self.id {
+                write!(f, "{id:?}-")?;
+            }
+            write!(f, "{}", hash(&self.frames))
+        })
     }
 }
 
@@ -95,7 +98,8 @@ impl Pane {
         behavior: &mut Behavior,
         tile_id: TileId,
     ) -> UiResponse {
-        let mut state = State::load(ui.ctx(), Id::new(tile_id));
+        let id = *self.id.get_or_insert_with(|| ui.next_auto_id());
+        let mut state = State::load(ui.ctx(), id);
         let response = TopBottomPanel::top(ui.auto_id_with("Pane"))
             .show_inside(ui, |ui| {
                 MenuBar::new()
@@ -123,10 +127,10 @@ impl Pane {
                 self.central(ui, &mut state);
                 self.windows(ui, &mut state);
             });
-        if let Some(id) = behavior.close {
-            state.remove(ui.ctx(), Id::new(id));
+        if behavior.close == Some(tile_id) {
+            state.remove(ui.ctx(), id);
         } else {
-            state.store(ui.ctx(), Id::new(tile_id));
+            state.store(ui.ctx(), id);
         }
         if response.dragged() {
             UiResponse::DragStarted
@@ -136,23 +140,23 @@ impl Pane {
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
+        let mut response = ui.heading(INTERSECT_THREE).on_hover_ui(|ui| {
             ui.label(ui.localize("Composition"));
         });
         response |= ui.heading(self.title(state.settings.index));
         response = response
-            .on_hover_text(format!("{:x}/{:x}", self.hash(), self.target.hash))
+            .on_hover_text(format!("{}/{:x}", self.id(), self.target.hash))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         // List
         ui.menu_button(RichText::new(LIST).heading(), |ui| {
             let mut clicked = false;
-            for index in 0..self.source.len() {
+            for index in 0..self.frames.len() {
                 clicked |= ui
                     .selectable_value(
                         &mut state.settings.index,
                         Some(index),
-                        self.source[index].meta.format(".").to_string(),
+                        self.frames[index].meta.format(".").to_string(),
                     )
                     .clicked()
             }
@@ -291,13 +295,13 @@ impl Pane {
             )
             .collect()?;
         let meta = match state.settings.index {
-            Some(index) => self.source[index].meta.clone(),
+            Some(index) => self.frames[index].meta.clone(),
             None => {
                 let mut meta = Metadata::default();
-                meta.insert(NAME.to_owned(), name(&self.source));
-                meta.insert(AUTHORS.to_owned(), authors(&self.source));
-                meta.insert(DATE.to_owned(), date(&self.source));
-                meta.insert(DESCRIPTION.to_owned(), description(&self.source));
+                meta.insert(NAME.to_owned(), name(&self.frames));
+                meta.insert(AUTHORS.to_owned(), authors(&self.frames));
+                meta.insert(DATE.to_owned(), date(&self.frames));
+                meta.insert(DESCRIPTION.to_owned(), description(&self.frames));
                 meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
                 meta
             }
@@ -313,7 +317,7 @@ impl Pane {
             memory
                 .caches
                 .cache::<CompositionSpeciesComputed>()
-                .get(CompositionSpeciesKey::new(&self.source, &state.settings))
+                .get(CompositionSpeciesKey::new(&self.frames, &state.settings))
         });
         // Composition
         self.target = ui.memory_mut(|memory| {
@@ -342,28 +346,35 @@ impl Pane {
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
-        self.settings(ui, state);
+        self.settings_window(ui, state);
     }
 
-    fn settings(&mut self, ui: &mut Ui, state: &mut State) {
+    fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
         if state.settings.parameters.discriminants.is_empty() {
             let unique = ui.memory_mut(|memory| {
                 memory
                     .caches
                     .cache::<UniqueCompositionComputed>()
                     .get(UniqueCompositionKey {
-                        frames: &self.source,
+                        frames: &self.frames,
                     })
             });
             state.settings.parameters.discriminants = unique.into_iter().collect();
         }
-        Window::new(format!("{SLIDERS_HORIZONTAL} Composition settings"))
-            .id(ui.auto_id_with(ID_SOURCE))
-            .default_pos(ui.next_widget_position())
-            .open(&mut state.windows.open_settings)
-            .show(ui.ctx(), |ui| {
-                state.settings.show(ui, &self.target);
-            });
+        if let Some(inner_response) =
+            Window::new(format!("{SLIDERS_HORIZONTAL} Composition settings"))
+                .id(ui.auto_id_with(ID_SOURCE))
+                .default_pos(ui.next_widget_position())
+                .open(&mut state.windows.open_settings)
+                .show(ui.ctx(), |ui| {
+                    state.settings.show(ui, &self.target);
+                })
+        {
+            inner_response
+                .response
+                .on_hover_text(self.title(state.settings.index).to_string())
+                .on_hover_text(self.id().to_string());
+        }
     }
 }
 

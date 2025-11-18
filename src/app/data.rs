@@ -5,7 +5,7 @@ use crate::{
 use egui::{CentralPanel, Color32, Id, Label, MenuBar, RichText, ScrollArea, TopBottomPanel, Ui};
 use egui_dnd::dnd;
 use egui_l20n::{ResponseExt, UiExt as _};
-use egui_phosphor::regular::{CHECK, DOTS_SIX_VERTICAL, TRASH};
+use egui_phosphor::regular::{CHECK, DOTS_SIX_VERTICAL, NOTE_PENCIL, TRASH};
 use metadata::egui::MetadataWidget;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -79,7 +79,7 @@ impl Data {
         // Configuration
         ui.add_enabled_ui(enabled, |ui| {
             if ui
-                .button(RichText::new(ConfigurationPane::icon()).heading())
+                .button(RichText::new(NOTE_PENCIL).heading())
                 .on_hover_localized("configuration")
                 .clicked()
             {
