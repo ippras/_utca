@@ -15,7 +15,7 @@ use eframe::{APP_KEY, CreationContext, Storage, get_value, set_value};
 use egui::{
     Align, Align2, CentralPanel, Color32, Context, DroppedFile, FontDefinitions, Frame, Id,
     LayerId, Layout, MenuBar, Order, RichText, ScrollArea, SidePanel, Sides, TextStyle,
-    TopBottomPanel, Visuals, Widget as _, Window, warn_if_debug_build,
+    TopBottomPanel, Ui, Visuals, Widget as _, Window, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
 use egui_l20n::{ResponseExt, UiExt as _};
@@ -151,27 +151,13 @@ impl App {
             MenuBar::new().ui(ui, |ui| {
                 ScrollArea::horizontal().show(ui, |ui| {
                     // Left panel
-                    ui.toggle_value(
-                        &mut self.left_panel,
-                        RichText::new(SIDEBAR_SIMPLE).size(ICON_SIZE),
-                    )
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("LeftPanel"));
-                    });
+                    self.left_panel_button(ui);
                     ui.separator();
                     // Light/Dark
                     ui.light_dark_button(ICON_SIZE);
                     ui.separator();
                     // Reset app
-                    if ui
-                        .button(RichText::new(TRASH).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("ResetApplication"));
-                        })
-                        .clicked()
-                    {
-                        *self = Default::default();
-                    }
+                    self.reset_button(ui);
                     ui.separator();
                     // Reset app
                     if ui
@@ -189,68 +175,12 @@ impl App {
                         ui.ctx().set_localizations();
                     }
                     ui.separator();
-                    if ui
-                        .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Vertical"));
-                        })
-                        .clicked()
-                    {
-                        if let Some(id) = self.tree.root {
-                            if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                                container.set_kind(ContainerKind::Vertical);
-                            }
-                        }
-                    }
-                    if ui
-                        .button(RichText::new(SQUARE_SPLIT_HORIZONTAL).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Horizontal"));
-                        })
-                        .clicked()
-                    {
-                        if let Some(id) = self.tree.root {
-                            if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                                container.set_kind(ContainerKind::Horizontal);
-                            }
-                        }
-                    }
-                    if ui
-                        .button(RichText::new(GRID_FOUR).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Grid"));
-                        })
-                        .clicked()
-                    {
-                        if let Some(id) = self.tree.root {
-                            if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                                container.set_kind(ContainerKind::Grid);
-                            }
-                        }
-                    }
-                    if ui
-                        .button(RichText::new(TABS).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Tabs"));
-                        })
-                        .clicked()
-                    {
-                        if let Some(id) = self.tree.root {
-                            if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                                container.set_kind(ContainerKind::Tabs);
-                            }
-                        }
-                    }
+                    self.vertical_button(ui);
+                    self.horizontal_button(ui);
+                    self.grid_button(ui);
+                    self.tabs_button(ui);
                     ui.separator();
-                    if ui
-                        .button(RichText::new(SLIDERS_HORIZONTAL).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Settings"));
-                        })
-                        .clicked()
-                    {
-                        state.windows.open_settings ^= true;
-                    }
+                    self.settings_button(ui, state);
                     ui.separator();
                     // Create
                     if ui
@@ -276,34 +206,167 @@ impl App {
                     ui.add(Github);
                     ui.separator();
                     // About
-                    if ui
-                        .button(RichText::new(INFO).size(ICON_SIZE))
-                        .on_hover_localized("About")
-                        .clicked()
-                    {
-                        state.windows.open_about ^= true;
-                    }
+                    self.about_button(ui, state);
                     ui.separator();
                 });
             });
         });
+    }
+
+    /// Left panel button
+    fn left_panel_button(&mut self, ui: &mut Ui) {
+        ui.toggle_value(
+            &mut self.left_panel,
+            RichText::new(SIDEBAR_SIMPLE).size(ICON_SIZE),
+        )
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize("LeftPanel"));
+        });
+    }
+
+    /// Reset
+    fn reset_button(&mut self, ui: &mut Ui) {
+        if ui
+            .button(RichText::new(TRASH).size(ICON_SIZE))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("ResetApplication"));
+            })
+            .clicked()
+        {
+            // if let Some(id) = self.tree.root {
+            //     if let Some(tile) = self.tree.tiles.get(id) {
+            //         match tile {
+            //             Tile::Pane(pane) => {
+            //                 pane;
+            //             }
+            //             Tile::Container(container) => {
+            //                 // // Container removal
+            //                 // log::debug!("Closing container: {:?}", container.kind());
+            //                 // let children_ids = container.children();
+            //                 // for child_id in children_ids {
+            //                 //     if let Some(Tile::Pane(pane)) = tiles.get(*child_id) {
+            //                 //         let tab_title = self.tab_title_for_pane(pane);
+            //                 //         log::debug!(
+            //                 //             "Closing tab: {}, tile ID: {tile_id:?}",
+            //                 //             tab_title.text()
+            //                 //         );
+            //                 //     }
+            //                 // }
+            //             }
+            //         }
+            //     }
+            // }
+            *self = Default::default();
+        }
+    }
+
+    /// Vertical button
+    fn vertical_button(&mut self, ui: &mut Ui) {
+        if ui
+            .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(ICON_SIZE))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Vertical"));
+            })
+            .clicked()
+        {
+            if let Some(id) = self.tree.root {
+                if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
+                    container.set_kind(ContainerKind::Vertical);
+                }
+            }
+        }
+    }
+
+    /// Horizontal button
+    fn horizontal_button(&mut self, ui: &mut Ui) {
+        if ui
+            .button(RichText::new(SQUARE_SPLIT_HORIZONTAL).size(ICON_SIZE))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Horizontal"));
+            })
+            .clicked()
+        {
+            if let Some(id) = self.tree.root {
+                if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
+                    container.set_kind(ContainerKind::Horizontal);
+                }
+            }
+        }
+    }
+
+    /// Grid button
+    fn grid_button(&mut self, ui: &mut Ui) {
+        if ui
+            .button(RichText::new(GRID_FOUR).size(ICON_SIZE))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Grid"));
+            })
+            .clicked()
+        {
+            if let Some(id) = self.tree.root {
+                if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
+                    container.set_kind(ContainerKind::Grid);
+                }
+            }
+        }
+    }
+
+    /// Tabs button
+    fn tabs_button(&mut self, ui: &mut Ui) {
+        if ui
+            .button(RichText::new(TABS).size(ICON_SIZE))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Tabs"));
+            })
+            .clicked()
+        {
+            if let Some(id) = self.tree.root {
+                if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
+                    container.set_kind(ContainerKind::Tabs);
+                }
+            }
+        }
+    }
+
+    /// Settings
+    fn settings_button(&mut self, ui: &mut Ui, state: &mut State) {
+        if ui
+            .button(RichText::new(SLIDERS_HORIZONTAL).size(ICON_SIZE))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Settings"));
+            })
+            .clicked()
+        {
+            state.windows.open_settings ^= true;
+        }
+    }
+
+    /// About
+    fn about_button(&mut self, ui: &mut Ui, state: &mut State) {
+        if ui
+            .button(RichText::new(INFO).size(ICON_SIZE))
+            .on_hover_localized("About")
+            .clicked()
+        {
+            state.windows.open_about ^= true;
+        }
     }
 }
 
 // Windows
 impl App {
     fn windows(&mut self, ctx: &Context, state: &mut State) {
-        self.about(ctx, state);
-        self.settings(ctx, state);
+        self.about_window(ctx, state);
+        self.settings_window(ctx, state);
     }
 
-    fn about(&mut self, ctx: &Context, state: &mut State) {
+    fn about_window(&mut self, ctx: &Context, state: &mut State) {
         Window::new(format!("{INFO} About"))
             .open(&mut state.windows.open_about)
             .show(ctx, |ui| About.ui(ui));
     }
 
-    fn settings(&mut self, ctx: &Context, state: &mut State) {
+    fn settings_window(&mut self, ctx: &Context, state: &mut State) {
         Window::new(format!("{SLIDERS_HORIZONTAL} Settings"))
             .open(&mut state.windows.open_settings)
             .show(ctx, |ui| {

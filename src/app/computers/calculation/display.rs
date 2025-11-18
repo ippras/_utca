@@ -124,6 +124,7 @@ pub(crate) struct Key<'a> {
     pub(crate) percent: bool,
     pub(crate) precision: usize,
     pub(crate) significant: bool,
+    pub(crate) sort: bool,
 }
 
 impl<'a> Key<'a> {
@@ -134,6 +135,7 @@ impl<'a> Key<'a> {
             percent: settings.percent,
             precision: settings.precision,
             significant: settings.significant,
+            sort: settings.sort_by_minor_major,
         }
     }
 }
@@ -154,12 +156,7 @@ fn schema(data_frame: &DataFrame) -> PolarsResult<usize> {
 
 fn format(key: Key) -> PolarsResult<LazyFrame> {
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    // println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
-    // Filter minor
-    if !key.minor {
-        // true or null (standard)
-        lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
-    }
+    println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
     // Unnest
     lazy_frame = lazy_frame
         .unnest(
@@ -177,12 +174,14 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
         );
     // Format sum
     let sum = lazy_frame.clone().select([
+        // Фильтрует и считает сумму.
         format_float(
             col(r#"^StereospecificNumbers.*\.Mean$"#)
                 .filter(col("Filter"))
                 .sum(),
             key,
         ),
+        // Не фильтрует и считает стандартное отклонение суммы.
         ternary_expr(
             col(r#"^StereospecificNumbers.*\.StandardDeviation$"#)
                 .is_not_null()
@@ -198,6 +197,19 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
         ),
     ]);
     // println!("Display sum: {}", sum.clone().collect().unwrap());
+    // Filter minor
+    if !key.minor {
+        // true or null (standard)
+        lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
+    } else if key.sort {
+        lazy_frame = lazy_frame.sort_by_exprs(
+            [col("Filter")],
+            SortMultipleOptions::default()
+                .with_maintain_order(true)
+                .with_order_reversed(),
+        );
+    }
+    println!("Display 1: {}", lazy_frame.clone().collect().unwrap());
     // Format
     let predicate = col("StereospecificNumbers123.StandardDeviation")
         .is_null()

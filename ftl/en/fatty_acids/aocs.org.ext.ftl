@@ -10,3 +10,5 @@ c22c15 =
     .systematic = (15Z)-docos-15-enoic
 c22c13c16 =
     .systematic = (13Z,16Z)-docos-13,16-dienoic
+c23 =
+    .systematic = tricosanoic

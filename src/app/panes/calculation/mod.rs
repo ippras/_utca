@@ -395,6 +395,7 @@ impl Pane {
     fn correlations(&mut self, ui: &mut Ui, state: &mut State) {
         let response = Window::new(format!("{SLIDERS_HORIZONTAL} Calculation correlations"))
             .id(ui.auto_id_with(ID_SOURCE).with("Correlations"))
+            .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_correlations)
             .show(ui.ctx(), |ui| {
                 self.correlations_content(ui, &mut state.settings)
@@ -423,6 +424,7 @@ impl Pane {
     fn indices(&mut self, ui: &mut Ui, state: &mut State) {
         Window::new(format!("{SIGMA} Calculation indices"))
             .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
+            .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_indices)
             .show(ui.ctx(), |ui| self.indices_content(ui, &state.settings));
     }
@@ -441,6 +443,7 @@ impl Pane {
     fn settings(&mut self, ui: &mut Ui, state: &mut State) {
         Window::new(format!("{SLIDERS_HORIZONTAL} Calculation settings"))
             .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
+            .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_settings)
             .show(ui.ctx(), |ui| {
                 state.settings.show(ui);

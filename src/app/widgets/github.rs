@@ -65,6 +65,10 @@ impl Github {
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-2776[2].2025-11-01.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-2776[3].2025-11-01.utca.ron");
             ui.separator();
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3110[1].2025-11-10.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3110[2].2025-11-10.utca.ron");
+            let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3110[3].2025-11-10.utca.ron");
+            ui.separator();
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3384[1].2025-10-31.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3384[2].2025-10-31.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3384[3].2025-10-31.utca.ron");

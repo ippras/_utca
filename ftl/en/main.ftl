@@ -191,3 +191,5 @@ Threshold = Threshold
     .hover = Values greater than or equal to the threshold value are major, values less than the threshold value are minor.
 DisplayMinor = Display minor
     .hover = Show/hide minor fatty acids.
+SortByMinorMajor = Sort
+    .hover = Sort by minor major.
