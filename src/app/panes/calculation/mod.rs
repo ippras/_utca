@@ -45,6 +45,7 @@ const ID_SOURCE: &str = "Calculation";
 /// Calculation pane
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Pane {
+    id: Option<Id>,
     source: Vec<HashedMetaDataFrame>,
     target: HashedDataFrame,
 }
@@ -52,6 +53,7 @@ pub(crate) struct Pane {
 impl Pane {
     pub(crate) fn new(frames: Vec<HashedMetaDataFrame>) -> Self {
         Self {
+            id: None,
             source: frames,
             target: HashedDataFrame {
                 data_frame: DataFrame::empty(),
@@ -94,7 +96,8 @@ impl Pane {
         behavior: &mut Behavior,
         tile_id: TileId,
     ) -> UiResponse {
-        let mut state = State::load(ui.ctx(), Id::new(tile_id));
+        let id = *self.id.get_or_insert_with(|| ui.next_auto_id());
+        let mut state = State::load(ui.ctx(), id);
         let response = TopBottomPanel::top(ui.auto_id_with("Pane"))
             .show_inside(ui, |ui| {
                 MenuBar::new()
@@ -122,10 +125,10 @@ impl Pane {
                 let _ = self.central(ui, &mut state);
                 self.windows(ui, &mut state);
             });
-        if let Some(id) = behavior.close {
-            state.remove(ui.ctx(), Id::new(id));
+        if behavior.close == Some(tile_id) {
+            state.remove(ui.ctx(), id);
         } else {
-            state.store(ui.ctx(), Id::new(tile_id));
+            state.store(ui.ctx(), id);
         }
         if response.dragged() {
             UiResponse::DragStarted
@@ -133,7 +136,7 @@ impl Pane {
             UiResponse::None
         }
     }
-
+ 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
         let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));
