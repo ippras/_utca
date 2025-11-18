@@ -117,20 +117,9 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         .alias("Filter"),
     );
     println!("lazy_frame 00: {}", lazy_frame.clone().collect().unwrap());
-    // Normalize  
-    // Значения стандарта - теоретически расчитанное (как если бы он был
-    // включен), но все остальные значения расчитывабтся без учета стандарта.
+    // Normalize
+    // Отбрасывает значения стандарта.
     lazy_frame = lazy_frame.with_columns([
-        // ternary_expr(
-        //     col("Filter"),
-        //     experimental(sn123.clone().nullify(col("Filter")), key),
-        //     experimental(sn123.clone(), key),
-        // ),
-        // ternary_expr(
-        //     col("Filter"),
-        //     experimental(sn2.clone().nullify(col("Filter")), key),
-        //     experimental(sn2.clone(), key),
-        // ),
         experimental(sn123.clone().nullify(col("Filter")), key),
         experimental(sn2.clone().nullify(col("Filter")), key),
     ]);
@@ -222,11 +211,12 @@ fn experimental(mut expr: Expr, key: Key) -> Expr {
 /// 2 * DAG1(3) = 3 * TAG - MAG2 (стр. 116)
 /// $x_{1:i} = x_{3:i} = x_{1:i | 3:i} / 2 = (3 * x_{1:i | 2:i | 3:i} - x_{2:i}) / 2$ (Sovová2008)
 fn sn13(sn123: Expr, sn2: Expr, key: Key) -> Expr {
-    ((sn123 * lit(3) - sn2) / lit(2))
-        .clip_min_if(key.unsigned)
-        .normalize()
-        .name()
-        .replace(STEREOSPECIFIC_NUMBERS123, STEREOSPECIFIC_NUMBERS13, true)
+    let expr = ((sn123 * lit(3) - sn2) / lit(2)).clip_min_if(key.unsigned);
+    (expr.clone() / expr.sum()).name().replace(
+        STEREOSPECIFIC_NUMBERS123,
+        STEREOSPECIFIC_NUMBERS13,
+        true,
+    )
 }
 
 fn enrichment_factors(sn2: Expr, sn123: Expr, key: Key) -> Expr {
