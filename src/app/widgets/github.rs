@@ -4,8 +4,10 @@ use crate::{
 };
 use anyhow::{Context as _, Error, Result};
 use egui::{
-    Context, Id, PopupCloseBehavior, Response, RichText, ScrollArea, Ui, Widget,
+    Context, Id, InnerResponse, IntoAtoms, PopupCloseBehavior, Response, RichText, ScrollArea, Ui,
+    Widget,
     containers::menu::{MenuButton, MenuConfig},
+    scroll_area::ScrollAreaOutput,
 };
 use egui_ext::Doi as _;
 use egui_phosphor::regular::CLOUD_ARROW_DOWN;
@@ -23,7 +25,7 @@ impl Github {
     fn content(&mut self, ui: &mut Ui) {
         // IPPRAS
         ui.hyperlink_to(RichText::new("IPPRAS").heading(), "https://ippras.ru");
-        ui.menu_button("Acer", |ui| {
+        ui.menu_button_with_scroll("Acer", |ui| {
             ui.heading("Acer Ginnala");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ginnala[1].2025-07-08.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ginnala[2].2025-07-08.utca.ron");
@@ -45,13 +47,13 @@ impl Github {
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ukurunduense[2].2025-07-08.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ukurunduense[3].2025-07-08.utca.ron");
         });
-        ui.menu_button("Cedrus", |ui| {
+        ui.menu_button_with_scroll("Cedrus", |ui| {
             ui.heading("Cedrus");
             // preset(ui, &CEDRUS_2023_05_19);
             // preset(ui, &CEDRUS_2023_05_19_1);
             // preset(ui, &CEDRUS_2023_05_19_2);
         });
-        ui.menu_button("Helianthus annuus", |ui| {
+        ui.menu_button_with_scroll("Helianthus annuus", |ui| {
             ui.heading("Helianthus annuus");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-2233[1].2025-10-29.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-2233[2].2025-10-29.utca.ron");
@@ -85,7 +87,7 @@ impl Github {
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3714[2].2025-10-31.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3714[3].2025-10-31.utca.ron");
         });
-        ui.menu_button("Microalgae", |ui| {
+        ui.menu_button_with_scroll("Microalgae", |ui| {
             ui.heading("Chromochloris zofingiensis");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-108[-N;1].2025-04-23.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-108[-N;2].2025-04-23.utca.ron");
@@ -107,7 +109,7 @@ impl Github {
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/P-519[-N;1].2025-04-23.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/P-519[-N;2].2025-04-23.utca.ron");
         });
-        ui.menu_button("Lunaria rediviva", |ui| {
+        ui.menu_button_with_scroll("Lunaria rediviva", |ui| {
             ui.heading("Lunaria rediviva");
             // Petal
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, petal[1].2024-05-16.utca.ron");
@@ -123,7 +125,7 @@ impl Github {
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 1mm[2].2024-05-29.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 1mm[3].2024-05-29.utca.ron");
         });
-        ui.menu_button("Sidorov (2014)", |ui| {
+        ui.menu_button_with_scroll("Sidorov (2014)", |ui| {
             ui.doi("10.1007/s11746-014-2553-8");
             ui.heading("Subgenus Euonymus");
             ui.heading("Section Euonymus");
@@ -144,7 +146,7 @@ impl Github {
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus maximowiczianus.2014-06-19.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2014/Euonymus sachalinensis.2014-06-19.utca.ron");
         });
-        ui.menu_button("Sidorov (2025)", |ui| {
+        ui.menu_button_with_scroll("Sidorov (2025)", |ui| {
             ui.doi("10.3390/plants14040612");
             ui.heading("Lunaria Rediviva");
             ui.heading("TMSH");
@@ -170,7 +172,7 @@ impl Github {
         ui.separator();
         // Third party
         ui.heading("Third party");
-        ui.menu_button("Reske (1997)", |ui| {
+        ui.menu_button_with_scroll("Reske (1997)", |ui| {
             ui.doi("10.1007/s11746-997-0016-1");
             ui.heading("Soybean");
             // preset(ui, &SOYBEAN_SEED_COMMODITY);
@@ -182,7 +184,7 @@ impl Github {
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Reske1997/Sunflower seed (High palmitic, high oleic).1997-08-01.utca.ron");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Reske1997/Sunflower seed (High stearic, high oleic).1997-08-01.utca.ron");
         });
-        ui.menu_button("Martinez-Force (2004)", |ui| {
+        ui.menu_button_with_scroll("Martinez-Force (2004)", |ui| {
             ui.doi("10.1016/j.ab.2004.07.019");
             ui.heading("Hazelnut");
             let _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/ThirdParty/Martinez-Force2004/Hazelnut.2004-05-20.utca.ron");
@@ -209,6 +211,25 @@ impl Widget for Github {
                 ScrollArea::new([false, true]).show(ui, |ui| self.content(ui));
             })
             .0
+    }
+}
+
+/// Extension methods for [`Ui`]
+trait UiExt: Sized {
+    fn menu_button_with_scroll<'a, R>(
+        &mut self,
+        atoms: impl IntoAtoms<'a>,
+        add_contents: impl FnOnce(&mut Ui) -> R,
+    ) -> InnerResponse<Option<ScrollAreaOutput<R>>>;
+}
+
+impl UiExt for Ui {
+    fn menu_button_with_scroll<'a, R>(
+        &mut self,
+        atoms: impl IntoAtoms<'a>,
+        add_contents: impl FnOnce(&mut Ui) -> R,
+    ) -> InnerResponse<Option<ScrollAreaOutput<R>>> {
+        self.menu_button(atoms, |ui| ScrollArea::vertical().show(ui, add_contents))
     }
 }
 
