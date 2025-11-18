@@ -154,9 +154,9 @@ impl Pane {
         });
         ui.separator();
         // Reset
-        ui.reset(&mut state.reset_table);
+        ui.reset_button(&mut state.reset_table);
         // Resize
-        ui.resize(&mut state.settings.resize_table);
+        ui.resize_button(&mut state.settings.resize_table);
         // Edit
         ui.edit(&mut state.settings.edit_table);
         // Clear
@@ -190,7 +190,7 @@ impl Pane {
         });
         ui.separator();
         // Settings
-        ui.settings(&mut state.windows.open_settings);
+        ui.settings_button(&mut state.windows.open_settings);
         ui.separator();
         // Save
         let name = self.frames[state.settings.index].meta.format(".");

@@ -38,6 +38,7 @@ use metadata::{AUTHORS, DATE, DEFAULT_VERSION, Metadata, NAME, VERSION, polars::
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, from_fn};
 use tracing::instrument;
 
 const ID_SOURCE: &str = "Calculation";
@@ -62,10 +63,6 @@ impl Pane {
         }
     }
 
-    pub(crate) const fn icon() -> &'static str {
-        CALCULATOR
-    }
-
     pub(crate) fn title(&self, index: Option<usize>) -> String {
         self.title_with_separator(index, " ")
     }
@@ -84,8 +81,13 @@ impl Pane {
         }
     }
 
-    fn hash(&self) -> u64 {
-        hash(&self.source)
+    fn id(&self) -> impl Display {
+        from_fn(|f| {
+            if let Some(id) = self.id {
+                write!(f, "{id:?}-")?;
+            }
+            write!(f, "{}", hash(&self.source))
+        })
     }
 }
 
@@ -136,17 +138,36 @@ impl Pane {
             UiResponse::None
         }
     }
- 
+
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
+        let mut response = ui.heading(CALCULATOR).on_hover_ui(|ui| {
             ui.label(ui.localize("Calculation"));
         });
         response |= ui.heading(self.title(state.settings.index));
         response = response
-            .on_hover_text(format!("{:x}", self.hash()))
+            .on_hover_text(self.id().to_string())
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
-        // List
+        self.list_button(ui, state);
+        ui.separator();
+        // Reset
+        ui.reset_button(&mut state.settings.table.reset_state);
+        // Resize
+        ui.resize_button(&mut state.settings.table.resizable);
+        ui.separator();
+        // Settings
+        ui.settings_button(&mut state.windows.open_settings);
+        ui.separator();
+        self.sum_button(ui, state);
+        ui.separator();
+        self.composition_button(ui, state);
+        ui.separator();
+        self.save_button(ui, state);
+        ui.separator();
+        response
+    }
+
+    fn list_button(&self, ui: &mut Ui, state: &mut State) {
         ui.menu_button(RichText::new(LIST).heading(), |ui| {
             let mut clicked = false;
             for index in 0..self.source.len() {
@@ -171,16 +192,9 @@ impl Pane {
         .on_hover_ui(|ui| {
             ui.label(ui.localize("List"));
         });
-        ui.separator();
-        // Reset
-        ui.reset(&mut state.settings.table.reset_state);
-        // Resize
-        ui.resize(&mut state.settings.table.resizable);
-        ui.separator();
-        // Settings
-        ui.settings(&mut state.windows.open_settings);
-        ui.separator();
-        // Sum tables
+    }
+
+    fn sum_button(&self, ui: &mut Ui, state: &mut State) {
         ui.menu_button(RichText::new(SIGMA).heading(), |ui| {
             ui.toggle_value(
                 &mut state.windows.open_correlations,
@@ -203,8 +217,9 @@ impl Pane {
                 ui.label(ui.localize("Index.hover"));
             });
         });
-        ui.separator();
-        // Composition
+    }
+
+    fn composition_button(&self, ui: &mut Ui, state: &mut State) {
         if ui
             .button(RichText::new(INTERSECT_THREE).heading())
             .on_hover_ui(|ui| {
@@ -214,8 +229,51 @@ impl Pane {
         {
             let _ = self.composition(ui, state);
         }
-        ui.separator();
-        // Save
+    }
+
+    #[instrument(skip_all, err)]
+    fn composition(&self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
+        let mut frames = Vec::with_capacity(self.source.len());
+        for index in 0..self.source.len() {
+            let meta = self.source[index].meta.clone();
+            let HashedDataFrame { data_frame, hash } = ui.memory_mut(|memory| {
+                memory
+                    .caches
+                    .cache::<CalculationComputed>()
+                    .get(CalculationKey {
+                        index: Some(index),
+                        ..CalculationKey::new(&self.source, &state.settings)
+                    })
+            });
+            let data_frame = data_frame
+                .lazy()
+                .select([
+                    col(LABEL),
+                    col(FATTY_ACID),
+                    col(STEREOSPECIFIC_NUMBERS123)
+                        .struct_()
+                        .field_by_name("Mean")
+                        .alias(STEREOSPECIFIC_NUMBERS123),
+                    col(STEREOSPECIFIC_NUMBERS13)
+                        .struct_()
+                        .field_by_name("Mean")
+                        .alias(STEREOSPECIFIC_NUMBERS13),
+                    col(STEREOSPECIFIC_NUMBERS2)
+                        .struct_()
+                        .field_by_name("Mean")
+                        .alias(STEREOSPECIFIC_NUMBERS2),
+                ])
+                .collect()?;
+            frames.push(MetaDataFrame::new(
+                meta,
+                HashedDataFrame { data_frame, hash },
+            ));
+        }
+        ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), frames));
+        Ok(())
+    }
+
+    fn save_button(&self, ui: &mut Ui, state: &mut State) {
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
             let title = self.title_with_separator(state.settings.index, ".");
             if ui
@@ -243,12 +301,10 @@ impl Pane {
                 // let _ = self.save_parquet(&title);
             }
         });
-        ui.separator();
-        response
     }
 
     #[instrument(skip_all, err)]
-    fn save_ron(&mut self, title: &str, state: &mut State) -> Result<()> {
+    fn save_ron(&self, title: &str, state: &mut State) -> Result<()> {
         let data = self
             .target
             .data_frame
@@ -329,48 +385,6 @@ impl Pane {
     // }
 
     #[instrument(skip_all, err)]
-    fn composition(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
-        let mut frames = Vec::with_capacity(self.source.len());
-        for index in 0..self.source.len() {
-            let meta = self.source[index].meta.clone();
-            let HashedDataFrame { data_frame, hash } = ui.memory_mut(|memory| {
-                memory
-                    .caches
-                    .cache::<CalculationComputed>()
-                    .get(CalculationKey {
-                        index: Some(index),
-                        ..CalculationKey::new(&self.source, &state.settings)
-                    })
-            });
-            let data_frame = data_frame
-                .lazy()
-                .select([
-                    col(LABEL),
-                    col(FATTY_ACID),
-                    col(STEREOSPECIFIC_NUMBERS123)
-                        .struct_()
-                        .field_by_name("Mean")
-                        .alias(STEREOSPECIFIC_NUMBERS123),
-                    col(STEREOSPECIFIC_NUMBERS13)
-                        .struct_()
-                        .field_by_name("Mean")
-                        .alias(STEREOSPECIFIC_NUMBERS13),
-                    col(STEREOSPECIFIC_NUMBERS2)
-                        .struct_()
-                        .field_by_name("Mean")
-                        .alias(STEREOSPECIFIC_NUMBERS2),
-                ])
-                .collect()?;
-            frames.push(MetaDataFrame::new(
-                meta,
-                HashedDataFrame { data_frame, hash },
-            ));
-        }
-        ui.data_mut(|data| data.insert_temp(Id::new(COMPOSE), frames));
-        Ok(())
-    }
-
-    #[instrument(skip_all, err)]
     fn central(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
         self.target = ui.memory_mut(|memory| {
             memory
@@ -396,17 +410,19 @@ impl Pane {
     }
 
     fn correlations_window(&mut self, ui: &mut Ui, state: &mut State) {
-        let response = Window::new(format!("{SLIDERS_HORIZONTAL} Calculation correlations"))
-            .id(ui.auto_id_with(ID_SOURCE).with("Correlations"))
-            .default_pos(ui.next_widget_position())
-            .open(&mut state.windows.open_correlations)
-            .show(ui.ctx(), |ui| {
-                self.correlations_content(ui, &mut state.settings)
-            });
-        #[allow(unused_variables)]
-        if let Some(inner_response) = response {
+        if let Some(inner_response) =
+            Window::new(format!("{SLIDERS_HORIZONTAL} Calculation correlations"))
+                .id(ui.auto_id_with(ID_SOURCE).with("Correlations"))
+                .default_pos(ui.next_widget_position())
+                .open(&mut state.windows.open_correlations)
+                .show(ui.ctx(), |ui| {
+                    self.correlations_content(ui, &mut state.settings)
+                })
+        {
+            #[allow(unused_variables)]
+            let response = inner_response.response.on_hover_text(self.id().to_string());
             #[cfg(feature = "markdown")]
-            inner_response.response.on_hover_ui(|ui| {
+            response.on_hover_ui(|ui| {
                 ui.markdown(CORRELATIONS);
             });
         }
@@ -425,11 +441,14 @@ impl Pane {
     }
 
     fn indices_window(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SIGMA} Calculation indices"))
+        if let Some(inner_response) = Window::new(format!("{SIGMA} Calculation indices"))
             .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
             .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_indices)
-            .show(ui.ctx(), |ui| self.indices_content(ui, &state.settings));
+            .show(ui.ctx(), |ui| self.indices_content(ui, &state.settings))
+        {
+            inner_response.response.on_hover_text(self.id().to_string());
+        }
     }
 
     #[instrument(skip_all, err)]
@@ -444,13 +463,17 @@ impl Pane {
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SLIDERS_HORIZONTAL} Calculation settings"))
-            .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
-            .default_pos(ui.next_widget_position())
-            .open(&mut state.windows.open_settings)
-            .show(ui.ctx(), |ui| {
-                state.settings.show(ui);
-            });
+        if let Some(inner_response) =
+            Window::new(format!("{SLIDERS_HORIZONTAL} Calculation settings"))
+                .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
+                .default_pos(ui.next_widget_position())
+                .open(&mut state.windows.open_settings)
+                .show(ui.ctx(), |ui| {
+                    state.settings.show(ui);
+                })
+        {
+            inner_response.response.on_hover_text(self.id().to_string());
+        }
     }
 }
 

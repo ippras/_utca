@@ -10,13 +10,13 @@ pub trait UiExt {
     fn edit(&mut self, selected: &mut bool);
 
     /// Reset
-    fn reset(&mut self, selected: &mut bool);
+    fn reset_button(&mut self, selected: &mut bool);
 
     /// Resize
-    fn resize(&mut self, selected: &mut bool);
+    fn resize_button(&mut self, selected: &mut bool);
 
     /// Settings
-    fn settings(&mut self, selected: &mut bool);
+    fn settings_button(&mut self, selected: &mut bool);
 }
 
 impl UiExt for Ui {
@@ -27,21 +27,21 @@ impl UiExt for Ui {
             });
     }
 
-    fn reset(&mut self, selected: &mut bool) {
+    fn reset_button(&mut self, selected: &mut bool) {
         self.toggle_value(selected, RichText::new(ARROWS_CLOCKWISE).heading())
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("ResetTable"));
             });
     }
 
-    fn resize(&mut self, selected: &mut bool) {
+    fn resize_button(&mut self, selected: &mut bool) {
         self.toggle_value(selected, RichText::new(ARROWS_HORIZONTAL).heading())
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("ResizeTable"));
             });
     }
 
-    fn settings(&mut self, selected: &mut bool) {
+    fn settings_button(&mut self, selected: &mut bool) {
         self.toggle_value(selected, RichText::new(SLIDERS_HORIZONTAL).heading())
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("Settings"));
