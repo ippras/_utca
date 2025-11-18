@@ -14,22 +14,17 @@ use egui_phosphor::regular::{
     CALCULATOR, ERASER, FLOPPY_DISK, LIST, NOTE_PENCIL, SLIDERS_HORIZONTAL, TAG, TRASH, X,
 };
 use egui_tiles::{TileId, UiResponse};
-use itertools::Itertools as _;
 use lipid::prelude::*;
 use metadata::egui::MetadataWidget;
 use polars::prelude::*;
+use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, sync::LazyLock};
+use std::{
+    fmt::{Display, from_fn},
+    sync::LazyLock,
+};
 
 const ID_SOURCE: &str = "Configuration";
-const COLUMNS: [&str; 6] = [
-    "Index",
-    "Label",
-    "Fatty acid",
-    "SN-1,2,3",
-    "SN-1,2(2,3)",
-    "SN-2",
-];
 
 pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
     Schema::from_iter([
@@ -43,26 +38,38 @@ pub(crate) static SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
 /// Configuration pane
 #[derive(Default, Deserialize, Serialize)]
 pub(crate) struct Pane {
+    id: Option<Id>,
     frames: Vec<HashedMetaDataFrame>,
 }
 
 impl Pane {
     pub(crate) fn new(frames: Vec<HashedMetaDataFrame>) -> Self {
-        Self { frames }
+        Self { id: None, frames }
     }
 
-    pub(crate) const fn icon() -> &'static str {
-        NOTE_PENCIL
+    pub(crate) fn title(&self, index: Option<usize>) -> String {
+        self.title_with_separator(index, " ")
     }
 
-    pub(crate) fn title(&self) -> impl Display {
-        self.frames
-            .iter()
-            .format_with(",", |frame, f| f(&frame.meta.format(" ")))
+    fn title_with_separator(&self, index: Option<usize>, separator: &str) -> String {
+        match index {
+            Some(index) => self.frames[index].meta.format(separator).to_string(),
+            None => {
+                format_list_truncated!(
+                    self.frames.iter().map(|frame| frame.meta.format(separator)),
+                    2
+                )
+            }
+        }
     }
 
-    fn hash(&self) -> u64 {
-        hash(&self.frames)
+    fn id(&self) -> impl Display {
+        from_fn(|f| {
+            if let Some(id) = self.id {
+                write!(f, "{id:?}-")?;
+            }
+            write!(f, "{}", hash(&self.frames))
+        })
     }
 }
 
@@ -73,10 +80,8 @@ impl Pane {
         behavior: &mut Behavior,
         tile_id: TileId,
     ) -> UiResponse {
-        let mut state = State::load(ui.ctx(), Id::new(tile_id));
-        if state.settings.column_filter.columns.is_empty() {
-            state.settings.column_filter.update(&COLUMNS);
-        }
+        let id = *self.id.get_or_insert_with(|| ui.next_auto_id());
+        let mut state = State::load(ui.ctx(), id);
         let response = TopBottomPanel::top(ui.auto_id_with("Pane"))
             .show_inside(ui, |ui| {
                 MenuBar::new()
@@ -104,10 +109,10 @@ impl Pane {
                 self.central(ui, &mut state);
                 self.windows(ui, &mut state);
             });
-        if let Some(id) = behavior.close {
-            state.remove(ui.ctx(), Id::new(id));
+        if behavior.close == Some(tile_id) {
+            state.remove(ui.ctx(), id);
         } else {
-            state.store(ui.ctx(), Id::new(tile_id));
+            state.store(ui.ctx(), id);
         }
         if response.dragged() {
             UiResponse::DragStarted
@@ -117,17 +122,12 @@ impl Pane {
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        let mut response = ui.heading(Self::icon()).on_hover_ui(|ui| {
+        let mut response = ui.heading(NOTE_PENCIL).on_hover_ui(|ui| {
             ui.label(ui.localize("Configuration"));
         });
-        response |= ui.heading(
-            self.frames[state.settings.index]
-                .meta
-                .format(" ")
-                .to_string(),
-        );
+        response |= ui.heading(self.title(Some(state.settings.index)));
         response = response
-            .on_hover_text(format!("{:x}", self.hash()))
+            .on_hover_text(self.id().to_string())
             .on_hover_ui(|ui| MetadataWidget::new(&self.frames[state.settings.index].meta).show(ui))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
@@ -252,13 +252,20 @@ impl Pane {
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SLIDERS_HORIZONTAL} Configuration settings"))
-            .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
-            .default_pos(ui.next_widget_position())
-            .open(&mut state.windows.open_settings)
-            .show(ui.ctx(), |ui| {
-                state.settings.show(ui);
-            });
+        if let Some(inner_response) =
+            Window::new(format!("{SLIDERS_HORIZONTAL} Configuration settings"))
+                .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
+                .default_pos(ui.next_widget_position())
+                .open(&mut state.windows.open_settings)
+                .show(ui.ctx(), |ui| {
+                    state.settings.show(ui);
+                })
+        {
+            inner_response
+                .response
+                .on_hover_text(self.title(Some(state.settings.index)).to_string())
+                .on_hover_text(self.id().to_string());
+        }
     }
 }
 

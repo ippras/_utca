@@ -30,7 +30,7 @@ use egui::{
 use egui_ext::Markdown as _;
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{
-    CALCULATOR, FLOPPY_DISK, INTERSECT_THREE, LIST, MATH_OPERATIONS, SIGMA, SLIDERS_HORIZONTAL, X,
+    CALCULATOR, FLOPPY_DISK, INTERSECT_THREE, LIST, SIGMA, SLIDERS_HORIZONTAL, X,
 };
 use egui_tiles::{TileId, UiResponse};
 use lipid::prelude::*;
@@ -47,7 +47,7 @@ const ID_SOURCE: &str = "Calculation";
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Pane {
     id: Option<Id>,
-    source: Vec<HashedMetaDataFrame>,
+    frames: Vec<HashedMetaDataFrame>,
     target: HashedDataFrame,
 }
 
@@ -55,7 +55,7 @@ impl Pane {
     pub(crate) fn new(frames: Vec<HashedMetaDataFrame>) -> Self {
         Self {
             id: None,
-            source: frames,
+            frames,
             target: HashedDataFrame {
                 data_frame: DataFrame::empty(),
                 hash: 0,
@@ -69,12 +69,10 @@ impl Pane {
 
     fn title_with_separator(&self, index: Option<usize>, separator: &str) -> String {
         match index {
-            Some(index) => self.source[index].meta.format(separator).to_string(),
+            Some(index) => self.frames[index].meta.format(separator).to_string(),
             None => {
                 format_list_truncated!(
-                    self.source
-                        .iter()
-                        .map(|frame| frame.meta.format(separator).to_string()),
+                    self.frames.iter().map(|frame| frame.meta.format(separator)),
                     2
                 )
             }
@@ -86,7 +84,7 @@ impl Pane {
             if let Some(id) = self.id {
                 write!(f, "{id:?}-")?;
             }
-            write!(f, "{}", hash(&self.source))
+            write!(f, "{}", hash(&self.frames))
         })
     }
 }
@@ -145,7 +143,7 @@ impl Pane {
         });
         response |= ui.heading(self.title(state.settings.index));
         response = response
-            .on_hover_text(self.id().to_string())
+            .on_hover_text(format!("{}/{:x}", self.id(), self.target.hash))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         self.list_button(ui, state);
@@ -170,12 +168,12 @@ impl Pane {
     fn list_button(&self, ui: &mut Ui, state: &mut State) {
         ui.menu_button(RichText::new(LIST).heading(), |ui| {
             let mut clicked = false;
-            for index in 0..self.source.len() {
+            for index in 0..self.frames.len() {
                 clicked |= ui
                     .selectable_value(
                         &mut state.settings.index,
                         Some(index),
-                        self.source[index].meta.format(".").to_string(),
+                        self.frames[index].meta.format(".").to_string(),
                     )
                     .clicked()
             }
@@ -233,16 +231,16 @@ impl Pane {
 
     #[instrument(skip_all, err)]
     fn composition(&self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
-        let mut frames = Vec::with_capacity(self.source.len());
-        for index in 0..self.source.len() {
-            let meta = self.source[index].meta.clone();
+        let mut frames = Vec::with_capacity(self.frames.len());
+        for index in 0..self.frames.len() {
+            let meta = self.frames[index].meta.clone();
             let HashedDataFrame { data_frame, hash } = ui.memory_mut(|memory| {
                 memory
                     .caches
                     .cache::<CalculationComputed>()
                     .get(CalculationKey {
                         index: Some(index),
-                        ..CalculationKey::new(&self.source, &state.settings)
+                        ..CalculationKey::new(&self.frames, &state.settings)
                     })
             });
             let data_frame = data_frame
@@ -320,7 +318,7 @@ impl Pane {
             .collect()?;
         let meta = match state.settings.index {
             Some(index) => {
-                let mut meta = self.source[index].meta.clone();
+                let mut meta = self.frames[index].meta.clone();
                 meta.retain(|key, _| key != "ARROW:schema");
                 meta
             }
@@ -328,9 +326,9 @@ impl Pane {
                 let mut meta = Metadata::default();
                 // let name =
                 //     format_list!(self.source.iter().filter_map(|frame| frame.meta.get(NAME)));
-                meta.insert(NAME.to_owned(), name(&self.source));
-                meta.insert(AUTHORS.to_owned(), authors(&self.source));
-                meta.insert(DATE.to_owned(), date(&self.source));
+                meta.insert(NAME.to_owned(), name(&self.frames));
+                meta.insert(AUTHORS.to_owned(), authors(&self.frames));
+                meta.insert(DATE.to_owned(), date(&self.frames));
                 meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
                 meta
             }
@@ -390,7 +388,7 @@ impl Pane {
             memory
                 .caches
                 .cache::<CalculationComputed>()
-                .get(CalculationKey::new(&self.source, &state.settings))
+                .get(CalculationKey::new(&self.frames, &state.settings))
         });
         state.settings.fatty_acids = self.target[LABEL]
             .str()?
@@ -415,12 +413,16 @@ impl Pane {
                 .id(ui.auto_id_with(ID_SOURCE).with("Correlations"))
                 .default_pos(ui.next_widget_position())
                 .open(&mut state.windows.open_correlations)
+                .scroll([true, true])
                 .show(ui.ctx(), |ui| {
                     self.correlations_content(ui, &mut state.settings)
                 })
         {
             #[allow(unused_variables)]
-            let response = inner_response.response.on_hover_text(self.id().to_string());
+            let response = inner_response
+                .response
+                .on_hover_text(self.title(state.settings.index).to_string())
+                .on_hover_text(self.id().to_string());
             #[cfg(feature = "markdown")]
             response.on_hover_ui(|ui| {
                 ui.markdown(CORRELATIONS);
@@ -447,7 +449,10 @@ impl Pane {
             .open(&mut state.windows.open_indices)
             .show(ui.ctx(), |ui| self.indices_content(ui, &state.settings))
         {
-            inner_response.response.on_hover_text(self.id().to_string());
+            inner_response
+                .response
+                .on_hover_text(self.title(state.settings.index).to_string())
+                .on_hover_text(self.id().to_string());
         }
     }
 
@@ -472,7 +477,10 @@ impl Pane {
                     state.settings.show(ui);
                 })
         {
-            inner_response.response.on_hover_text(self.id().to_string());
+            inner_response
+                .response
+                .on_hover_text(self.title(state.settings.index).to_string())
+                .on_hover_text(self.id().to_string());
         }
     }
 }
