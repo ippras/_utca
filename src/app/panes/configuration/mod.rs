@@ -248,12 +248,13 @@ impl Pane {
 
 impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
-        self.settings(ui, state);
+        self.settings_window(ui, state);
     }
 
-    fn settings(&mut self, ui: &mut Ui, state: &mut State) {
+    fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
         Window::new(format!("{SLIDERS_HORIZONTAL} Configuration settings"))
             .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
+            .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_settings)
             .show(ui.ctx(), |ui| {
                 state.settings.show(ui);
