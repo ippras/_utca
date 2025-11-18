@@ -129,6 +129,7 @@ impl App {
                 let mut behavior = Behavior { close: None };
                 self.tree.ui(&mut behavior, ui);
                 if let Some(id) = behavior.close {
+                    println!("behavior.close: {id:?}");
                     self.tree.tiles.remove(id);
                 }
             });
