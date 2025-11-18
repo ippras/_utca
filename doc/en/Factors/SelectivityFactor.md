@@ -1,5 +1,7 @@
 # Selectivity factor
 
+$$\frac{1}{3} SF$$
+
 $$\frac{X_{\{2:I\}}}{X_{\{1:I | 2:I | 3:I\}}} \cdot \frac{\sum X_{\{1:U | 2:U | 3:U\}}}{\sum X_{\{2:U\}}}$$
 
 * **Description**: Selectivity factor (SF) quantifies the relative preference

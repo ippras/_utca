@@ -334,7 +334,10 @@ impl Pane {
                 memory
                     .caches
                     .cache::<CalculationComputed>()
-                    .get(CalculationKey::new(&self.source, &state.settings).with_index(Some(index)))
+                    .get(CalculationKey {
+                        index: Some(index),
+                        ..CalculationKey::new(&self.source, &state.settings)
+                    })
             });
             let data_frame = data_frame
                 .lazy()

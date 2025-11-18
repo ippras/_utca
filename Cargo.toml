@@ -9,6 +9,7 @@ ahash = "0.8.12"
 anyhow = "1.0.100"
 base64 = "0.22.1"
 chrono = "0.4.42"
+const_format = "0.2.35"
 eframe = { version = "0.33.0", features = [
     "accesskit",
     "default_fonts",

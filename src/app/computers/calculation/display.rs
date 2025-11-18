@@ -120,7 +120,6 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 #[derive(Clone, Copy, Debug, Hash)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
-    pub(crate) ddof: u8,
     pub(crate) minor: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
@@ -131,10 +130,9 @@ impl<'a> Key<'a> {
     pub(crate) fn new(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
         Self {
             frame,
-            ddof: 1,
             minor: settings.display_minor,
             percent: settings.percent,
-            precision: settings.float_precision,
+            precision: settings.precision,
             significant: settings.significant,
         }
     }
@@ -156,13 +154,12 @@ fn schema(data_frame: &DataFrame) -> PolarsResult<usize> {
 
 fn format(key: Key) -> PolarsResult<LazyFrame> {
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
+    // println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
     // Filter minor
     if !key.minor {
         // true or null (standard)
         lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
     }
-    println!("Display 1: {}", lazy_frame.clone().collect().unwrap());
     // Unnest
     lazy_frame = lazy_frame
         .unnest(
@@ -178,43 +175,40 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
             cols(["Factors.Enrichment", "Factors.Selectivity"]),
             Some(PlSmallStr::from_static(".")),
         );
-    println!("Display 2: {}", lazy_frame.clone().collect().unwrap());
-    // Sum
+    // Format sum
     let sum = lazy_frame.clone().select([
-        lit("∑").alias(LABEL),
-        col(r#"^StereospecificNumbers.*\.Mean$"#).sum(),
+        format_float(
+            col(r#"^StereospecificNumbers.*\.Mean$"#)
+                .filter(col("Filter"))
+                .sum(),
+            key,
+        ),
         ternary_expr(
             col(r#"^StereospecificNumbers.*\.StandardDeviation$"#)
                 .is_not_null()
                 .any(true),
-            col(r#"^StereospecificNumbers.*\.StandardDeviation$"#)
-                .pow(2)
-                .sum()
-                .sqrt(),
+            format_standard_deviation(
+                col(r#"^StereospecificNumbers.*\.StandardDeviation$"#)
+                    .pow(2)
+                    .sum()
+                    .sqrt(),
+                key,
+            )?,
             lit(NULL),
         ),
     ]);
-    lazy_frame = lazy_frame.with_columns([
-        col(r#"^StereospecificNumbers123\.Mean$"#)
-            .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
-            .sum()
-            .alias("_StereospecificNumbers123.Unsaturated"),
-        col(r#"^StereospecificNumbers2\.Mean$"#)
-            .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
-            .sum()
-            .alias("_StereospecificNumbers2.Unsaturated"),
-    ]);
-    println!("Display sum: {}", sum.clone().collect().unwrap());
-    lazy_frame = concat_lf_diagonal([lazy_frame, sum], Default::default())?;
-    println!("Display 3: {}", lazy_frame.clone().collect().unwrap());
+    // println!("Display sum: {}", sum.clone().collect().unwrap());
     // Format
+    let predicate = col("StereospecificNumbers123.StandardDeviation")
+        .is_null()
+        .or(col("StereospecificNumbers2.StandardDeviation").is_null());
     lazy_frame = lazy_frame.with_columns([
         // Stereospecific numbers
-        format_mean(col(r#"^StereospecificNumbers.*\.Mean$"#), key),
+        format_float(col(r#"^StereospecificNumbers.*\.Mean$"#), key),
         format_standard_deviation(col(r#"^StereospecificNumbers.*\.StandardDeviation$"#), key)?,
         format_array(col(r#"^StereospecificNumbers.*\.Array$"#), key)?,
         // Factors
-        format_mean(
+        format_float(
             col(r#"^Factors.*\.Mean$"#),
             Key {
                 percent: false,
@@ -235,35 +229,59 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
                 ..key
             },
         )?,
-        // Temp
-        format_mean(col(r#"^_StereospecificNumbers.*\.Unsaturated$"#), key),
+        // Calculation
+        format_sn13(
+            predicate.clone(),
+            format_float(col("StereospecificNumbers123.Mean"), key),
+            format_float(col("StereospecificNumbers2.Mean"), key),
+        )?
+        .alias("StereospecificNumbers13.Calculation"),
+        format_ef(
+            predicate.clone(),
+            format_float(col("StereospecificNumbers123.Mean"), key),
+            format_float(col("StereospecificNumbers2.Mean"), key),
+        )?
+        .alias("Factors.Enrichment.Calculation"),
+        format_sf(
+            predicate.clone(),
+            format_float(col("StereospecificNumbers123.Mean"), key),
+            format_float(col("StereospecificNumbers2.Mean"), key),
+            format_float(
+                col("StereospecificNumbers123.Mean")
+                    .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
+                    .sum(),
+                key,
+            ),
+            format_float(
+                col("StereospecificNumbers2.Mean")
+                    .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
+                    .sum(),
+                key,
+            ),
+        )?
+        .alias("Factors.Selectivity.Calculation"),
     ]);
-    println!("Display 4: {}", lazy_frame.clone().collect().unwrap());
-    lazy_frame = lazy_frame.with_columns([
-        sn13_calculation()?.alias("StereospecificNumbers13.Calculation"),
-        ef_calculation()?.alias("Factors.Enrichment.Calculation"),
-        sf_calculation()?.alias("Factors.Selectivity.Calculation"),
-    ]);
-    lazy_frame = lazy_frame.drop(cols(["^_.*$"]));
-    println!("Display 5: {}", lazy_frame.clone().collect().unwrap());
+    // Concat
+    lazy_frame = concat_lf_diagonal([lazy_frame, sum], Default::default())?;
+    // println!("Display 5: {}", lazy_frame.clone().collect().unwrap());
     Ok(lazy_frame)
 }
 
-fn format_mean(expr: Expr, key: Key) -> Expr {
-    expr.percent_if(key.percent)
-        .precision(key.precision, false)
-        .cast(DataType::String)
+fn format_float(expr: Expr, key: Key) -> Expr {
+    float(
+        expr,
+        Key {
+            significant: false,
+            ..key
+        },
+    )
+    .cast(DataType::String)
 }
 
 fn format_standard_deviation(expr: Expr, key: Key) -> PolarsResult<Expr> {
     Ok(ternary_expr(
         expr.clone().is_not_null(),
-        format_str(
-            "±{}",
-            [expr
-                .percent_if(key.percent)
-                .precision(key.precision, key.significant)],
-        )?,
+        format_str("±{}", [float(expr, key)])?,
         lit(NULL),
     ))
 }
@@ -275,13 +293,7 @@ fn format_array(expr: Expr, key: Key) -> PolarsResult<Expr> {
             "[{}]",
             [expr
                 .arr()
-                .eval(
-                    element()
-                        .percent_if(key.percent)
-                        .precision(key.precision, key.significant)
-                        .cast(DataType::String),
-                    false,
-                )
+                .eval(format_float(element(), key), false)
                 .arr()
                 .join(lit(", "), false)],
         )?,
@@ -289,52 +301,31 @@ fn format_array(expr: Expr, key: Key) -> PolarsResult<Expr> {
     ))
 }
 
-fn sn13_calculation() -> PolarsResult<Expr> {
+fn float(expr: Expr, key: Key) -> Expr {
+    expr.percent_if(key.percent)
+        .precision(key.precision, key.significant)
+}
+
+fn format_sn13(predicate: Expr, sn123: Expr, sn2: Expr) -> PolarsResult<Expr> {
     Ok(ternary_expr(
-        col("StereospecificNumbers123.StandardDeviation")
-            .is_null()
-            .or(col("StereospecificNumbers2.StandardDeviation").is_null()),
-        format_str(
-            "(3 * {} - {}) / 2",
-            [
-                col("StereospecificNumbers123.Mean"),
-                col("StereospecificNumbers2.Mean"),
-            ],
-        )?,
+        predicate,
+        format_str("(3 * {} - {}) / 2", [sn123, sn2])?,
         lit(NULL),
     ))
 }
 
-fn ef_calculation() -> PolarsResult<Expr> {
+fn format_ef(predicate: Expr, sn123: Expr, sn2: Expr) -> PolarsResult<Expr> {
     Ok(ternary_expr(
-        col("StereospecificNumbers123.StandardDeviation")
-            .is_null()
-            .or(col("StereospecificNumbers2.StandardDeviation").is_null()),
-        format_str(
-            "2 / 3 * ({} / {})",
-            [
-                col("StereospecificNumbers2.Mean"),
-                col("StereospecificNumbers123.Mean"),
-            ],
-        )?,
+        predicate,
+        format_str("1 / 3 *  ({} / {})", [sn2, sn123])?,
         lit(NULL),
     ))
 }
 
-fn sf_calculation() -> PolarsResult<Expr> {
+fn format_sf(predicate: Expr, sn123: Expr, sn2: Expr, u123: Expr, u2: Expr) -> PolarsResult<Expr> {
     Ok(ternary_expr(
-        col("StereospecificNumbers123.StandardDeviation")
-            .is_null()
-            .or(col("StereospecificNumbers2.StandardDeviation").is_null()),
-        format_str(
-            "({} * {}) / ({} * {})",
-            [
-                col("StereospecificNumbers2.Mean"),
-                col("_StereospecificNumbers123.Unsaturated"),
-                col("StereospecificNumbers123.Mean"),
-                col("_StereospecificNumbers2.Unsaturated"),
-            ],
-        )?,
+        predicate,
+        format_str("1 / 3 * ({} * {}) / ({} * {})", [sn2, u123, sn123, u2])?,
         lit(NULL),
     ))
 }
