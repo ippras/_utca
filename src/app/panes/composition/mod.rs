@@ -173,12 +173,12 @@ impl Pane {
         });
         ui.separator();
         // Reset
-        ui.reset(&mut state.reset_table_state);
+        ui.reset_button(&mut state.reset_table_state);
         // Resize
-        ui.resize(&mut state.settings.resizable);
+        ui.resize_button(&mut state.settings.resizable);
         ui.separator();
         // Settings
-        ui.settings(&mut state.windows.open_settings);
+        ui.settings_button(&mut state.windows.open_settings);
         ui.separator();
         // Save
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
