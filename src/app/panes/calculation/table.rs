@@ -21,7 +21,7 @@ use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use lipid::prelude::*;
 use polars::prelude::*;
-use std::{borrow::Cow, ops::Range};
+use std::ops::Range;
 use tracing::instrument;
 
 const LEN: usize = top::FS.end;
@@ -311,50 +311,6 @@ impl TableDelegate for TableView<'_> {
             .show(ui, |ui| {
                 let _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
             });
-    }
-}
-
-/// Extension methods for [`Response`]
-trait ResponseExt: Sized {
-    fn calculation(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
-
-    fn standard_deviation(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
-
-    fn array(self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self>;
-}
-
-impl ResponseExt for Response {
-    fn calculation(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
-        if let Some(calculation) = data_frame["Calculation"].str()?.get(row) {
-            self = self.on_hover_ui(|ui| {
-                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                ui.heading(ui.localize("Calculation"));
-                ui.label(calculation);
-            });
-        }
-        Ok(self)
-    }
-
-    fn standard_deviation(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
-        if let Some(text) = data_frame["StandardDeviation"].str()?.get(row) {
-            self = self.on_hover_ui(|ui| {
-                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                ui.heading(ui.localize("StandardDeviation"));
-                ui.label(text);
-            });
-        }
-        Ok(self)
-    }
-
-    fn array(mut self, data_frame: &DataFrame, row: usize) -> PolarsResult<Self> {
-        if let Some(text) = data_frame["Array"].str()?.get(row) {
-            self = self.on_hover_ui(|ui| {
-                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                ui.heading(ui.localize("Array"));
-                ui.label(text);
-            });
-        }
-        Ok(self)
     }
 }
 

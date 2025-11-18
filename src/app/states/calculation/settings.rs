@@ -42,6 +42,7 @@ pub(crate) struct Settings {
     pub(crate) significant: bool,
     pub(crate) table: Table,
     pub(crate) display_minor: bool,
+    pub(crate) sort_by_minor_major: bool,
 
     // General parameters
     pub(crate) ddof: u8,
@@ -70,12 +71,13 @@ impl Settings {
             index: Some(0),
             // Display
             display_standard_deviation: true,
-            normalize_factors: false,
+            normalize_factors: true,
             percent: true,
             precision: 1,
             significant: false,
             table: Table::new(),
             display_minor: true,
+            sort_by_minor_major: true,
             // General parameters
             ddof: 1,
             // Special parameters
@@ -296,6 +298,13 @@ impl Settings {
                         ui.label(ui.localize("DisplayMinor.hover"));
                     });
                     ui.checkbox(&mut self.display_minor, ());
+                    ui.end_row();
+
+                    // Sort by minor major
+                    ui.label(ui.localize("SortByMinorMajor")).on_hover_ui(|ui| {
+                        ui.label(ui.localize("SortByMinorMajor.hover"));
+                    });
+                    ui.checkbox(&mut self.sort_by_minor_major, ());
                 });
             });
     }
