@@ -16,10 +16,12 @@ use crate::{
 };
 use egui::{
     ComboBox, DragValue, Grid, Id, Key, KeyboardShortcut, Modifiers, PopupCloseBehavior,
-    ScrollArea, Slider, Ui, Vec2b, Widget as _, emath::Float,
+    ScrollArea, Slider, Ui, Vec2b, Widget as _,
+    containers::menu::{MenuButton, MenuConfig},
+    emath::Float,
 };
 use egui_l20n::UiExt;
-use egui_phosphor::regular::{CHART_BAR, ERASER, MINUS, PLUS, TABLE};
+use egui_phosphor::regular::{BOOKMARK, CHART_BAR, ERASER, MINUS, PLUS, TABLE};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -33,26 +35,50 @@ pub(crate) struct Settings {
     pub(crate) index: Option<usize>,
 
     pub(crate) percent: bool,
-    pub(crate) float_precision: usize,
+    pub(crate) precision: usize,
     pub(crate) resizable: bool,
     pub(crate) sticky_columns: usize,
 
     pub(crate) view: View,
-    pub(crate) parameters: Parameters,
+
+    // Parameters
+    pub(crate) ddof: u8,
+    pub(crate) adduct: f64,
+    pub(crate) method: Method,
+    pub(crate) order: Order,
+    pub(crate) round_mass: u32,
+    pub(crate) selections: VecDeque<Selection>,
+    pub(crate) show_filtered: bool,
+    pub(crate) sort: Sort,
+    // Gunstone method
+    pub(crate) discriminants: Discriminants,
 }
 
 impl Settings {
     pub(crate) fn new() -> Self {
+        let mut selections = VecDeque::new();
+        selections.push_front(Selection::new());
         Self {
             index: None,
 
             percent: true,
-            float_precision: 1,
+            precision: 1,
             resizable: false,
             sticky_columns: 0,
 
             view: View::Table,
-            parameters: Parameters::new(),
+
+            // Parameters
+            ddof: 1,
+            adduct: 0.0,
+            selections,
+            method: Method::VanderWal,
+            order: Order::Descending,
+            round_mass: 2,
+            show_filtered: false,
+            sort: Sort::Value,
+            // Gunstone method
+            discriminants: Discriminants::new(),
         }
     }
 
@@ -60,121 +86,18 @@ impl Settings {
         ScrollArea::vertical().show(ui, |ui| {
             Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
                 self.percent(ui);
-                ui.end_row();
-                self.float_precision(ui);
-                ui.end_row();
+                self.precision(ui);
                 self.sticky_columns(ui);
-                ui.end_row();
 
                 ui.separator();
                 ui.separator();
                 ui.end_row();
-
-                // Compose
-                ui.label(ui.localize("Compose"));
-                ui.menu_button(PLUS, |ui| {
-                    let id_salt = "Composition";
-                    let id = ui.auto_id_with(Id::new(id_salt));
-
-                    let mut current_value =
-                        ui.data_mut(|data| data.get_temp::<Option<Composition>>(id).flatten());
-                    let max_height = ui.spacing().combo_height;
-                    ScrollArea::vertical()
-                        .max_height(max_height)
-                        .show(ui, |ui| {
-                            for selected_value in COMPOSITIONS {
-                                let response = ui
-                                    .selectable_value(
-                                        &mut current_value,
-                                        Some(selected_value),
-                                        ui.localize(selected_value.text()),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(ui.localize(selected_value.hover_text()));
-                                    });
-                                if response.clicked() {
-                                    self.parameters.selections.push_front(Selection {
-                                        composition: selected_value,
-                                        filter: Default::default(),
-                                    });
-                                    current_value = None;
-                                    ui.close();
-                                }
-                            }
-                        });
-                    ui.data_mut(|data| data.insert_temp(id, current_value));
-                });
-                ui.end_row();
-                let mut index = 0;
-                self.parameters.selections.retain_mut(|selection| {
-                    let mut keep = true;
-                    ui.label("");
-                    ui.horizontal(|ui| {
-                        // Delete
-                        keep = !ui.button(MINUS).clicked();
-                        ComboBox::from_id_salt(ui.next_auto_id())
-                            .selected_text(ui.localize(selection.composition.text()))
-                            .show_ui(ui, |ui| {
-                                for composition in COMPOSITIONS {
-                                    if ui
-                                        .selectable_value(
-                                            &mut selection.composition,
-                                            composition,
-                                            ui.localize(composition.text()),
-                                        )
-                                        .on_hover_ui(|ui| {
-                                            ui.label(ui.localize(composition.hover_text()));
-                                        })
-                                        .changed()
-                                    {
-                                        selection.filter = Default::default();
-                                    }
-                                }
-                            })
-                            .response
-                            .on_hover_ui(|ui| {
-                                ui.label(ui.localize(selection.composition.hover_text()));
-                            });
-                        // Filter
-                        // let data_frame = ui.memory_mut(|memory| {
-                        //     memory
-                        //         .caches
-                        //         .cache::<UniqueCompositionComputed>()
-                        //         .get(UniqueCompositionKey {
-                        //             data_frame,
-                        //             selections: &self.confirmable.selections,
-                        //         })
-                        // });
-                        // if let Some(series) = ui.memory_mut(|memory| {
-                        //     memory
-                        //         .caches
-                        //         .cache::<UniqueCompositionComputed>()
-                        //         .get(UniqueCompositionKey { data_frame, index })
-                        // }) {
-                        //     // ui.add(FilterWidget::new(selection, &series).percent(self.percent));
-                        // }
-                        if let Some(series) = target["Keys"]
-                            .struct_()
-                            .unwrap()
-                            .fields_as_series()
-                            .get(index)
-                        {
-                            let series = series.unique().unwrap().sort(Default::default()).unwrap();
-                            FilterWidget::new(selection, &series)
-                                .percent(self.percent)
-                                .ui(ui);
-                        }
-                    });
-                    ui.end_row();
-                    index += 1;
-                    keep
-                });
 
                 // // Filter
                 // ui.label(ui.localize("Filter?case=title"));
                 // for (index, selection) in &mut self.unconfirmed.selections.iter_mut().enumerate() {
                 //     let series = &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
-                //     ui.add(FilterWidget::new(selection, series).percent(self.percent));
+                //     FilterWidget::new(selection, series).percent(self.percent).ui(ui);
                 // }
                 // ui.end_row();
 
@@ -195,17 +118,12 @@ impl Settings {
                 //     );
                 // }
 
+                self.compose(ui, target);
                 self.method(ui);
-                ui.end_row();
-
-                ui.label(ui.localize("Discriminants"));
-                self.parameters.discriminants.show(ui);
-                ui.end_row();
+                self.discriminants(ui);
 
                 self.adduct(ui);
-                ui.end_row();
                 self.round_mass(ui);
-                ui.end_row();
 
                 // View
                 ui.heading(ui.localize("View"));
@@ -215,7 +133,7 @@ impl Settings {
                 ui.label(ui.localize("ShowFiltered")).on_hover_ui(|ui| {
                     ui.label(ui.localize("ShowFiltered.hover"));
                 });
-                ui.checkbox(&mut self.parameters.show_filtered, "");
+                ui.checkbox(&mut self.show_filtered, "");
                 ui.end_row();
 
                 // // Join
@@ -239,9 +157,7 @@ impl Settings {
                 ui.end_row();
 
                 self.sort(ui);
-                ui.end_row();
                 self.order(ui);
-                ui.end_row();
 
                 if self.index.is_none() {
                     // Statistic
@@ -250,18 +166,167 @@ impl Settings {
                     ui.end_row();
 
                     self.ddof(ui);
-                    ui.end_row();
                 }
             });
         });
     }
 
-    /// Float precision
-    fn float_precision(&mut self, ui: &mut Ui) {
+    /// Compose
+    fn compose(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
+        // Compose
+        ui.label(ui.localize("Compose"));
+        ui.horizontal(|ui| {
+            MenuButton::new(PLUS)
+                .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+                .ui(ui, |ui| {
+                    let max_height = ui.spacing().combo_height;
+                    ScrollArea::vertical()
+                        .max_height(max_height)
+                        .show(ui, |ui| {
+                            let id = ui.auto_id_with(Id::new("Composition"));
+                            let mut current_value = ui.data_mut(|data| {
+                                data.get_temp::<Option<Composition>>(id).flatten()
+                            });
+                            for selected_value in COMPOSITIONS {
+                                let response = ui
+                                    .selectable_value(
+                                        &mut current_value,
+                                        Some(selected_value),
+                                        ui.localize(selected_value.text()),
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(ui.localize(selected_value.hover_text()));
+                                    });
+                                if response.clicked() {
+                                    self.selections.push_front(Selection {
+                                        composition: selected_value,
+                                        filter: Default::default(),
+                                    });
+                                    current_value = None;
+                                }
+                            }
+                            ui.data_mut(|data| data.insert_temp(id, current_value));
+                        });
+                });
+            if ui
+                .button((
+                    BOOKMARK,
+                    ui.localize(SPECIES_POSITIONAL.abbreviation_text()),
+                ))
+                .clicked()
+            {
+                self.selections = VecDeque::new();
+                self.selections.push_front(Selection {
+                    composition: SPECIES_POSITIONAL,
+                    filter: Filter::new(),
+                });
+            };
+            if ui
+                .button((BOOKMARK, ui.localize(SPECIES_MONO.abbreviation_text())))
+                .clicked()
+            {
+                self.selections = VecDeque::new();
+                self.selections.push_front(Selection {
+                    composition: SPECIES_MONO,
+                    filter: Filter::new(),
+                });
+            };
+            if ui
+                .button((BOOKMARK, ui.localize(TYPE_POSITIONAL.abbreviation_text())))
+                .clicked()
+            {
+                self.selections = VecDeque::new();
+                self.selections.push_front(Selection {
+                    composition: TYPE_POSITIONAL,
+                    filter: Filter::new(),
+                });
+            };
+        });
+        ui.end_row();
+        let mut index = 0;
+        self.selections.retain_mut(|selection| {
+            let mut keep = true;
+            ui.label("");
+            ui.horizontal(|ui| {
+                // Delete
+                keep = !ui.button(MINUS).clicked();
+                ComboBox::from_id_salt(ui.next_auto_id())
+                    .selected_text(ui.localize(selection.composition.text()))
+                    .show_ui(ui, |ui| {
+                        for composition in COMPOSITIONS {
+                            if ui
+                                .selectable_value(
+                                    &mut selection.composition,
+                                    composition,
+                                    ui.localize(composition.text()),
+                                )
+                                .on_hover_ui(|ui| {
+                                    ui.label(ui.localize(composition.hover_text()));
+                                })
+                                .changed()
+                            {
+                                selection.filter = Default::default();
+                            }
+                        }
+                    })
+                    .response
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(selection.composition.hover_text()));
+                    });
+                // Filter
+                // let data_frame = ui.memory_mut(|memory| {
+                //     memory
+                //         .caches
+                //         .cache::<UniqueCompositionComputed>()
+                //         .get(UniqueCompositionKey {
+                //             data_frame,
+                //             selections: &self.confirmable.selections,
+                //         })
+                // });
+                // if let Some(series) = ui.memory_mut(|memory| {
+                //     memory
+                //         .caches
+                //         .cache::<UniqueCompositionComputed>()
+                //         .get(UniqueCompositionKey { data_frame, index })
+                // }) {
+                //     // ui.add(FilterWidget::new(selection, &series).percent(self.percent));
+                // }
+                if let Some(series) = target["Keys"]
+                    .struct_()
+                    .unwrap()
+                    .fields_as_series()
+                    .get(index)
+                {
+                    let series = series.unique().unwrap().sort(Default::default()).unwrap();
+                    FilterWidget::new(selection, &series)
+                        .percent(self.percent)
+                        .ui(ui);
+                }
+            });
+            ui.end_row();
+            index += 1;
+            keep
+        });
+        // Если пуст, то вставляет значение по умолчанию (не может быть пустым).
+        if self.selections.is_empty() {
+            self.selections.push_front(Selection::new());
+        }
+    }
+
+    /// Discriminants
+    fn discriminants(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Discriminants"));
+        self.discriminants.show(ui);
+        ui.end_row();
+    }
+
+    /// Precision
+    fn precision(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
             ui.label(ui.localize("Precision.hover"));
         });
-        Slider::new(&mut self.float_precision, 1..=MAX_PRECISION).ui(ui);
+        Slider::new(&mut self.precision, 1..=MAX_PRECISION).ui(ui);
+        ui.end_row();
     }
 
     /// Percent
@@ -270,6 +335,7 @@ impl Settings {
             ui.label(ui.localize("Percent.hover"));
         });
         ui.checkbox(&mut self.percent, ());
+        ui.end_row();
     }
 
     /// Sticky columns
@@ -277,11 +343,8 @@ impl Settings {
         ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
             ui.label(ui.localize("StickyColumns.hover"));
         });
-        Slider::new(
-            &mut self.sticky_columns,
-            0..=self.parameters.selections.len() * 2 + 1,
-        )
-        .ui(ui);
+        Slider::new(&mut self.sticky_columns, 0..=self.selections.len() * 2 + 1).ui(ui);
+        ui.end_row();
     }
 
     /// Method
@@ -290,18 +353,18 @@ impl Settings {
         if ui.input_mut(|input| {
             input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::G))
         }) {
-            self.parameters.method = Method::Gunstone;
+            self.method = Method::Gunstone;
         }
         if ui.input_mut(|input| {
             input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::W))
         }) {
-            self.parameters.method = Method::VanderWal;
+            self.method = Method::VanderWal;
         }
         ComboBox::from_id_salt("Method")
-            .selected_text(ui.localize(self.parameters.method.text()))
+            .selected_text(ui.localize(self.method.text()))
             .show_ui(ui, |ui| {
                 ui.selectable_value(
-                    &mut self.parameters.method,
+                    &mut self.method,
                     Method::Gunstone,
                     ui.localize(Method::Gunstone.text()),
                 )
@@ -309,7 +372,7 @@ impl Settings {
                     ui.label(ui.localize(Method::Gunstone.hover_text()));
                 });
                 ui.selectable_value(
-                    &mut self.parameters.method,
+                    &mut self.method,
                     Method::MartinezForce,
                     ui.localize(Method::MartinezForce.text()),
                 )
@@ -317,7 +380,7 @@ impl Settings {
                     ui.label(ui.localize(Method::MartinezForce.hover_text()));
                 });
                 ui.selectable_value(
-                    &mut self.parameters.method,
+                    &mut self.method,
                     Method::VanderWal,
                     ui.localize(Method::VanderWal.text()),
                 )
@@ -327,19 +390,20 @@ impl Settings {
             })
             .response
             .on_hover_ui(|ui| {
-                ui.label(ui.localize(self.parameters.method.hover_text()));
+                ui.label(ui.localize(self.method.hover_text()));
             });
+        ui.end_row();
     }
 
     /// Adduct
     fn adduct(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Adduct"));
         ui.horizontal(|ui| {
-            let adduct = &mut self.parameters.adduct;
+            let adduct = &mut self.adduct;
             DragValue::new(adduct)
                 .range(0.0..=f64::MAX)
-                .speed(1.0 / 10f64.powi(self.parameters.round_mass as _))
-                .custom_formatter(|n, _| format!("{n:.*}", self.parameters.round_mass as _))
+                .speed(1.0 / 10f64.powi(self.round_mass as _))
+                .custom_formatter(|n, _| format!("{n:.*}", self.round_mass as _))
                 .ui(ui)
                 .on_hover_text(format!("{adduct}"));
             ComboBox::from_id_salt(ui.auto_id_with("Adduct"))
@@ -359,59 +423,50 @@ impl Settings {
                     ui.selectable_value(adduct, LI, "Li");
                 });
         });
+        ui.end_row();
     }
 
     /// Round mass
     fn round_mass(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("RoundMass"));
-        Slider::new(&mut self.parameters.round_mass, 0..=MAX_PRECISION as _).ui(ui);
+        Slider::new(&mut self.round_mass, 1..=MAX_PRECISION as _).ui(ui);
+        ui.end_row();
     }
 
     /// Sort
     fn sort(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Sort"));
         ComboBox::from_id_salt("Sort")
-            .selected_text(ui.localize(self.parameters.sort.text()))
+            .selected_text(ui.localize(self.sort.text()))
             .show_ui(ui, |ui| {
-                ui.selectable_value(
-                    &mut self.parameters.sort,
-                    Sort::Key,
-                    ui.localize(Sort::Key.text()),
-                )
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize(Sort::Key.hover_text()));
-                });
-                ui.selectable_value(
-                    &mut self.parameters.sort,
-                    Sort::Value,
-                    ui.localize(Sort::Value.text()),
-                )
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize(Sort::Value.hover_text()));
-                });
+                ui.selectable_value(&mut self.sort, Sort::Key, ui.localize(Sort::Key.text()))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(Sort::Key.hover_text()));
+                    });
+                ui.selectable_value(&mut self.sort, Sort::Value, ui.localize(Sort::Value.text()))
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(Sort::Value.hover_text()));
+                    });
             })
             .response
             .on_hover_ui(|ui| {
-                ui.label(ui.localize(self.parameters.sort.hover_text()));
+                ui.label(ui.localize(self.sort.hover_text()));
             });
+        ui.end_row();
     }
 
     /// Order
     fn order(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Order"));
         ComboBox::from_id_salt("Order")
-            .selected_text(ui.localize(self.parameters.order.text()))
+            .selected_text(ui.localize(self.order.text()))
             .show_ui(ui, |ui| {
+                ui.selectable_value(&mut self.order, Order::Ascending, Order::Ascending.text())
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(Order::Ascending.hover_text()));
+                    });
                 ui.selectable_value(
-                    &mut self.parameters.order,
-                    Order::Ascending,
-                    Order::Ascending.text(),
-                )
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize(Order::Ascending.hover_text()));
-                });
-                ui.selectable_value(
-                    &mut self.parameters.order,
+                    &mut self.order,
                     Order::Descending,
                     ui.localize(Order::Descending.text()),
                 )
@@ -421,8 +476,9 @@ impl Settings {
             })
             .response
             .on_hover_ui(|ui| {
-                ui.label(ui.localize(self.parameters.order.hover_text()));
+                ui.label(ui.localize(self.order.hover_text()));
             });
+        ui.end_row();
     }
 
     // https://numpy.org/devdocs/reference/generated/numpy.std.html
@@ -435,9 +491,10 @@ impl Settings {
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
             });
-        Slider::new(&mut self.parameters.ddof, 0..=2)
+        Slider::new(&mut self.ddof, 0..=2)
             .update_while_editing(false)
             .ui(ui);
+        ui.end_row();
     }
 }
 
@@ -447,59 +504,48 @@ impl Default for Settings {
     }
 }
 
-/// Composition parameters
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub(crate) struct Parameters {
-    pub(crate) adduct: f64,
-    pub(crate) ddof: u8,
-    pub(crate) selections: VecDeque<Selection>,
-    pub(crate) method: Method,
-    pub(crate) order: Order,
-    pub(crate) round_mass: u32,
-    pub(crate) show_filtered: bool,
-    pub(crate) sort: Sort,
+// /// Composition parameters
+// #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+// pub(crate) struct Parameters {}
 
-    pub(crate) discriminants: Discriminants,
-}
+// impl Parameters {
+//     pub(crate) fn new() -> Self {
+//         let mut selections = VecDeque::new();
+//         selections.push_back(Selection::new());
+//         Self {
+//             adduct: 0.0,
+//             ddof: 1,
+//             selections,
+//             method: Method::VanderWal,
+//             order: Order::Descending,
+//             round_mass: 2,
+//             show_filtered: false,
+//             sort: Sort::Value,
 
-impl Parameters {
-    pub(crate) fn new() -> Self {
-        let mut selections = VecDeque::new();
-        selections.push_back(Selection::new());
-        Self {
-            adduct: 0.0,
-            ddof: 1,
-            selections,
-            method: Method::VanderWal,
-            order: Order::Descending,
-            round_mass: 2,
-            show_filtered: false,
-            sort: Sort::Value,
+//             discriminants: Discriminants::new(),
+//         }
+//     }
+// }
 
-            discriminants: Discriminants::new(),
-        }
-    }
-}
+// impl Default for Parameters {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
 
-impl Default for Parameters {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Hash for Parameters {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.adduct.ord().hash(state);
-        self.ddof.hash(state);
-        self.selections.hash(state);
-        self.method.hash(state);
-        self.order.hash(state);
-        self.round_mass.hash(state);
-        self.show_filtered.hash(state);
-        self.sort.hash(state);
-        self.discriminants.hash(state);
-    }
-}
+// impl Hash for Parameters {
+//     fn hash<H: Hasher>(&self, state: &mut H) {
+//         self.adduct.ord().hash(state);
+//         self.ddof.hash(state);
+//         self.selections.hash(state);
+//         self.method.hash(state);
+//         self.order.hash(state);
+//         self.round_mass.hash(state);
+//         self.show_filtered.hash(state);
+//         self.sort.hash(state);
+//         self.discriminants.hash(state);
+//     }
+// }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub(crate) struct Discriminants(pub(crate) IndexMap<String, [f64; 3]>);

@@ -1,8 +1,3 @@
-use std::fmt::{Display, from_fn};
-
-// CompositionComputed, CompositionKey, CompositionSpeciesComputed, CompositionSpeciesKey,
-// FilteredCompositionComputed, FilteredCompositionKey, UniqueCompositionComputed,
-// UniqueCompositionKey,
 use self::{plot::PlotView, table::TableView};
 use super::{Behavior, MARGIN};
 use crate::{
@@ -40,6 +35,7 @@ use metadata::{
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, from_fn};
 use tracing::instrument;
 
 const ID_SOURCE: &str = "Composition";
@@ -350,7 +346,7 @@ impl Pane {
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
-        if state.settings.parameters.discriminants.is_empty() {
+        if state.settings.discriminants.is_empty() {
             let unique = ui.memory_mut(|memory| {
                 memory
                     .caches
@@ -359,7 +355,7 @@ impl Pane {
                         frames: &self.frames,
                     })
             });
-            state.settings.parameters.discriminants = unique.into_iter().collect();
+            state.settings.discriminants = unique.into_iter().collect();
         }
         if let Some(inner_response) =
             Window::new(format!("{SLIDERS_HORIZONTAL} Composition settings"))

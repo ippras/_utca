@@ -82,20 +82,12 @@ impl<'a> Key<'a> {
         Self {
             frames,
             index: settings.index,
-            ddof: settings.parameters.ddof,
-            discriminants: &settings.parameters.discriminants,
-            method: settings.parameters.method,
+            ddof: settings.ddof,
+            discriminants: &settings.discriminants,
+            method: settings.method,
         }
     }
 }
-
-// {
-//     frames: &self.source,
-//     index: state.settings.index,
-//     ddof: state.settings.parameters.ddof,
-//     method: state.settings.parameters.method,
-//     discriminants: &state.settings.parameters.discriminants,
-// }
 
 /// Parameters
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]

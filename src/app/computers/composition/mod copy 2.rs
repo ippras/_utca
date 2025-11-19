@@ -25,15 +25,21 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        // ┌───────────────────────────────────┬──────────────────────────────────┬───────────────────────────┐
-        // │ Label                             ┆ Triacylglycerol                  ┆ Value                     │
-        // │ ---                               ┆ ---                              ┆ ---                       │
-        // │ struct[3]                         ┆ struct[3]                        ┆ struct[3]                 │
-        // ╞═══════════════════════════════════╪══════════════════════════════════╪═══════════════════════════╡
         let data_frame = key.data_frame;
-        let length = length(data_frame)?;
+        // |Label|Triacylglycerol|Value|
+        // println!("Compose 0: {:?}", key.data_frame);
+        let mode = length(data_frame)?;
+        // println!("Compose 1: {}", lazy_frame.clone().collect().unwrap());
+        // let mut selections = key.selections.clone();
+        // if key.selections.is_empty() {
+        //     selections.push_back(Selection {
+        //         composition: SPECIES_STEREO,
+        //         filter: Filter::new(),
+        //     });
+        //     key.selections = &selections;
+        // }
         let mut lazy_frame = key.data_frame.data_frame.clone().lazy();
-        lazy_frame = compute(lazy_frame, length, key)?;
+        lazy_frame = compute(lazy_frame, mode, key)?;
         lazy_frame.collect()
     }
 }
@@ -62,12 +68,12 @@ impl<'a> Key<'a> {
         Self {
             data_frame,
             index: settings.index,
-            adduct: OrderedFloat(settings.adduct),
-            ddof: settings.ddof,
-            order: settings.order,
-            round_mass: settings.round_mass,
-            selections: &settings.selections,
-            sort: settings.sort,
+            adduct: OrderedFloat(settings.parameters.adduct),
+            ddof: settings.parameters.ddof,
+            order: settings.parameters.order,
+            round_mass: settings.parameters.round_mass,
+            selections: &settings.parameters.selections,
+            sort: settings.parameters.sort,
         }
     }
 }
@@ -75,8 +81,16 @@ impl<'a> Key<'a> {
 /// Composition value
 type Value = DataFrame;
 
-fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
-    const SCHEMA: LazyLock<Schema> = LazyLock::new(|| {
+fn length(data_frame: &DataFrame) -> PolarsResult<Mode> {
+    const ONE: LazyLock<Schema> = LazyLock::new(|| {
+        Schema::from_iter([
+            field!(LABEL[DataType::String]),
+            field!(TRIACYLGLYCEROL),
+            Field::new(PlSmallStr::from_static("Value"), DataType::Float64),
+        ])
+    });
+
+    const MANY: LazyLock<Schema> = LazyLock::new(|| {
         Schema::from_iter([
             field!(LABEL[DataType::String]),
             field!(TRIACYLGLYCEROL),
@@ -114,7 +128,9 @@ fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
         && *triacylglycerol == data_type!(TRIACYLGLYCEROL)
         && let Some(value) = schema.get("Value")
     {
-        if let DataType::Struct(fields) = value
+        if *value == DataType::Float64 {
+            return Ok(Mode::One);
+        } else if let DataType::Struct(fields) = value
             && let [field1, field2, field3] = &**fields
             && field1.name == "Mean"
             && field1.dtype == DataType::Float64
@@ -123,21 +139,21 @@ fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
             && field3.name == "Array"
             && let DataType::Array(box DataType::Float64, length) = field3.dtype
         {
-            return Ok(length);
+            return Ok(Mode::Many(length as _));
         }
     }
-    polars_bail!(SchemaMismatch: "Invalid composition schema: expected `{SCHEMA:?}`, got = `{schema:?}`");
+    polars_bail!(SchemaMismatch: "Invalid composition schema: expected [`{ONE:?}`, `{MANY:?}`], got = `{schema:?}`");
 }
 
-fn compute(mut lazy_frame: LazyFrame, length: usize, key: Key) -> PolarsResult<LazyFrame> {
+fn compute(mut lazy_frame: LazyFrame, mode: Mode, key: Key) -> PolarsResult<LazyFrame> {
     // Compose
-    lazy_frame = compose(lazy_frame, length, key)?;
+    lazy_frame = compose(lazy_frame, mode, key)?;
     // Sort
     lazy_frame = sort(lazy_frame, key);
     Ok(lazy_frame)
 }
 
-fn compose(mut lazy_frame: LazyFrame, length: usize, key: Key) -> PolarsResult<LazyFrame> {
+fn compose(mut lazy_frame: LazyFrame, mode: Mode, key: Key) -> PolarsResult<LazyFrame> {
     // Composition
     for (index, selection) in key.selections.iter().enumerate() {
         lazy_frame = lazy_frame.with_column(
@@ -199,25 +215,46 @@ fn compose(mut lazy_frame: LazyFrame, length: usize, key: Key) -> PolarsResult<L
             }
             .alias(format!("Key{index}")),
         );
-        let array = || {
-            concat_arr(
-                (0..length)
-                    .map(|index| {
-                        col("Value")
-                            .struct_()
-                            .field_by_name("Array")
-                            .arr()
-                            .get(lit(index as IdxSize), false)
-                            .sum()
-                    })
-                    .collect(),
-            )
-        };
-        let expr = as_struct(vec![
-            array()?.arr().mean().alias("Mean"),
-            array()?.arr().std(key.ddof).alias("StandardDeviation"),
-            array()?.alias("Array"),
-        ])
+        let expr = match mode {
+            Mode::One => sum("Value"),
+            Mode::Many(length) => {
+                // let array = || {
+                //     col("Value")
+                //         .struct_()
+                //         .field_by_name("Array")
+                //         .arr()
+                //         .to_list()
+                //         .list()
+                //         .eval(col("").sum())
+                //         .list()
+                //         .to_array(length as _).over([as_struct(vec![col(format!("^Key[0-{index}]$"))])])
+                // };
+                // as_struct(vec![
+                //     array().arr().mean().alias("Mean"),
+                //     array().arr().std(ddof).alias("StandardDeviation"),
+                //     array().alias("Array"),
+                // ])
+                let array = || {
+                    concat_arr(
+                        (0..length)
+                            .map(|index| {
+                                col("Value")
+                                    .struct_()
+                                    .field_by_name("Array")
+                                    .arr()
+                                    .get(lit(index), false)
+                                    .sum()
+                            })
+                            .collect(),
+                    )
+                };
+                as_struct(vec![
+                    array()?.arr().mean().alias("Mean"),
+                    array()?.arr().std(key.ddof).alias("StandardDeviation"),
+                    array()?.alias("Array"),
+                ])
+            }
+        }
         .over([as_struct(vec![col(format!("^Key[0-{index}]$"))])])
         .alias(format!("Value{index}"));
         lazy_frame = lazy_frame.with_column(expr);

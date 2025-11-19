@@ -49,7 +49,7 @@ type Value = HashedDataFrame;
 
 fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     let mut predicate = lit(true);
-    for (index, selection) in settings.parameters.selections.iter().enumerate() {
+    for (index, selection) in settings.selections.iter().enumerate() {
         // Key
         for (key, value) in &selection.filter.key {
             let expr = col("Keys").struct_().field_by_index(index as _);
