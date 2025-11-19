@@ -53,7 +53,7 @@ impl Computer {
             {
                 let label = || col("").struct_().field_by_name(LABEL);
                 format_str(
-                    "[{}; {}; {}]",
+                    "[{}; {}; {}]",
                     [
                         label().triacylglycerol().stereospecific_number1(),
                         label().triacylglycerol().stereospecific_number2(),
@@ -65,7 +65,7 @@ impl Computer {
             {
                 let triacylglycerol = || col("").struct_().field_by_name(TRIACYLGLYCEROL);
                 format_str(
-                    "[{}; {}; {}]",
+                    "[{}; {}; {}]",
                     [
                         triacylglycerol()
                             .triacylglycerol()
@@ -118,7 +118,7 @@ impl Computer {
                     let key = match *composition {
                         ECN_MONO | MASS_MONO | UNSATURATION_MONO => format_str("({})", [key()])?,
                         SPECIES_MONO | TYPE_MONO => format_str(
-                            "({}; {}; {})", // { 1, 2, 3: {}, {}, {}}
+                            "({}; {}; {})", // { 1, 2, 3: {}, {}, {}}
                             [
                                 key().triacylglycerol().stereospecific_number1(),
                                 key().triacylglycerol().stereospecific_number2(),
@@ -127,7 +127,7 @@ impl Computer {
                         )?,
                         ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO
                         | UNSATURATION_STEREO => format_str(
-                            "[{}; {}; {}]", // { 1: {}; 2: {}; 3: {}}
+                            "[{}; {}; {}]", // { 1: {}; 2: {}; 3: {}}
                             [
                                 key().triacylglycerol().stereospecific_number1(),
                                 key().triacylglycerol().stereospecific_number2(),
@@ -135,7 +135,7 @@ impl Computer {
                             ],
                         )?,
                         SPECIES_POSITIONAL | TYPE_POSITIONAL => format_str(
-                            "{{}; {}; {}}",
+                            "{{}; {}; {}}",
                             [
                                 key().triacylglycerol().stereospecific_number1(),
                                 key().triacylglycerol().stereospecific_number2(),

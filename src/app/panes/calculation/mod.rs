@@ -40,7 +40,7 @@ use metadata::{
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, from_fn};
+use std::fmt::{Debug, Display, from_fn};
 use tracing::instrument;
 
 const ID_SOURCE: &str = "Calculation";
@@ -148,6 +148,7 @@ impl Pane {
             .on_hover_text(format!("{}/{:x}", self.id(), self.target.hash))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
+        // List
         self.list_button(ui, state);
         ui.separator();
         // Reset
@@ -158,11 +159,14 @@ impl Pane {
         // Settings
         ui.settings_button(&mut state.windows.open_settings);
         ui.separator();
+        // Sum
         self.sum_button(ui, state);
         ui.separator();
-        self.composition_button(ui, state);
-        ui.separator();
+        // Save
         self.save_button(ui, state);
+        ui.separator();
+        // Composition
+        self.composition_button(ui, state);
         ui.separator();
         response
     }
@@ -273,28 +277,29 @@ impl Pane {
         Ok(())
     }
 
-    fn save_button(&self, ui: &mut Ui, state: &mut State) {
+    fn save_button(&self, ui: &mut Ui, state: &State) {
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
-            let title = self.title_with_separator(state.settings.index, ".");
+            let meta = self.meta(state);
+            let name = meta.format(".");
             if ui
-                .button("RON")
+                .button((FLOPPY_DISK, "RON"))
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("Save"));
                 })
                 .on_hover_ui(|ui| {
-                    ui.label(&format!("{title}.fa.utca.ron"));
+                    ui.label(format!("{name}.fa.utca.ron"));
                 })
                 .clicked()
             {
-                let _ = self.save_ron(&title, state);
+                let _ = self.save_ron(&name, &meta);
             }
             if ui
-                .button("PARQUET")
+                .button((FLOPPY_DISK, "PARQUET"))
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("Save"));
                 })
                 .on_hover_ui(|ui| {
-                    ui.label(&format!("{title}.fa.utca.parquet"));
+                    ui.label(format!("{name}.fa.utca.parquet"));
                 })
                 .clicked()
             {
@@ -303,8 +308,8 @@ impl Pane {
         });
     }
 
-    #[instrument(skip_all, err)]
-    fn save_ron(&self, title: &str, state: &mut State) -> Result<()> {
+    #[instrument(skip(self), err)]
+    fn save_ron(&self, name: impl Debug + Display, meta: &Metadata) -> Result<()> {
         let data = self
             .target
             .data_frame
@@ -318,21 +323,8 @@ impl Pane {
                 col(STEREOSPECIFIC_NUMBERS2),
             ])
             .collect()?;
-        let meta = match state.settings.index {
-            Some(index) => self.frames[index].meta.clone(),
-            None => {
-                let mut meta = Metadata::default();
-                meta.insert(AUTHORS.to_owned(), authors(&self.frames));
-                meta.insert(DATE.to_owned(), date(&self.frames));
-                meta.insert(DESCRIPTION.to_owned(), description(&self.frames));
-                meta.insert(NAME.to_owned(), name(&self.frames));
-                meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
-                meta
-            }
-        };
-        println!("meta: {meta}");
         let frame = MetaDataFrame::new(meta, data);
-        ron::save(&frame, &format!("{title}.fa.utca.ron"))?;
+        ron::save(&frame, &format!("{name}.fa.utca.ron"))?;
         Ok(())
     }
 
@@ -379,6 +371,21 @@ impl Pane {
     //     let _ = parquet::save(&mut frame, &format!("{title}.fa.utca.parquet"));
     //     Ok(())
     // }
+
+    fn meta(&self, state: &State) -> Metadata {
+        match state.settings.index {
+            Some(index) => self.frames[index].meta.clone(),
+            None => {
+                let mut meta = Metadata::default();
+                meta.insert(AUTHORS.to_owned(), authors(&self.frames));
+                meta.insert(DATE.to_owned(), date(&self.frames));
+                meta.insert(DESCRIPTION.to_owned(), description(&self.frames));
+                meta.insert(NAME.to_owned(), name(&self.frames));
+                meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
+                meta
+            }
+        }
+    }
 
     #[instrument(skip_all, err)]
     fn central(&mut self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {

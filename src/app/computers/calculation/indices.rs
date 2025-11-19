@@ -15,28 +15,6 @@ const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
     STEREOSPECIFIC_NUMBERS2,
 ];
 
-// const NAMES: [&str; 19] = [
-//     "Monounsaturated",
-//     "Polyunsaturated",
-//     "Saturated",
-//     "Trans",
-//     "Unsaturated",
-//     "Unsaturated-9",
-//     "Unsaturated-6",
-//     "Unsaturated-3",
-//     "Unsaturated9",
-//     "EicosapentaenoicAndDocosahexaenoic",
-//     "FishLipidQuality",
-//     "HealthPromotingIndex",
-//     "HypocholesterolemicToHypercholesterolemic",
-//     "IndexOfAtherogenicity",
-//     "IndexOfThrombogenicity",
-//     "LinoleicToAlphaLinolenic",
-//     "Polyunsaturated-6ToPolyunsaturated-3",
-//     "PolyunsaturatedToSaturated",
-//     "UnsaturationIndex",
-// ];
-
 /// Calculation indices computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
 

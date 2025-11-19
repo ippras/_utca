@@ -69,7 +69,7 @@ pub(crate) struct Settings {
 impl Settings {
     pub(crate) fn new() -> Self {
         Self {
-            index: Some(0),
+            index: None,
             // Display
             display_standard_deviation: true,
             normalize_factors: true,
