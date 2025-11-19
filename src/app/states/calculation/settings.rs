@@ -322,9 +322,14 @@ impl Settings {
         ui.label(ui.localize("ManualThreshold")).on_hover_ui(|ui| {
             ui.label(ui.localize("ManualThreshold.hover"));
         });
+        let selected_text = format_list_truncated!(
+            zip(&self.threshold.manual, &self.fatty_acids)
+                .filter_map(|(keep, fatty_acid)| keep.then_some(fatty_acid)),
+            1
+        );
         ComboBox::from_id_salt("ManualThreshold")
             .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
-            .selected_text(self.standard.text())
+            .selected_text(&selected_text)
             .show_ui(ui, |ui| {
                 for (fatty_acid, selected) in zip(&self.fatty_acids, &mut self.threshold.manual) {
                     if ui
@@ -338,7 +343,7 @@ impl Settings {
             })
             .response
             .on_hover_ui(|ui| {
-                ui.label(ui.localize(self.standard.hover_text()));
+                ui.label(selected_text);
             });
     }
 

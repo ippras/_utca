@@ -225,12 +225,12 @@ impl Pane {
             })
             .clicked()
         {
-            let _ = self.composition(ui, state);
+            let _ = self.composition_content(ui, state);
         }
     }
 
     #[instrument(skip_all, err)]
-    fn composition(&self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
+    fn composition_content(&self, ui: &mut Ui, state: &mut State) -> PolarsResult<()> {
         let mut frames = Vec::with_capacity(self.frames.len());
         for index in 0..self.frames.len() {
             let meta = self.frames[index].meta.clone();
