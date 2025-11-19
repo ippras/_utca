@@ -60,7 +60,7 @@ impl TableView<'_> {
         }
         let height = ui.text_style_height(&TextStyle::Heading);
         let num_rows = self.data_frame.height() as u64 + 1;
-        let num_columns = self.state.settings.parameters.selections.len() * 2 + 1;
+        let num_columns = self.state.settings.selections.len() * 2 + 1;
         let top = vec![0..1, 1..num_columns];
         let mut middle = vec![0..1];
         const STEP: usize = 2;
@@ -101,7 +101,7 @@ impl TableView<'_> {
             (1, column) => {
                 if column.start % 2 == 1 {
                     let index = column.start / 2;
-                    let composition = self.state.settings.parameters.selections[index].composition;
+                    let composition = self.state.settings.selections[index].composition;
                     ui.heading(ui.localize(composition.text()))
                         .on_hover_text(ui.localize(composition.hover_text()));
                 } else if column.start != 0 {
@@ -153,7 +153,6 @@ impl TableView<'_> {
                             compositions: &self
                                 .state
                                 .settings
-                                .parameters
                                 .selections
                                 .iter()
                                 .map(|selection| selection.composition)
@@ -175,7 +174,6 @@ impl TableView<'_> {
                             compositions: &self
                                 .state
                                 .settings
-                                .parameters
                                 .selections
                                 .iter()
                                 .map(|selection| selection.composition)
@@ -191,7 +189,7 @@ impl TableView<'_> {
                     // ui.label(text);
                     // let keys = self.data_frame["Keys"].struct_()?;
                     // let key = &keys.fields_as_series()[index];
-                    // let response = match self.state.settings.parameters.selections[index].composition {
+                    // let response = match self.state.settings.selections[index].composition {
                     //     ECN_MONO | MASS_MONO | UNSATURATION_MONO => {
                     //         let text = Mono(key.str_value(row)?).to_string();
                     //         ui.label(text)
@@ -250,7 +248,7 @@ impl TableView<'_> {
                     let mean = value.struct_()?.field_by_name("Mean")?;
                     if let Some(mean) = mean.f64()?.get(row) {
                         let response = ui
-                            .label(format!("{mean:.0$}", self.state.settings.float_precision))
+                            .label(format!("{mean:.0$}", self.state.settings.precision))
                             .on_hover_text(mean.to_string());
                         if response.hovered() {
                             response
@@ -266,12 +264,12 @@ impl TableView<'_> {
 
     fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         // Last column
-        if column.start == self.state.settings.parameters.selections.len() * 2 {
+        if column.start == self.state.settings.selections.len() * 2 {
             self.value(
                 ui,
                 self.data_frame["Values"].as_materialized_series(),
                 None,
-                self.state.settings.parameters.selections.len() - 1,
+                self.state.settings.selections.len() - 1,
             )?;
         }
         Ok(())
@@ -295,7 +293,7 @@ impl TableView<'_> {
         };
         let response = FloatWidget::new(value)
             .percent(self.state.settings.percent)
-            .precision(Some(self.state.settings.float_precision))
+            .precision(Some(self.state.settings.precision))
             .hover(true)
             .show(ui)
             .response

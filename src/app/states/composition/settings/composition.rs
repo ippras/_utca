@@ -7,7 +7,7 @@ use self::{
 use crate::text::Text;
 use serde::{Deserialize, Serialize};
 
-pub const COMPOSITIONS: [Composition; 12] = [
+pub(crate) const COMPOSITIONS: [Composition; 12] = [
     SPECIES_STEREO,
     SPECIES_POSITIONAL,
     SPECIES_MONO,
@@ -23,38 +23,41 @@ pub const COMPOSITIONS: [Composition; 12] = [
 ];
 
 // Mass composition, non-stereospecific, agregation
-pub const MASS_MONO: Composition = Mass(NonStereospecific(Agregation));
+pub(crate) const MASS_MONO: Composition = Mass(NonStereospecific(Agregation));
 // Mass composition, stereospecific
-pub const MASS_STEREO: Composition = Mass(Stereospecific);
+pub(crate) const MASS_STEREO: Composition = Mass(Stereospecific);
 
 // Equivalent carbon number composition, non-stereospecific, agregation
-pub const ECN_MONO: Composition = EquivalentCarbonNumber(NonStereospecific(Agregation));
+pub(crate) const ECN_MONO: Composition = EquivalentCarbonNumber(NonStereospecific(Agregation));
 // Equivalent carbon number composition, stereospecific
-pub const ECN_STEREO: Composition = EquivalentCarbonNumber(Stereospecific);
+pub(crate) const ECN_STEREO: Composition = EquivalentCarbonNumber(Stereospecific);
 
 // Species composition, non-stereospecific, permutation
-pub const SPECIES_MONO: Composition = Species(NonStereospecific(Permutation { positional: false }));
+pub(crate) const SPECIES_MONO: Composition =
+    Species(NonStereospecific(Permutation { positional: false }));
 // Species composition, non-stereospecific, permutation, positional
-pub const SPECIES_POSITIONAL: Composition =
+pub(crate) const SPECIES_POSITIONAL: Composition =
     Species(NonStereospecific(Permutation { positional: true }));
 // Species composition, stereospecific
-pub const SPECIES_STEREO: Composition = Species(Stereospecific);
+pub(crate) const SPECIES_STEREO: Composition = Species(Stereospecific);
 
 // Type composition, non-stereospecific, permutation
-pub const TYPE_MONO: Composition = Type(NonStereospecific(Permutation { positional: false }));
+pub(crate) const TYPE_MONO: Composition =
+    Type(NonStereospecific(Permutation { positional: false }));
 // Type composition, non-stereospecific, permutation, positional
-pub const TYPE_POSITIONAL: Composition = Type(NonStereospecific(Permutation { positional: true }));
+pub(crate) const TYPE_POSITIONAL: Composition =
+    Type(NonStereospecific(Permutation { positional: true }));
 // Type composition, stereospecific
-pub const TYPE_STEREO: Composition = Type(Stereospecific);
+pub(crate) const TYPE_STEREO: Composition = Type(Stereospecific);
 
 // Unsaturation composition, non-stereospecific, agregation
-pub const UNSATURATION_MONO: Composition = Unsaturation(NonStereospecific(Agregation));
+pub(crate) const UNSATURATION_MONO: Composition = Unsaturation(NonStereospecific(Agregation));
 // Unsaturation composition, stereospecific
-pub const UNSATURATION_STEREO: Composition = Unsaturation(Stereospecific);
+pub(crate) const UNSATURATION_STEREO: Composition = Unsaturation(Stereospecific);
 
 /// Composition
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum Composition {
+pub(crate) enum Composition {
     EquivalentCarbonNumber(Stereospecificity<Agregation>),
     Mass(Stereospecificity<Agregation>),
     Species(Stereospecificity<Permutation>),
@@ -63,8 +66,25 @@ pub enum Composition {
 }
 
 impl Composition {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         SPECIES_STEREO
+    }
+
+    pub(crate) fn abbreviation_text(&self) -> &'static str {
+        match *self {
+            ECN_MONO => "Composition-EquivalentCarbonNumber-Monospecific.abbreviation",
+            ECN_STEREO => "Composition-EquivalentCarbonNumber-Stereospecific.abbreviation",
+            MASS_MONO => "Composition-Mass-Monospecific.abbreviation",
+            MASS_STEREO => "Composition-Mass-Stereospecific.abbreviation",
+            SPECIES_MONO => "Composition-Species-Monospecific.abbreviation",
+            SPECIES_POSITIONAL => "Composition-Species-Positionalspecific.abbreviation",
+            SPECIES_STEREO => "Composition-Species-Stereospecific.abbreviation",
+            TYPE_MONO => "Composition-Type-Monospecific.abbreviation",
+            TYPE_POSITIONAL => "Composition-Type-Positionalspecific.abbreviation",
+            TYPE_STEREO => "Composition-Type-Stereospecific.abbreviation",
+            UNSATURATION_MONO => "Composition-Unsaturation-Monospecific.abbreviation",
+            UNSATURATION_STEREO => "Composition-Unsaturation-Stereospecific.abbreviation",
+        }
     }
 }
 
@@ -130,26 +150,26 @@ impl Default for Composition {
 }
 
 // /// Numeric
-// pub enum Numeric {
+// pub(crate) enum Numeric {
 //     Agregation(Stereospecificity<Agregation>),
 //     Permutation(Stereospecificity<Permutation>),
 // }
 
 /// Stereospecificity
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum Stereospecificity<T> {
+pub(crate) enum Stereospecificity<T> {
     Stereospecific,
     NonStereospecific(T),
 }
 
 /// Agregation
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct Agregation;
+pub(crate) struct Agregation;
 
 /// Permutation
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct Permutation {
-    pub positional: bool,
+pub(crate) struct Permutation {
+    pub(crate) positional: bool,
 }
 
 // Composition

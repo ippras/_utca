@@ -1,8 +1,3 @@
-use std::fmt::{Display, from_fn};
-
-// CompositionComputed, CompositionKey, CompositionSpeciesComputed, CompositionSpeciesKey,
-// FilteredCompositionComputed, FilteredCompositionKey, UniqueCompositionComputed,
-// UniqueCompositionKey,
 use self::{plot::PlotView, table::TableView};
 use super::{Behavior, MARGIN};
 use crate::{
@@ -40,6 +35,7 @@ use metadata::{
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Display, from_fn};
 use tracing::instrument;
 
 const ID_SOURCE: &str = "Composition";
@@ -49,6 +45,8 @@ const ID_SOURCE: &str = "Composition";
 pub(crate) struct Pane {
     id: Option<Id>,
     frames: Vec<HashedMetaDataFrame>,
+    // Слишком большой размер вызывает задержку при десериализации, при открытие
+    // программы.
     #[serde(skip)]
     target: HashedDataFrame,
 }
@@ -149,6 +147,39 @@ impl Pane {
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         // List
+        self.list_button(ui, state);
+        ui.separator();
+        // Reset
+        ui.reset_button(&mut state.reset_table_state);
+        // Resize
+        ui.resize_button(&mut state.settings.resizable);
+        ui.separator();
+        // Settings
+        ui.settings_button(&mut state.windows.open_settings);
+        ui.separator();
+        // Save
+        self.save_button(ui, state);
+        ui.separator();
+        // View
+        self.view_button(ui, state);
+        ui.separator();
+        response
+    }
+
+    /// View button
+    fn view_button(&self, ui: &mut Ui, state: &mut State) {
+        ui.menu_button(RichText::new(state.settings.view.icon()).heading(), |ui| {
+            ui.selectable_value(&mut state.settings.view, View::Plot, View::Plot.text())
+                .on_hover_text(View::Plot.hover_text());
+            ui.selectable_value(&mut state.settings.view, View::Table, View::Table.text())
+                .on_hover_text(View::Table.hover_text());
+        })
+        .response
+        .on_hover_text(state.settings.view.hover_text());
+    }
+
+    /// List button
+    fn list_button(&self, ui: &mut Ui, state: &mut State) {
         ui.menu_button(RichText::new(LIST).heading(), |ui| {
             let mut clicked = false;
             for index in 0..self.frames.len() {
@@ -175,106 +206,51 @@ impl Pane {
         .on_hover_ui(|ui| {
             ui.label(ui.localize("List"));
         });
-        ui.separator();
-        // Reset
-        ui.reset_button(&mut state.reset_table_state);
-        // Resize
-        ui.resize_button(&mut state.settings.resizable);
-        ui.separator();
-        // Settings
-        ui.settings_button(&mut state.windows.open_settings);
-        ui.separator();
-        // Save
+    }
+
+    /// Save button
+    fn save_button(&self, ui: &mut Ui, state: &State) {
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
-            let title = self.title_with_separator(state.settings.index, ".");
+            let meta = self.meta(state);
+            let name = meta.format(".");
             if ui
-                .button("RON")
+                .button((FLOPPY_DISK, "RON"))
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("Save"));
                 })
                 .on_hover_ui(|ui| {
-                    ui.label(&format!("{title}.tag.utca.ron"));
+                    ui.label(format!("{name}.tag.utca.ron"));
                 })
                 .clicked()
             {
-                let _ = self.save_ron(ui, &title, state);
+                let _ = self.save_ron(ui, &name, state);
             }
-            // if ui
-            //     .button("PARQUET")
-            //     .on_hover_ui(|ui| {
-            //         ui.label(ui.localize("Save"));
-            //     })
-            //     .on_hover_ui(|ui| {
-            //         ui.label(&format!("{title}.tag.utca.parquet"));
-            //     })
-            //     .clicked()
-            // {
-            //     let mut data_frame = ui.memory_mut(|memory| {
-            //         memory.caches.cache::<FilteredCompositionComputed>().get(
-            //             FilteredCompositionKey {
-            //                 data_frame: &self.target,
-            //                 settings: &state.settings,
-            //             },
-            //         )
-            //     });
-            //     let mut data = data_frame
-            //         .data_frame
-            //         .lazy()
-            //         .select([col("Species").explode()])
-            //         .unnest(by_name(["Species"], true), None)
-            //         .sort(
-            //             ["Value"],
-            //             SortMultipleOptions::default().with_order_descending(true),
-            //         )
-            //         .collect()
-            //         .unwrap();
-            //     println!("data_frame unnest: {}", data.clone());
-            //     // let _ = parquet::save_data(&mut data_frame, &format!("{title}.utca.parquet"));
-            //     let mut meta = self.source[0].meta.clone();
-            //     meta.retain(|key, _| key != "ARROW:schema");
-            //     println!("meta: {meta:?}");
-            //     let mut frame = MetaDataFrame::new(meta, data);
-            //     let _ = export::parquet::save(&mut frame, &format!("{title}.tag.utca.parquet"));
-            // }
             if ui
-                .button("XLSX")
+                .button((FLOPPY_DISK, "XLSX"))
                 .on_hover_ui(|ui| {
                     ui.label(ui.localize("Save"));
                 })
                 .on_hover_ui(|ui| {
-                    ui.label(&format!("{title}.tag.utca.xlsx"));
+                    ui.label(format!("{name}.tag.utca.xlsx"));
                 })
                 .clicked()
             {
-                let data_frame = ui.memory_mut(|memory| {
-                    memory.caches.cache::<FilteredCompositionComputed>().get(
-                        FilteredCompositionKey {
-                            data_frame: &self.target,
-                            settings: &state.settings,
-                        },
-                    )
-                });
-                let data_frame = data_frame.data_frame.unnest(["Keys"], None).unwrap();
-                let _ = xlsx::save(&data_frame, &format!("{title}.utca.xlsx"));
+                let _ = self.save_xlsx(ui, &name, state);
             }
         });
-        ui.separator();
-        // View
-        ui.menu_button(RichText::new(state.settings.view.icon()).heading(), |ui| {
-            ui.selectable_value(&mut state.settings.view, View::Plot, View::Plot.text())
-                .on_hover_text(View::Plot.hover_text());
-            ui.selectable_value(&mut state.settings.view, View::Table, View::Table.text())
-                .on_hover_text(View::Table.hover_text());
-        })
-        .response
-        .on_hover_text(state.settings.view.hover_text());
-        ui.end_row();
-        ui.separator();
-        response
     }
 
     #[instrument(skip_all, err)]
-    fn save_ron(&mut self, ui: &mut Ui, title: &str, state: &mut State) -> Result<()> {
+    fn save_ron(&self, ui: &mut Ui, name: impl Debug + Display, state: &State) -> Result<()> {
+        let meta = self.meta(state);
+        let data = self.data(ui, state)?;
+        let frame = MetaDataFrame::new(meta, data);
+        ron::save(&frame, &format!("{name}.tag.utca.ron"))?;
+        Ok(())
+    }
+
+    #[instrument(skip_all, err)]
+    fn save_xlsx(&self, ui: &mut Ui, name: impl Debug + Display, state: &State) -> Result<()> {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
@@ -284,7 +260,37 @@ impl Pane {
                     settings: &state.settings,
                 })
         });
-        let data = data_frame
+        let data_frame = data_frame.data_frame.unnest(["Keys"], None)?;
+        let _ = xlsx::save(&data_frame, &format!("{name}.utca.xlsx"));
+        Ok(())
+    }
+
+    fn meta(&self, state: &State) -> Metadata {
+        match state.settings.index {
+            Some(index) => self.frames[index].meta.clone(),
+            None => {
+                let mut meta = Metadata::default();
+                meta.insert(AUTHORS.to_owned(), authors(&self.frames));
+                meta.insert(DATE.to_owned(), date(&self.frames));
+                meta.insert(DESCRIPTION.to_owned(), description(&self.frames));
+                meta.insert(NAME.to_owned(), name(&self.frames));
+                meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
+                meta
+            }
+        }
+    }
+
+    fn data(&self, ui: &Ui, state: &State) -> PolarsResult<DataFrame> {
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<FilteredCompositionComputed>()
+                .get(FilteredCompositionKey {
+                    data_frame: &self.target,
+                    settings: &state.settings,
+                })
+        });
+        data_frame
             .data_frame
             .lazy()
             .select([col("Species").explode()])
@@ -293,22 +299,7 @@ impl Pane {
                 ["Value"],
                 SortMultipleOptions::default().with_order_descending(true),
             )
-            .collect()?;
-        let meta = match state.settings.index {
-            Some(index) => self.frames[index].meta.clone(),
-            None => {
-                let mut meta = Metadata::default();
-                meta.insert(NAME.to_owned(), name(&self.frames));
-                meta.insert(AUTHORS.to_owned(), authors(&self.frames));
-                meta.insert(DATE.to_owned(), date(&self.frames));
-                meta.insert(DESCRIPTION.to_owned(), description(&self.frames));
-                meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
-                meta
-            }
-        };
-        let frame = MetaDataFrame::new(meta, data);
-        ron::save(&frame, &format!("{title}.tag.utca.ron"))?;
-        Ok(())
+            .collect()
     }
 
     fn central(&mut self, ui: &mut Ui, state: &mut State) {
@@ -350,7 +341,7 @@ impl Pane {
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
-        if state.settings.parameters.discriminants.is_empty() {
+        if state.settings.discriminants.is_empty() {
             let unique = ui.memory_mut(|memory| {
                 memory
                     .caches
@@ -359,7 +350,7 @@ impl Pane {
                         frames: &self.frames,
                     })
             });
-            state.settings.parameters.discriminants = unique.into_iter().collect();
+            state.settings.discriminants = unique.into_iter().collect();
         }
         if let Some(inner_response) =
             Window::new(format!("{SLIDERS_HORIZONTAL} Composition settings"))

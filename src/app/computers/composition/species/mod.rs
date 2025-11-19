@@ -34,6 +34,10 @@ impl Computer {
             None => &key.frames[..],
         };
         let mut lazy_frame = compute(&frames[0])?;
+        println!(
+            "lazy_frame mod gggg: {}",
+            lazy_frame.clone().collect().unwrap()
+        );
         for frame in &frames[1..] {
             lazy_frame = lazy_frame.join(
                 compute(frame)?,
@@ -43,15 +47,15 @@ impl Computer {
             );
         }
         lazy_frame = lazy_frame.drop(by_name(["Hash"], true));
-        println!(
-            "mean_and_standard_deviation 0: {}",
-            lazy_frame.clone().collect().unwrap()
-        );
+        // println!(
+        //     "mean_and_standard_deviation 0: {}",
+        //     lazy_frame.clone().collect().unwrap()
+        // );
         lazy_frame = lazy_frame.select(mean_and_standard_deviation(key.ddof)?);
-        println!(
-            "mean_and_standard_deviation 1: {}",
-            lazy_frame.clone().collect().unwrap()
-        );
+        // println!(
+        //     "mean_and_standard_deviation 1: {}",
+        //     lazy_frame.clone().collect().unwrap()
+        // );
         let mut data_frame = lazy_frame.collect()?;
         let hash = data_frame.hash_rows(None)?.xor_reduce().unwrap_or_default();
         Ok(HashedDataFrame {
@@ -82,20 +86,12 @@ impl<'a> Key<'a> {
         Self {
             frames,
             index: settings.index,
-            ddof: settings.parameters.ddof,
-            discriminants: &settings.parameters.discriminants,
-            method: settings.parameters.method,
+            ddof: settings.ddof,
+            discriminants: &settings.discriminants,
+            method: settings.method,
         }
     }
 }
-
-// {
-//     frames: &self.source,
-//     index: state.settings.index,
-//     ddof: state.settings.parameters.ddof,
-//     method: state.settings.parameters.method,
-//     discriminants: &state.settings.parameters.discriminants,
-// }
 
 /// Parameters
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
