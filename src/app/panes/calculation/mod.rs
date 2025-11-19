@@ -18,7 +18,7 @@ use crate::{
     utils::{
         HashedDataFrame, HashedMetaDataFrame,
         egui::UiExt as _,
-        metadata::{authors, date, name},
+        metadata::{authors, date, description, name},
     },
 };
 use anyhow::Result;
@@ -34,7 +34,9 @@ use egui_phosphor::regular::{
 };
 use egui_tiles::{TileId, UiResponse};
 use lipid::prelude::*;
-use metadata::{AUTHORS, DATE, DEFAULT_VERSION, Metadata, NAME, VERSION, polars::MetaDataFrame};
+use metadata::{
+    AUTHORS, DATE, DEFAULT_VERSION, DESCRIPTION, Metadata, NAME, VERSION, polars::MetaDataFrame,
+};
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
@@ -317,22 +319,18 @@ impl Pane {
             ])
             .collect()?;
         let meta = match state.settings.index {
-            Some(index) => {
-                let mut meta = self.frames[index].meta.clone();
-                meta.retain(|key, _| key != "ARROW:schema");
-                meta
-            }
+            Some(index) => self.frames[index].meta.clone(),
             None => {
                 let mut meta = Metadata::default();
-                // let name =
-                //     format_list!(self.source.iter().filter_map(|frame| frame.meta.get(NAME)));
-                meta.insert(NAME.to_owned(), name(&self.frames));
                 meta.insert(AUTHORS.to_owned(), authors(&self.frames));
                 meta.insert(DATE.to_owned(), date(&self.frames));
+                meta.insert(DESCRIPTION.to_owned(), description(&self.frames));
+                meta.insert(NAME.to_owned(), name(&self.frames));
                 meta.insert(VERSION.to_owned(), DEFAULT_VERSION.to_owned());
                 meta
             }
         };
+        println!("meta: {meta}");
         let frame = MetaDataFrame::new(meta, data);
         ron::save(&frame, &format!("{title}.fa.utca.ron"))?;
         Ok(())

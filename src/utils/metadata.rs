@@ -11,6 +11,7 @@ pub(crate) fn authors(frames: &[HashedMetaDataFrame]) -> String {
         .flat_map(|frame| frame.meta.get(AUTHORS).map(|authors| authors.split(",")))
         .flatten()
         .unique()
+        .sorted()
         .join(",")
 }
 
@@ -29,20 +30,41 @@ pub(crate) fn date(frames: &[HashedMetaDataFrame]) -> String {
 }
 
 pub(crate) fn description(frames: &[HashedMetaDataFrame]) -> String {
-    frames
+    let descriptions = frames
         .iter()
-        .flat_map(|frame| frame.meta.get(DESCRIPTION).map(|description| description))
-        .unique()
-        .join("\n")
+        .flat_map(|frame| frame.meta.get(DESCRIPTION))
+        .map(String::as_str)
+        .collect();
+    longest_common_prefix(descriptions).to_owned()
 }
 
 pub(crate) fn name(frames: &[HashedMetaDataFrame]) -> String {
-    format!(
-        "[{}]",
-        frames
-            .iter()
-            .filter_map(|frame| frame.meta.get(NAME))
-            .unique()
-            .format_with(", ", |name, f| f(&name))
-    )
+    let names: Vec<_> = frames
+        .iter()
+        .filter_map(|frame| frame.meta.get(NAME))
+        .map(String::as_str)
+        .unique()
+        .collect();
+    match &*names {
+        &[name] => name.to_owned(),
+        names => format!("[{}]", names.join(", ")),
+    }
+}
+
+pub fn longest_common_prefix(strings: Vec<&str>) -> &str {
+    if strings.is_empty() {
+        return "";
+    }
+    let mut prefix = strings[0];
+    for string in strings {
+        while !string.starts_with(&prefix) {
+            if prefix.is_empty() {
+                return "";
+            }
+            prefix = prefix
+                .trim_end_matches(|c| c != '\n')
+                .trim_end_matches('\n');
+        }
+    }
+    prefix
 }
