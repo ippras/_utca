@@ -1,9 +1,5 @@
-use crate::{
-    app::states::calculation::Settings,
-    utils::{HashedDataFrame, polars::SchemaExt},
-};
+use crate::{app::states::calculation::Settings, utils::HashedDataFrame};
 use egui::util::cache::{ComputerMut, FrameCache};
-use itertools::Itertools;
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_ext::expr::{ExprExt as _, ExprIfExt as _};
@@ -103,7 +99,7 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let length = schema(&key.frame)?;
+        schema(&key.frame)?;
         let lazy_frame = format(key)?;
         let data_frame = lazy_frame.collect()?;
         Ok(data_frame)
@@ -143,15 +139,15 @@ impl<'a> Key<'a> {
 /// Display calculation value
 type Value = DataFrame;
 
-fn schema(data_frame: &DataFrame) -> PolarsResult<usize> {
+fn schema(data_frame: &DataFrame) -> PolarsResult<()> {
     let schema = data_frame.schema();
     let _cast = schema.matches_schema(&SCHEMA)?;
-    let length = schema
-        .array_lengths_recursive()?
-        .into_iter()
-        .all_equal_value()
-        .map_err(|lengths| polars_err!(SchemaMismatch: "Invalid array lengths: expected all equal, got = {lengths:?}"))?;
-    Ok(length)
+    // let length = schema
+    //     .array_lengths_recursive()?
+    //     .into_iter()
+    //     .all_equal_value()
+    //     .map_err(|lengths| polars_err!(SchemaMismatch: "Invalid array lengths: expected all equal, got = {lengths:?}"))?;
+    Ok(())
 }
 
 fn format(key: Key) -> PolarsResult<LazyFrame> {
