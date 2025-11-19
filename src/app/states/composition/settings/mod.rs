@@ -44,7 +44,7 @@ pub(crate) struct Settings {
 impl Settings {
     pub(crate) fn new() -> Self {
         Self {
-            index: Some(0),
+            index: None,
 
             percent: true,
             float_precision: 1,

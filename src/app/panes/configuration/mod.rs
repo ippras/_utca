@@ -5,6 +5,7 @@ use crate::{
     export,
     utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
 };
+use anyhow::Result;
 use egui::{
     CentralPanel, CursorIcon, Frame, Id, MenuBar, Response, RichText, ScrollArea, TextStyle,
     TextWrapMode, TopBottomPanel, Ui, Window, util::hash,
@@ -20,9 +21,10 @@ use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::{Display, from_fn},
+    fmt::{Debug, Display, from_fn},
     sync::LazyLock,
 };
+use tracing::instrument;
 
 const ID_SOURCE: &str = "Configuration";
 
@@ -189,26 +191,44 @@ impl Pane {
             }
         });
         ui.separator();
-        // Settings
         ui.settings_button(&mut state.windows.open_settings);
         ui.separator();
-        // Save
-        let name = self.frames[state.settings.index].meta.format(".");
-        if ui
-            .button(RichText::new(FLOPPY_DISK).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Save"));
-            })
-            .on_hover_text(format!("{name}"))
-            .clicked()
-        {
-            let _ = export::ron::save(
-                &self.frames[state.settings.index],
-                &format!("{name}.utca.ron"),
-            );
-        }
+        self.save_button(ui, state);
         ui.separator();
-        // Calculation
+        self.calculation_button(ui);
+        ui.separator();
+        response
+    }
+
+    // Save button
+    fn save_button(&self, ui: &mut Ui, state: &State) {
+        ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
+            let name = self.frames[state.settings.index].meta.format(".");
+            if ui
+                .button((FLOPPY_DISK, "RON"))
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize("Save"));
+                })
+                .on_hover_ui(|ui| {
+                    ui.label(format!("{name}.fa.utca.ron"));
+                })
+                .clicked()
+            {
+                let _ = self.save_ron(&name, state);
+            }
+        });
+    }
+
+    #[instrument(skip(self, state), err)]
+    fn save_ron(&self, name: impl Debug + Display, state: &State) -> Result<()> {
+        export::ron::save(
+            &self.frames[state.settings.index],
+            &format!("{name}.utca.ron"),
+        )
+    }
+
+    /// Calculation button
+    fn calculation_button(&self, ui: &mut Ui) {
         if ui
             .button(RichText::new(CALCULATOR).heading())
             .on_hover_ui(|ui| {
@@ -220,8 +240,6 @@ impl Pane {
                 data.insert_temp(Id::new(CALCULATE), self.frames.clone());
             });
         }
-        ui.separator();
-        response
     }
 
     fn central(&mut self, ui: &mut Ui, state: &mut State) {
