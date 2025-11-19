@@ -1,5 +1,5 @@
 use crate::{
-    app::states::calculation::{Normalize, Settings},
+    app::states::calculation::{Normalize, Settings, Threshold},
     presets::CHRISTIE,
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
@@ -61,7 +61,7 @@ pub(crate) struct Key<'a> {
     pub(crate) normalize_factors: bool,
     pub(crate) normalize: Normalize,
     pub(crate) standard: Option<&'a str>,
-    pub(crate) threshold: OrderedFloat<f64>,
+    pub(crate) threshold: &'a Threshold,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
 }
@@ -76,7 +76,7 @@ impl<'a> Key<'a> {
             normalize_factors: settings.normalize_factors,
             normalize: settings.normalize,
             standard: settings.standard.as_deref(),
-            threshold: OrderedFloat(settings.table.threshold),
+            threshold: &settings.threshold,
             unsigned: settings.unsigned,
             weighted: settings.weighted,
         }
@@ -122,13 +122,17 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         experimental(sn123.clone().nullify(col("Filter")), key),
         experimental(sn2.clone().nullify(col("Filter")), key),
     ]);
-    // Filter
-    // Стандарт - null, все остальные - установленные значения.
-    lazy_frame = lazy_frame.with_column(col("Filter").and(
-        any_horizontal([sn123.clone().gt_eq(key.threshold.0)])?.or(any_horizontal([
-            sn2.clone().fill_nan(lit(0)).gt_eq(key.threshold.0),
-        ])?),
-    ));
+    // Threshold
+    // Стандарт - null, все остальные - автоматически или вручную.
+    lazy_frame = if key.threshold.is_auto {
+        lazy_frame.with_column(col("Filter").and(
+            any_horizontal([sn123.clone().gt_eq(key.threshold.auto)])?.or(any_horizontal([
+                sn2.clone().fill_nan(lit(0)).gt_eq(key.threshold.auto),
+            ])?),
+        ))
+    } else {
+        lazy_frame.with_column(lit(Series::from_iter(&key.threshold.manual)).alias("Filter"))
+    };
     println!("lazy_frame 1: {}", lazy_frame.clone().collect().unwrap());
     // Calculate
     lazy_frame = lazy_frame.with_columns([

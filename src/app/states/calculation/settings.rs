@@ -8,16 +8,19 @@ use egui::{
     ComboBox, Grid, Popup, PopupCloseBehavior, Response, RichText, ScrollArea, Slider,
     SliderClamping, Ui, Widget,
     containers::menu::{MenuButton, MenuConfig},
+    emath::Float,
 };
 use egui_dnd::dnd;
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{ARROWS_CLOCKWISE, BOOKMARK, BROWSERS, DOTS_SIX_VERTICAL, FUNNEL};
+use egui_phosphor::regular::{ARROWS_CLOCKWISE, BOOKMARK, BROWSERS, DOTS_SIX_VERTICAL};
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter},
+    hash::{Hash, Hasher},
+    iter::zip,
     ops::{Deref, DerefMut},
 };
 use tracing::instrument;
@@ -41,20 +44,18 @@ pub(crate) struct Settings {
     pub(crate) precision: usize,
     pub(crate) significant: bool,
     pub(crate) table: Table,
-    pub(crate) display_minor: bool,
-    pub(crate) sort_by_minor_major: bool,
-
     // General parameters
     pub(crate) ddof: u8,
     // Special parameters
     pub(crate) christie: bool,
     pub(crate) normalize: Normalize,
+    pub(crate) sort_by_minor_major: bool,
     pub(crate) standard: Standard,
+    pub(crate) threshold: Threshold,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
     // Mutable
     pub(crate) fatty_acids: Vec<String>,
-    // pub(crate) fatty_acids: Vec<(String, AnyValue)>,
 
     // Correlations
     pub(crate) auto_size_correlations_table: bool,
@@ -76,14 +77,14 @@ impl Settings {
             precision: 1,
             significant: false,
             table: Table::new(),
-            display_minor: true,
-            sort_by_minor_major: true,
             // General parameters
             ddof: 1,
             // Special parameters
             christie: false,
             normalize: Normalize::new(),
+            sort_by_minor_major: false,
             standard: Standard(None),
+            threshold: Threshold::new(),
             unsigned: true,
             weighted: false,
             // Mutable
@@ -126,7 +127,25 @@ impl Settings {
 
             self.standard(ui);
             ui.end_row();
-            self.filter(ui);
+
+            ui.label(ui.localize("Threshold")).on_hover_ui(|ui| {
+                ui.label(ui.localize("Threshold.hover"));
+            });
+            ui.separator();
+            ui.end_row();
+            self.is_auto_threshold(ui);
+            ui.end_row();
+            self.auto_threshold(ui);
+            ui.end_row();
+            self.manual_threshold(ui);
+            ui.end_row();
+            self.sort_thresholded(ui);
+            ui.end_row();
+            self.display_thresholded(ui);
+            ui.end_row();
+
+            ui.label(ui.localize("Normalization"));
+            ui.separator();
             ui.end_row();
             self.weighted(ui);
             ui.end_row();
@@ -255,59 +274,104 @@ impl Settings {
         });
     }
 
-    /// Filter
-    fn filter(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("FilterTableRows")).on_hover_ui(|ui| {
-            ui.label(ui.localize("FilterTableRows.hover"));
+    /// Is auto threshold
+    fn is_auto_threshold(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("IsAutoThreshold")).on_hover_ui(|ui| {
+            ui.label(ui.localize("IsAutoThreshold.hover"));
         });
-        MenuButton::new(FUNNEL)
-            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-            .ui(ui, |ui| {
-                Grid::new(ui.next_auto_id()).show(ui, |ui| {
-                    // Threshold
-                    ui.label(ui.localize("Threshold")).on_hover_ui(|ui| {
-                        ui.label(ui.localize("Threshold.hover"));
-                    });
-                    ui.horizontal(|ui| {
-                        Slider::new(&mut self.table.threshold, 0.0..=1.0)
-                            .clamping(SliderClamping::Always)
-                            .custom_formatter(|mut value, _| {
-                                if self.percent {
-                                    value *= 100.0;
-                                }
-                                AnyValue::Float64(value).to_string()
-                            })
-                            .custom_parser(|value| {
-                                let mut parsed = value.parse::<f64>().ok()?;
-                                if self.percent {
-                                    parsed /= 100.0;
-                                }
-                                Some(parsed)
-                            })
-                            .logarithmic(true)
-                            .update_while_editing(false)
-                            .ui(ui);
-                        if ui.button((BOOKMARK, "0.25")).clicked() {
-                            self.table.threshold = 0.0025;
-                        }
-                    });
-                    ui.end_row();
+        ui.checkbox(&mut self.threshold.is_auto, ());
+    }
 
-                    // Display minor
-                    ui.label(ui.localize("DisplayMinor")).on_hover_ui(|ui| {
-                        ui.label(ui.localize("DisplayMinor.hover"));
-                    });
-                    ui.checkbox(&mut self.display_minor, ());
-                    ui.end_row();
+    /// Auto threshold
+    fn auto_threshold(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("AutoThreshold")).on_hover_ui(|ui| {
+            ui.label(ui.localize("AutoThreshold.hover"));
+        });
+        ui.horizontal(|ui| {
+            if Slider::new(&mut self.threshold.auto, 0.0..=1.0)
+                .clamping(SliderClamping::Always)
+                .custom_formatter(|mut value, _| {
+                    if self.percent {
+                        value *= 100.0;
+                    }
+                    AnyValue::Float64(value).to_string()
+                })
+                .custom_parser(|value| {
+                    let mut parsed = value.parse::<f64>().ok()?;
+                    if self.percent {
+                        parsed /= 100.0;
+                    }
+                    Some(parsed)
+                })
+                .logarithmic(true)
+                .update_while_editing(false)
+                .ui(ui)
+                .changed()
+            {
+                self.threshold.is_auto = true;
+            }
+            if ui.button((BOOKMARK, "0.25")).clicked() {
+                self.threshold.auto = 0.0025;
+                self.threshold.is_auto = true;
+            }
+        });
+    }
 
-                    // Sort by minor major
-                    ui.label(ui.localize("SortByMinorMajor")).on_hover_ui(|ui| {
-                        ui.label(ui.localize("SortByMinorMajor.hover"));
-                    });
-                    ui.checkbox(&mut self.sort_by_minor_major, ());
-                });
+    /// Manual threshold
+    fn manual_threshold(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("ManualThreshold")).on_hover_ui(|ui| {
+            ui.label(ui.localize("ManualThreshold.hover"));
+        });
+        ComboBox::from_id_salt("ManualThreshold")
+            .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+            .selected_text(self.standard.text())
+            .show_ui(ui, |ui| {
+                for (fatty_acid, selected) in zip(&self.fatty_acids, &mut self.threshold.manual) {
+                    if ui
+                        .toggle_value(selected, fatty_acid)
+                        .on_hover_text(fatty_acid)
+                        .changed()
+                    {
+                        self.threshold.is_auto = false;
+                    }
+                }
+            })
+            .response
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize(self.standard.hover_text()));
             });
     }
+
+    /// Display minor
+    fn display_thresholded(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("DisplayThreshold")).on_hover_ui(|ui| {
+            ui.label(ui.localize("DisplayThreshold.hover"));
+        });
+        ui.checkbox(&mut self.threshold.display, ());
+    }
+
+    /// sort
+    fn sort_thresholded(&mut self, ui: &mut Ui) {
+        // Sort by minor major
+        ui.label(ui.localize("SortByMinorMajor")).on_hover_ui(|ui| {
+            ui.label(ui.localize("SortByMinorMajor.hover"));
+        });
+        ui.checkbox(&mut self.sort_by_minor_major, ());
+    }
+
+    // /// Filter
+    // fn filter(&mut self, ui: &mut Ui) {
+    //     ui.label(ui.localize("FilterTableRows")).on_hover_ui(|ui| {
+    //         ui.label(ui.localize("FilterTableRows.hover"));
+    //     });
+    //     MenuButton::new(FUNNEL)
+    //         .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+    //         .ui(ui, |ui| {
+    //             Grid::new(ui.next_auto_id()).show(ui, |ui| {
+    //                 ui.end_row();
+    //             });
+    //         });
+    // }
 
     /// Weighted
     fn weighted(&mut self, ui: &mut Ui) {
@@ -501,14 +565,12 @@ pub(crate) struct Table {
     pub(crate) resizable: bool,
     pub(crate) sticky_columns: usize,
     pub(crate) truncate_headers: bool,
-    pub(crate) threshold: f64,
     pub(crate) column_filter: ColumnFilter,
 }
 
 impl Table {
     pub(crate) fn new() -> Self {
         Self {
-            threshold: 0.0,
             reset_state: false,
             resizable: false,
             sticky_columns: 0,
@@ -710,5 +772,33 @@ impl Display for StereospecificNumbers {
             Self::Three => f.write_str(STEREOSPECIFIC_NUMBERS13),
             Self::OneAndTwoAndTree => f.write_str(STEREOSPECIFIC_NUMBERS123),
         }
+    }
+}
+
+/// Threshold
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub(crate) struct Threshold {
+    pub(crate) auto: f64,
+    pub(crate) display: bool,
+    pub(crate) is_auto: bool,
+    pub(crate) manual: Vec<bool>,
+}
+
+impl Threshold {
+    pub(crate) fn new() -> Self {
+        Self {
+            auto: 0.0,
+            display: true,
+            is_auto: true,
+            manual: Vec::new(),
+        }
+    }
+}
+
+impl Hash for Threshold {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.auto.ord().hash(state);
+        self.is_auto.hash(state);
+        self.manual.hash(state);
     }
 }

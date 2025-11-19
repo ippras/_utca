@@ -395,6 +395,8 @@ impl Pane {
             .into_no_null_iter()
             .map(ToOwned::to_owned)
             .collect();
+        state.settings.threshold.manual =
+            self.target["Filter"].bool()?.into_no_null_iter().collect();
         TableView::new(&self.target, state).show(ui);
         Ok(())
     }

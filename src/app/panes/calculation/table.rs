@@ -160,20 +160,6 @@ impl TableView<'_> {
         row: usize,
         column: Range<usize>,
     ) -> PolarsResult<()> {
-        // if row + 1 != self.data_frame(ui).height() {
-        // } else {
-        //     self.footer_cell_content_ui(ui, column)?;
-        // }
-        self.body_cell_content_ui(ui, row, column)?;
-        Ok(())
-    }
-
-    fn body_cell_content_ui(
-        &mut self,
-        ui: &mut Ui,
-        row: usize,
-        column: Range<usize>,
-    ) -> PolarsResult<()> {
         let data_frame = self.data_frame(ui);
         match (row, column) {
             (row, bottom::INDEX) if row + 1 < data_frame.height() => {
