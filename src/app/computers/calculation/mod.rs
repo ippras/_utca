@@ -4,10 +4,7 @@ use crate::{
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use const_format::formatcp;
-use egui::{
-    emath::OrderedFloat,
-    util::cache::{ComputerMut, FrameCache},
-};
+use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_ext::expr::{ExprExt as _, ExprIfExt as _};

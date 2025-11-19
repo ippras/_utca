@@ -152,7 +152,7 @@ fn schema(data_frame: &DataFrame) -> PolarsResult<()> {
 
 fn format(key: Key) -> PolarsResult<LazyFrame> {
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
+    // println!("Display 0: {}", lazy_frame.clone().collect().unwrap());
     // Unnest
     lazy_frame = lazy_frame
         .unnest(
@@ -192,7 +192,6 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
             lit(NULL),
         ),
     ]);
-    // println!("Display sum: {}", sum.clone().collect().unwrap());
     // Filter minor
     if !key.display {
         // true or null (standard)
@@ -205,7 +204,6 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
                 .with_order_reversed(),
         );
     }
-    println!("Display 1: {}", lazy_frame.clone().collect().unwrap());
     // Format
     let predicate = col("StereospecificNumbers123.StandardDeviation")
         .is_null()
@@ -271,7 +269,6 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
     ]);
     // Concat
     lazy_frame = concat_lf_diagonal([lazy_frame, sum], Default::default())?;
-    // println!("Display 5: {}", lazy_frame.clone().collect().unwrap());
     Ok(lazy_frame)
 }
 
