@@ -22,7 +22,7 @@ impl Computer {
         let compute = |frame: &HashedMetaDataFrame| -> PolarsResult<LazyFrame> {
             Ok(
                 compute(frame.data.data_frame.clone().lazy(), key.parameters())?.select([
-                    hash_expr(as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL)])),
+                    // hash_expr(as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL)])),
                     col(LABEL),
                     col(TRIACYLGLYCEROL),
                     col("Value").alias(frame.meta.format(".").to_string()),
@@ -34,23 +34,16 @@ impl Computer {
             None => &key.frames[..],
         };
         let mut lazy_frame = compute(&frames[0])?;
-        println!(
-            "lazy_frame mod gggg: {}",
-            lazy_frame.clone().collect().unwrap()
-        );
+        println!("spec 0: {}", lazy_frame.clone().collect().unwrap());
         for frame in &frames[1..] {
             lazy_frame = lazy_frame.join(
                 compute(frame)?,
-                [col("Hash"), col(LABEL), col(TRIACYLGLYCEROL)],
-                [col("Hash"), col(LABEL), col(TRIACYLGLYCEROL)],
+                [col(LABEL), col(TRIACYLGLYCEROL)],
+                [col(LABEL), col(TRIACYLGLYCEROL)],
                 JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
             );
         }
-        lazy_frame = lazy_frame.drop(by_name(["Hash"], true));
-        // println!(
-        //     "mean_and_standard_deviation 0: {}",
-        //     lazy_frame.clone().collect().unwrap()
-        // );
+        println!("spec 1: {}", lazy_frame.clone().collect().unwrap());
         lazy_frame = lazy_frame.select(mean_and_standard_deviation(key.ddof)?);
         // println!(
         //     "mean_and_standard_deviation 1: {}",
