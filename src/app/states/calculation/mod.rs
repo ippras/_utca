@@ -1,5 +1,5 @@
 pub(crate) use self::{
-    settings::{Correlation, Indices, Normalize, Settings, StereospecificNumbers},
+    settings::{Correlation, Indices, Normalize, Settings, StereospecificNumbers, Threshold},
     windows::Windows,
 };
 

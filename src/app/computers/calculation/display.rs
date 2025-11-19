@@ -120,7 +120,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 #[derive(Clone, Copy, Debug, Hash)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
-    pub(crate) minor: bool,
+    pub(crate) display: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
     pub(crate) significant: bool,
@@ -131,7 +131,7 @@ impl<'a> Key<'a> {
     pub(crate) fn new(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
         Self {
             frame,
-            minor: settings.display_minor,
+            display: settings.threshold.display,
             percent: settings.percent,
             precision: settings.precision,
             significant: settings.significant,
@@ -198,7 +198,7 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
     ]);
     // println!("Display sum: {}", sum.clone().collect().unwrap());
     // Filter minor
-    if !key.minor {
+    if !key.display {
         // true or null (standard)
         lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
     } else if key.sort {
