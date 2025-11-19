@@ -128,6 +128,16 @@ impl Settings {
             self.standard(ui);
             ui.end_row();
 
+            ui.label(ui.localize("Normalization")).on_hover_ui(|ui| {
+                ui.label(ui.localize("Normalization.hover"));
+            });
+            ui.separator();
+            ui.end_row();
+            self.weighted(ui);
+            ui.end_row();
+            self.christie(ui);
+            ui.end_row();
+
             ui.label(ui.localize("Threshold")).on_hover_ui(|ui| {
                 ui.label(ui.localize("Threshold.hover"));
             });
@@ -141,15 +151,7 @@ impl Settings {
             ui.end_row();
             self.sort_thresholded(ui);
             ui.end_row();
-            self.display_thresholded(ui);
-            ui.end_row();
-
-            ui.label(ui.localize("Normalization"));
-            ui.separator();
-            ui.end_row();
-            self.weighted(ui);
-            ui.end_row();
-            self.christie(ui);
+            self.save_thresholded(ui);
             ui.end_row();
 
             if self.index.is_none() {
@@ -347,15 +349,15 @@ impl Settings {
             });
     }
 
-    /// Display minor
-    fn display_thresholded(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("DisplayThreshold")).on_hover_ui(|ui| {
-            ui.label(ui.localize("DisplayThreshold.hover"));
+    /// Save thresholded
+    fn save_thresholded(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("SaveThreshold")).on_hover_ui(|ui| {
+            ui.label(ui.localize("SaveThreshold.hover"));
         });
-        ui.checkbox(&mut self.threshold.display, ());
+        ui.checkbox(&mut self.threshold.save, ());
     }
 
-    /// sort
+    /// Sort thresholded
     fn sort_thresholded(&mut self, ui: &mut Ui) {
         // Sort by minor major
         ui.label(ui.localize("SortByMinorMajor")).on_hover_ui(|ui| {
@@ -363,20 +365,6 @@ impl Settings {
         });
         ui.checkbox(&mut self.sort_by_minor_major, ());
     }
-
-    // /// Filter
-    // fn filter(&mut self, ui: &mut Ui) {
-    //     ui.label(ui.localize("FilterTableRows")).on_hover_ui(|ui| {
-    //         ui.label(ui.localize("FilterTableRows.hover"));
-    //     });
-    //     MenuButton::new(FUNNEL)
-    //         .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-    //         .ui(ui, |ui| {
-    //             Grid::new(ui.next_auto_id()).show(ui, |ui| {
-    //                 ui.end_row();
-    //             });
-    //         });
-    // }
 
     /// Weighted
     fn weighted(&mut self, ui: &mut Ui) {
@@ -784,18 +772,18 @@ impl Display for StereospecificNumbers {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub(crate) struct Threshold {
     pub(crate) auto: f64,
-    pub(crate) display: bool,
     pub(crate) is_auto: bool,
     pub(crate) manual: Vec<bool>,
+    pub(crate) save: bool,
 }
 
 impl Threshold {
     pub(crate) fn new() -> Self {
         Self {
             auto: 0.0,
-            display: true,
             is_auto: true,
             manual: Vec::new(),
+            save: true,
         }
     }
 }
@@ -805,5 +793,6 @@ impl Hash for Threshold {
         self.auto.ord().hash(state);
         self.is_auto.hash(state);
         self.manual.hash(state);
+        self.save.hash(state);
     }
 }

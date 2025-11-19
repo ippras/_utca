@@ -196,7 +196,10 @@ ManualThreshold = Manual
     .hover = Manual threshold.
 AutoThreshold = Auto
     .hover = Auto threshold.
-DisplayThreshold = Display
-    .hover = Display minor fatty acids.
+SaveThreshold = Save
+    .hover = Save minor fatty acids.
 SortByMinorMajor = Sort
     .hover = Sort by minor major.
+
+Normalization = Normalization
+    .hover = Normalization kind.
