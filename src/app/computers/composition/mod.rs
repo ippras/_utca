@@ -238,6 +238,7 @@ fn sort(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
     let mut sort_options = SortMultipleOptions::default();
     if let Order::Descending = key.order {
         sort_options = sort_options
+            .with_maintain_order(true)
             .with_order_descending(true)
             .with_nulls_last(true);
     }
@@ -299,12 +300,6 @@ fn sort(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
 //     ]);
 //     Ok(lazy_frame)
 // }
-
-#[derive(Clone, Copy, Debug)]
-enum Mode {
-    One,
-    Many(u64),
-}
 
 pub(crate) mod display;
 pub(crate) mod filtered;

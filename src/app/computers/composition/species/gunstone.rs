@@ -123,6 +123,48 @@ fn gunstone_factor(lazy_frame: LazyFrame) -> PolarsResult<DataFrame> {
         ])
         .sum()
         .collect()?;
+    println!(
+        "АФСЕЩК: {}",
+        lazy_frame
+            .clone()
+            .with_columns([
+                col("Value")
+                    .nullify(col("FattyAcid").fatty_acid().is_saturated())
+                    .sum()
+                    .alias("S"),
+                col("Value")
+                    .nullify(col("FattyAcid").fatty_acid().is_unsaturated(None))
+                    .sum()
+                    .alias("U"),
+            ])
+            .with_columns([
+                ternary_expr(
+                    col("S").lt_eq(lit(2.0 / 3.0)),
+                    lit(0.0),
+                    lit(1) - lit(3) * col("U")
+                )
+                .alias("S_3"),
+                ternary_expr(
+                    col("S").lt_eq(lit(2.0 / 3.0)),
+                    (lit(3.0 / 2.0) * col("S")).pow(2),
+                    lit(3) * col("U"),
+                )
+                .alias("S_2U"),
+                ternary_expr(
+                    col("S").lt_eq(lit(2.0 / 3.0)),
+                    lit(3.0 / 2.0) * col("S") * (lit(3) * col("U") - lit(1)),
+                    lit(0),
+                )
+                .alias("SU_2"),
+                ternary_expr(
+                    col("S").lt_eq(lit(2.0 / 3.0)),
+                    (lit(1) - lit(3.0 / 2.0) * col("S")).pow(2),
+                    lit(0.0),
+                )
+                .alias("U_3"),
+            ])
+            .collect()?
+    );
     let s = data_frame["S"].f64()?.first().unwrap();
     let u = data_frame["U"].f64()?.first().unwrap();
     // assert!(1.0 - u - s <= f64::EPSILON, "s + u != 1.0");
