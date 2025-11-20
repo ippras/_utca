@@ -18,7 +18,7 @@ eframe = { version = "0.33.0", features = [
     "wayland",
 ] }
 egui = "0.33.2"
-egui-phosphor = { git = "https://github.com/ItsEthra/egui-phosphor", branch = "egui-0.33" }
+egui-phosphor = "0.11.0"
 egui_dnd = "0.14.0"
 egui_extras = { version = "0.33.0", features = ["datepicker", "serde", "svg"] }
 egui_plot = "0.34.0"

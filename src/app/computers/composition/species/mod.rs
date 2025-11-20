@@ -5,7 +5,6 @@ use crate::{
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::ExprExt as _;
 use tracing::instrument;
 
 /// Composition computed
