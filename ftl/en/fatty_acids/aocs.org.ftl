@@ -72,19 +72,19 @@ c10e9 =
     .systematic = dec-9-enoic
 
 c10c2c4 =
-    .common = cis,cis-Stillingic
+    .common = cis,cis‑Stillingic
     .systematic = (2Z,4Z)-deca-2,4-dienoic
 
 c10t2c4 =
-    .common = trans,cis-Stillingic
+    .common = trans,cis‑Stillingic
     .systematic = (2E,4Z)-deca-2,4-dienoic
 
 c10c2a4a6 =
-    .common = cis-Lachnophyllic
+    .common = cis‑Lachnophyllic
     .systematic = (2Z)-dec-2-ene-4,6-diynoic
 
 c10c2a4a6t8 =
-    .common = Z,E-Matricaric
+    .common = cis,trans‑Matricaric
     .systematic = (2Z,8E)-deca-2,8-diene-4,6-diynoic
 
 c10e2a4a6a8 =
@@ -266,13 +266,13 @@ c18c10 =
 
 c18c11 =
     .abbreviation = CVA
-    .common = cis-Vaccenic
-    .synonyms = Asclepic; cis-Vaccenic
+    .common = cis‑Vaccenic
+    .synonyms = Asclepic; cis‑Vaccenic
     .systematic = (11Z)-octadec-11-enoic
 
 c18t11 =
     .abbreviation = TVA
-    .common = trans-Vaccenic
+    .common = trans‑Vaccenic
     .systematic = (11E)-octadec-11-enoic
 
 c18t5 =
@@ -391,11 +391,11 @@ c18c5c9c12 =
     .systematic = (5Z,9Z,12Z)-octadeca-5,9,12-trienoic
 
 c18r5e6c16 =
-    .common = R-Lamenallenic
+    .common = R‑Lamenallenic
     .systematic = (5R,16E)-octadeca-5,6,16-trienoic
 
 c18s5e6c16 =
-    .common = S-Lamenallenic
+    .common = S‑Lamenallenic
     .systematic = (5S,16E)-octadeca-5,6,16-trienoic
 
 c18t5c9c12 =
@@ -405,17 +405,17 @@ c18t5c9c12 =
 
 c18c6c9c12 =
     .abbreviation = GLA
-    .common = γ-Linolenic
+    .common = γ‑Linolenic
     .synonyms = Gamolenic
     .systematic = (6Z,9Z,12Z)-octadeca-6,9,12-trienoic
 
 c18c8c10c12 =
-    .common = β-Calendic
+    .common = β‑Calendic
     .synonyms = Calendulic
     .systematic = (8Z,10Z,12Z)-octadeca-8,10,12-trienoic
 
 c18c8c10t12 =
-    .common = α-Calendic
+    .common = α‑Calendic
     .systematic = (8Z,10Z,12E)-octadeca-8,10,12-trienoic
 
 c18c8t10c12 =
@@ -442,7 +442,7 @@ c18c9t11c13 =
     .systematic = (9Z,11E,13Z)-octadeca-9,11,13-trienoic
 
 c18c9t11t13 =
-    .common = α-Eleostearic
+    .common = α‑Eleostearic
     .synonyms = Eleostearinic; Margarolic
     .systematic = (9Z,11E,13E)-octadeca-9,11,13-trienoic
 
@@ -456,7 +456,7 @@ c18c9a12c14 =
 
 c18c9c12c15 =
     .abbreviation = ALA
-    .common = α-Linolenic
+    .common = α‑Linolenic
     .systematic = (9Z,12Z,-15Z)-octadeca-9,12,15-trienoic
 
 c18c9t13c15 =
@@ -468,7 +468,7 @@ c18t9t11c13 =
     .systematic = (9E,11E,13Z)-octadeca-9,11,13-trienoic
 
 c18t9t11t13 =
-    .common = β-Eleostearic
+    .common = β‑Eleostearic
     .systematic = (9E,11E,13E)-octadeca-9,11,13-trienoic
 
 c18t9t12t15 =
@@ -493,11 +493,11 @@ c18c8c10c12t14 =
     .systematic = (8Z,10Z,12Z,14E)-octadeca-8,10,12,14-tetraenoic
 
 c18c9t11t13c15 =
-    .common = α-Parinaric
+    .common = α‑Parinaric
     .systematic = (9Z,11E,13E,15Z)-octadeca-9,11,13,15-tetraenoic
 
 c18t9t11t13t15 =
-    .common = β-Parinaric
+    .common = β‑Parinaric
     .systematic = (9E,11E,13E,15E)-octadeca-9,11,13,15-tetraenoic
 
 c20 =
@@ -540,8 +540,8 @@ c20e7e8 =
 
 c20c11c14c17 =
     .abbreviation = DALA
-    .common = Dihomo-α-linolenic
-    .synonyms = Bishomo-α-linolenic
+    .common = Dihomo‑α‑linolenic
+    .synonyms = Bishomo‑α‑linolenic
     .systematic = (11Z,14Z,17Z)-icosa-11,14,17-trienoic
 
 c20c5c11c14 =
@@ -564,8 +564,8 @@ c20c7c11t14 =
 
 c20c8c11c14 =
     .abbreviation = DGLA
-    .common = Dihomo-γ-linolenic
-    .synonyms = Bishomo-γ-linolenic
+    .common = Dihomo‑γ‑linolenic
+    .synonyms = Bishomo‑γ‑linolenic
     .systematic = (8Z,11Z,14Z)-icosa-8,11,14-trienoic
 
 c20c4c8c12c15 =
@@ -654,7 +654,7 @@ c24c15 =
     .systematic = (15Z)-tetracos-15-enoic
 
 c24t15 =
-    .common = trans-Selacholeic
+    .common = trans‑Selacholeic
     .systematic = (15E)-tetracos-=15-enoic
 
 c24c6c9c12c15c18c21 =
