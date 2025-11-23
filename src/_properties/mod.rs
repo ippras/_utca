@@ -9,8 +9,6 @@ pub mod viscosity;
 // // 6.79 * 48 + -19.09 + -36.7 * 0.07787616392032737
 // // 44,5 = 317,65
 
-// /// - [lipidlibrary.shinyapps.io](https://lipidlibrary.shinyapps.io/Triglyceride_Property_Calculator/)
-// /// - [crcfoodandhealth.com](https://www.crcfoodandhealth.com/downloads/asmTPC-webMathe.pdf)
 // pub(super) fn thermodynamic(&self, tag: Tag<usize>) -> Thermodynamic {
 //     let formula = tag.map(|index| &self.state.entry().meta.formulas[index]);
 //     Thermodynamic::new(formula)

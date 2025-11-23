@@ -116,9 +116,9 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 #[derive(Clone, Copy, Debug, Hash)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
-    pub(crate) save: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
+    pub(crate) save: bool,
     pub(crate) significant: bool,
     pub(crate) sort: bool,
 }
@@ -267,6 +267,16 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
         )?
         .alias("Factors.Selectivity.Calculation"),
     ]);
+    // // Unique prefixes
+    // if key.prefix {
+    //     lazy_frame = lazy_frame.with_column(col(LABEL).map(
+    //         |column| {
+    //             let unique_prefixes = unique_prefixes(column.str()?);
+    //             Ok(Series::new(column.name().clone(), unique_prefixes).into_column())
+    //         },
+    //         |_, field| Ok(field.clone()),
+    //     ));
+    // }
     // Concat
     lazy_frame = concat_lf_diagonal([lazy_frame, sum], Default::default())?;
     Ok(lazy_frame)
