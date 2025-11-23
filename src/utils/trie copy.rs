@@ -1,59 +1,34 @@
-use std::collections::HashMap;
-
-// use radix_trie::{Trie, TrieCommon, iter::Children};
 use polars::prelude::StringChunked;
+// use radix_trie::{Trie, TrieCommon, iter::Children};
 use radix_immutable::StringTrie;
 
 // Shortest unique (unambiguous) prefixes of list.
-// pub fn unique_prefixes_without_prefixes(strings: &StringChunked) -> Vec<&str> {
-//     // Create and fill Radix Trie.
-//     let mut trie = StringTrie::new();
-//     for string in strings.into_no_null_iter() {
-//         trie = trie.insert(string, ());
-//     }
-//     let mut results = Vec::new();
-//     for string in strings.into_no_null_iter() {
-//         // By default, if there is no unique prefix, we use the entire string.
-//         let mut unique = string;
-//         // Iterate through all possible suffixes, starting with the shortest one.
-//         for (index, _) in string.char_indices() {
-//             let root = &string[..=index];
-//             let view_subtrie = trie.view_subtrie(root);
-//             if view_subtrie.len() == 1 {
-//                 unique = root;
-//                 break;
-//             }
-//         }
-//         results.push(unique);
-//     }
-//     results
-// }
-
 pub fn unique_prefixes(strings: &StringChunked) -> Vec<&str> {
     // Create and fill Radix Trie.
     let mut trie = StringTrie::new();
-    let mut starts = HashMap::new();
-    for string in strings.into_no_null_iter() {
-        let index = string.find('‑').unwrap_or_default();
-        trie = trie.insert(&string[index..], ());
-        starts.insert(string, index);
+    for string in strings {
+        if let Some(value) = string {
+            let suffix = value.trim_start_matches(['α', 'β', 'γ', '-']);
+            if !trie.contains_key(&suffix) {
+                println!(r#"trie !contains_key: "{suffix}""#);
+                trie = trie.insert(suffix, value.chars().count());
+            }
+        }
     }
-    println!("starts: {starts:?}");
     let mut results = Vec::new();
+    //
     for string in strings.into_no_null_iter() {
         // By default, if there is no unique prefix, we use the entire string.
         let mut unique = string;
-        let start = starts[string];
         // Iterate through all possible suffixes, starting with the shortest one.
-        for (end, _) in string.char_indices().skip(start) {
-            let root = &string[start..=end];
+        for (index, _) in string.char_indices() {
+            let suffix = string.trim_start_matches(['α', 'β', 'γ', '-']);
+            let root = &suffix[..index + 1];
             let view_subtrie = trie.view_subtrie(root);
-            println!(
-                r#"-root: "{root}" ({start}..={end}) ({})"#,
-                view_subtrie.len()
-            );
+            println!(r#"-root: "{root}" ({})"#, view_subtrie.len());
             if view_subtrie.len() == 1 {
-                unique = &string[..=end];
+                unique = root;
+                // We found it, let's get out of the inner loop.
                 break;
             }
         }
@@ -61,6 +36,10 @@ pub fn unique_prefixes(strings: &StringChunked) -> Vec<&str> {
     }
     results
 }
+
+// string = string.trim_start_matches(['α', 'β', 'γ', '-']);
+// .trim_start_matches("cis")
+// .trim_start_matches("trans")
 
 #[cfg(test)]
 mod test {

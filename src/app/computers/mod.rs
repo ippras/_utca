@@ -1,5 +1,4 @@
 pub(super) mod calculation;
 pub(super) mod composition;
 pub(super) mod configuration;
-pub(super) mod viscosity;
-pub(super) mod wesdorp;
+pub(super) mod properties;

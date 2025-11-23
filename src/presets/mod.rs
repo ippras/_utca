@@ -15,8 +15,6 @@ fn parse(bytes: &[u8]) -> Result<HashedMetaDataFrame> {
     })
 }
 
-pub(crate) static CHRISTIE: LazyLock<HashedMetaDataFrame> = preset!("Christie.ron");
-
 /// IPPRAS
 #[rustfmt::skip]
 pub(crate) mod ippras {

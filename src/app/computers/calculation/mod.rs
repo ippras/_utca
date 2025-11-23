@@ -1,6 +1,6 @@
 use crate::{
     app::states::calculation::{Normalize, Settings, Threshold},
-    presets::CHRISTIE,
+    assets::CHRISTIE,
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use const_format::formatcp;

@@ -1,21 +1,18 @@
 //! [Rabelo (2000)](https://doi.org/10.1007/s11746-000-0197-z)
-//! Rabelo2000
-//! https://doi.org/10.1007/s11746-000-0197-z
-//! Viscosity prediction for fatty systems
-//! Dynamic viscosities (η)
 
+use super::T_0;
 use lipid::prelude::*;
-use polars::{
-    lazy::dsl::{max_horizontal, min_horizontal, sum_horizontal},
-    prelude::*,
-};
-use std::ops::Rem;
+use polars::prelude::*;
 
-// ГОСТ 8.157-75
-const T_0: f64 = 273.15;
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct Options {
+    pub temperature: f64,
+    pub intermediate: bool,
+}
 
-fn fatty_acid(lazy_frame: LazyFrame, t: f64) -> PolarsResult<LazyFrame> {
-    Ok(lazy_frame
+/// Dynamic viscosities (η)
+pub(crate) fn fatty_acids(mut lazy_frame: LazyFrame, options: Options) -> PolarsResult<LazyFrame> {
+    lazy_frame = lazy_frame
         .with_columns([
             lit(-6.09).alias("_A_1"),
             lit(-3.536).alias("_A_2"),
@@ -49,14 +46,28 @@ fn fatty_acid(lazy_frame: LazyFrame, t: f64) -> PolarsResult<LazyFrame> {
             .alias("_A"),
         ])
         .with_column(
-            (col("_A") + col("_B") / (lit(T_0 + 40.0) - col("_C")))
+            (col("_A") + col("_B") / (lit(options.temperature) - col("_C")))
                 .exp()
                 .alias("η"),
-        ))
+        );
+    if !options.intermediate {
+        lazy_frame = lazy_frame.drop(by_name(
+            [
+                "_A_1", "_A_2", "_A_3", "_A_4", "_A_5", "_B_1", "_C_1", "_C_2", "_C_3", "_n_C",
+                "_n_D", "_A", "_B", "_C",
+            ],
+            true,
+        ));
+    }
+    Ok(lazy_frame)
 }
 
-fn triacylglycerol(lazy_frame: LazyFrame, t: f64) -> PolarsResult<LazyFrame> {
-    Ok(lazy_frame
+/// Dynamic viscosities (η)
+pub(crate) fn triacylglycerols(
+    mut lazy_frame: LazyFrame,
+    options: Options,
+) -> PolarsResult<LazyFrame> {
+    lazy_frame = lazy_frame
         .with_columns([
             lit(-4.01).alias("_A_1"),
             lit(-2.954).alias("_A_2"),
@@ -92,19 +103,28 @@ fn triacylglycerol(lazy_frame: LazyFrame, t: f64) -> PolarsResult<LazyFrame> {
             .alias("_A"),
         ])
         .with_column(
-            (col("_A") + col("_B") / (lit(t) - col("_C")))
+            (col("_A") + col("_B") / (lit(options.temperature) - col("_C")))
                 .exp()
                 .alias("η"),
-        ))
+        );
+    if !options.intermediate {
+        lazy_frame = lazy_frame.drop(by_name(
+            [
+                "_A_1", "_A_2", "_A_3", "_A_4", "_A_5", "_B_1", "_C_1", "_C_2", "_C_3", "_n_C",
+                "_n_D", "_A", "_B", "_C",
+            ],
+            true,
+        ));
+    }
+    Ok(lazy_frame)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use anyhow::Result;
 
     #[test]
-    fn test1() -> Result<()> {
+    fn test1() -> PolarsResult<()> {
         let data_frame = df! {
             FATTY_ACID => [
                 fatty_acid!(C16 { })?,
@@ -112,14 +132,19 @@ mod test {
                 fatty_acid!(C18 { 9 => C, 12 => C })?,
             ],
         }?;
-        println!("data_frame: {data_frame}");
-        let lazy_frame = fatty_acid(data_frame.lazy(), T_0 + 40.0)?;
+        let lazy_frame = fatty_acids(
+            data_frame.lazy(),
+            Options {
+                temperature: T_0 + 40.0,
+                ..Default::default()
+            },
+        )?;
         println!("lazy_frame: {}", lazy_frame.collect()?);
         Ok(())
     }
 
     #[test]
-    fn test2() -> Result<()> {
+    fn test2() -> PolarsResult<()> {
         let data_frame = df! {
             TRIACYLGLYCEROL => df! {
                 STEREOSPECIFIC_NUMBERS1 => [
@@ -142,8 +167,13 @@ mod test {
                 ],
             }?.into_struct(PlSmallStr::EMPTY).into_series(),
         }?;
-        println!("data_frame: {data_frame}");
-        let lazy_frame = triacylglycerol(data_frame.lazy(), T_0 + 60.0)?;
+        let lazy_frame = triacylglycerols(
+            data_frame.lazy(),
+            Options {
+                temperature: T_0 + 60.0,
+                ..Default::default()
+            },
+        )?;
         println!("lazy_frame: {}", lazy_frame.collect()?);
         Ok(())
     }
