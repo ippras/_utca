@@ -1,19 +1,17 @@
 //! [Rabelo (2000)](https://doi.org/10.1007/s11746-000-0197-z)
 
+use super::T_0;
 use lipid::prelude::*;
 use polars::prelude::*;
 
-// ГОСТ 8.157-75
-const T_0: f64 = 273.15;
-
 #[derive(Clone, Copy, Debug, Default)]
-pub struct Options {
+pub(crate) struct Options {
     pub temperature: f64,
     pub intermediate: bool,
 }
 
 /// Dynamic viscosities (η)
-fn fatty_acids(mut lazy_frame: LazyFrame, options: Options) -> PolarsResult<LazyFrame> {
+pub(crate) fn fatty_acids(mut lazy_frame: LazyFrame, options: Options) -> PolarsResult<LazyFrame> {
     lazy_frame = lazy_frame
         .with_columns([
             lit(-6.09).alias("_A_1"),
@@ -65,7 +63,10 @@ fn fatty_acids(mut lazy_frame: LazyFrame, options: Options) -> PolarsResult<Lazy
 }
 
 /// Dynamic viscosities (η)
-fn triacylglycerols(mut lazy_frame: LazyFrame, options: Options) -> PolarsResult<LazyFrame> {
+pub(crate) fn triacylglycerols(
+    mut lazy_frame: LazyFrame,
+    options: Options,
+) -> PolarsResult<LazyFrame> {
     lazy_frame = lazy_frame
         .with_columns([
             lit(-4.01).alias("_A_1"),
