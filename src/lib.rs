@@ -8,6 +8,7 @@
 pub use app::App;
 
 mod app;
+mod assets;
 mod r#const;
 mod export;
 mod localization;
