@@ -37,7 +37,6 @@ mod sources {
         asset!("/ftl/en/fatty_acids/aocs.org.ftl"),
         asset!("/ftl/en/fatty_acids/aocs.org.ext.ftl"),
         asset!("/ftl/en/headers.ftl"),
-        asset!("/ftl/en/indices.ftl"),
         asset!("/ftl/en/menu.ftl"),
         asset!("/ftl/en/names.ftl"),
         asset!("/ftl/en/properties.ftl"),

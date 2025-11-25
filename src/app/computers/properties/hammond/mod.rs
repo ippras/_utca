@@ -19,7 +19,7 @@ fn fatty_acids(mut lazy_frame: LazyFrame, intermediate: bool) -> PolarsResult<La
             lit(8.247).alias("_k_3"),
             lit(16.54).alias("_k_4"),
             ternary_expr(
-                col(FATTY_ACID).fatty_acid().is_monoenoics(),
+                col(FATTY_ACID).fatty_acid().is_monoenoic(),
                 lit(-6.65),
                 lit(-6.87),
             )

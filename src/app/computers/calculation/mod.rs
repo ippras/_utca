@@ -263,6 +263,7 @@ fn mean_and_standard_deviation(expr: Expr, ddof: u8) -> PolarsResult<Expr> {
 //     destruct(names) / to_mass(names).sum()
 // }
 
+pub(crate) mod properties;
 pub(crate) mod correlations;
 pub(crate) mod display;
 pub(crate) mod indices;

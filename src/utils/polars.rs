@@ -26,3 +26,26 @@ pub fn check_array_lengths(dtype: &DataType, lengths: &mut Vec<usize>) {
         _ => {}
     }
 }
+
+pub(crate) fn format_standard_deviation(expr: Expr) -> PolarsResult<Expr> {
+    Ok(ternary_expr(
+        expr.clone().is_not_null(),
+        format_str("±{}", [expr])?,
+        lit(NULL),
+    ))
+}
+
+pub(crate) fn format_sample(expr: Expr) -> PolarsResult<Expr> {
+    Ok(ternary_expr(
+        expr.clone().arr().len().gt(1),
+        format_str(
+            "[{}]",
+            [expr
+                .arr()
+                .eval(element(), false)
+                .arr()
+                .join(lit(", "), false)],
+        )?,
+        lit(NULL),
+    ))
+}

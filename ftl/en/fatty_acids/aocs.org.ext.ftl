@@ -1,3 +1,9 @@
+c15 =
+    .common = Pentadecylic
+    .systematic = pentadecanoic
+c19 =
+    .common = Nonadecylic
+    .systematic = nonadecanoic 
 c16c0c0 =
     .systematic = (0Z,0Z)-hexadeca-0,0-dienoic
 c16c7c10 =

@@ -203,3 +203,9 @@ SortByMinorMajor = Sort
 
 Normalization = Normalization
     .hover = Normalization kind.
+
+RelativeAtomicMass = Relative atomic mass
+    .hover = Relative atomic mass.
+
+Sample = Sample
+    .hover = Sample.

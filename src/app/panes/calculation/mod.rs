@@ -1,4 +1,4 @@
-use self::{correlations::Correlations, indices::Indices, table::TableView};
+use self::{correlations::Correlations, properties::Properties, table::TableView};
 use super::{Behavior, MARGIN};
 #[cfg(feature = "markdown")]
 use crate::r#const::markdown::CORRELATIONS;
@@ -10,6 +10,10 @@ use crate::{
                 Computed as CalculationCorrelationsComputed, Key as CalculationCorrelationsKey,
             },
             indices::{Computed as CalculationIndicesComputed, Key as CalculationIndicesKey},
+            properties::biodiesel::{
+                Computed as CalculationPropertiesBiodieselComputed,
+                Key as CalculationPropertiesBiodieselKey,
+            },
         },
         identifiers::COMPOSE,
         states::calculation::{Settings, State},
@@ -211,14 +215,24 @@ impl Pane {
                 ui.label(ui.localize("Correlation.hover"));
             });
             ui.toggle_value(
-                &mut state.windows.open_indices,
+                &mut state.windows.open_properties,
                 (
                     RichText::new(SIGMA).heading(),
-                    RichText::new(ui.localize("Index?PluralCategory=other")).heading(),
+                    RichText::new(ui.localize("Property?PluralCategory=other")).heading(),
                 ),
             )
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("Index.hover"));
+                ui.label(ui.localize("Property.hover"));
+            });
+            ui.toggle_value(
+                &mut state.windows.open_biodiesel_properties,
+                (
+                    RichText::new(SIGMA).heading(),
+                    RichText::new(ui.localize("BiodieselProperties")).heading(),
+                ),
+            )
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("BiodieselProperties.hover"));
             });
         });
     }
@@ -410,7 +424,8 @@ impl Pane {
 impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
         self.correlations_window(ui, state);
-        self.indices_window(ui, state);
+        self.properties_window(ui, state);
+        self.biodiesel_properties_window(ui, state);
         self.settings_window(ui, state);
     }
 
@@ -449,29 +464,51 @@ impl Pane {
         Ok(())
     }
 
-    fn indices_window(&mut self, ui: &mut Ui, state: &mut State) {
-        if let Some(inner_response) = Window::new(format!("{SIGMA} Calculation indices"))
-            .id(ui.auto_id_with(ID_SOURCE).with("Indices"))
+    fn properties_window(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SIGMA} Calculation properties"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Properties"))
             .default_pos(ui.next_widget_position())
-            .open(&mut state.windows.open_indices)
-            .show(ui.ctx(), |ui| self.indices_content(ui, &state.settings))
-        {
-            inner_response
-                .response
-                .on_hover_text(self.title(state.settings.index).to_string())
-                .on_hover_text(self.id().to_string());
-        }
+            .open(&mut state.windows.open_properties)
+            .show(ui.ctx(), |ui| self.properties_content(ui, &state.settings));
     }
 
     #[instrument(skip_all, err)]
-    fn indices_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
+    fn properties_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
                 .cache::<CalculationIndicesComputed>()
                 .get(CalculationIndicesKey::new(&self.target, settings))
         });
-        Indices::new(&data_frame, settings).show(ui).inner
+        Properties::new(&data_frame, settings).show(ui).inner
+    }
+
+    fn biodiesel_properties_window(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SIGMA} Calculation biodiesel properties"))
+            .id(ui.auto_id_with(ID_SOURCE).with("BiodieselProperties"))
+            .default_pos(ui.next_widget_position())
+            .open(&mut state.windows.open_biodiesel_properties)
+            .show(ui.ctx(), |ui| {
+                self.biodiesel_properties_content(ui, &state.settings)
+            });
+    }
+
+    #[instrument(skip_all, err)]
+    fn biodiesel_properties_content(
+        &mut self,
+        ui: &mut Ui,
+        settings: &Settings,
+    ) -> PolarsResult<()> {
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<CalculationPropertiesBiodieselComputed>()
+                .get(CalculationPropertiesBiodieselKey::new(
+                    &self.target,
+                    settings,
+                ))
+        });
+        Properties::new(&data_frame, settings).show(ui).inner
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
@@ -493,5 +530,5 @@ impl Pane {
 }
 
 mod correlations;
-mod indices;
+mod properties;
 mod table;

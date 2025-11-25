@@ -1,6 +1,9 @@
 use crate::{
     app::states::calculation::{Indices, Settings},
-    utils::HashedDataFrame,
+    utils::{
+        HashedDataFrame,
+        polars::{format_sample, format_standard_deviation},
+    },
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -8,12 +11,6 @@ use polars::prelude::*;
 use polars_ext::expr::ExprExt;
 use std::num::NonZeroI8;
 use tracing::instrument;
-
-const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
-    STEREOSPECIFIC_NUMBERS123,
-    STEREOSPECIFIC_NUMBERS13,
-    STEREOSPECIFIC_NUMBERS2,
-];
 
 /// Calculation indices computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -25,7 +22,17 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        compute(key, length(&key.frame)?)
+        let mut lazy_frame = key.frame.data_frame.clone().lazy();
+        // Filter minor
+        if !key.save {
+            // true or null (standard)
+            lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
+        }
+        // Compute
+        lazy_frame = compute(lazy_frame, key)?;
+        // Format
+        lazy_frame = format(lazy_frame, key)?;
+        lazy_frame.collect()
     }
 }
 
@@ -42,6 +49,7 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) indices: &'a Indices,
     pub(crate) precision: usize,
+    pub(crate) save: bool,
     pub(crate) significant: bool,
 }
 
@@ -52,6 +60,7 @@ impl<'a> Key<'a> {
             ddof: settings.ddof,
             indices: &settings.indices,
             precision: settings.precision,
+            save: settings.threshold.save,
             significant: settings.significant,
         }
     }
@@ -60,7 +69,7 @@ impl<'a> Key<'a> {
 /// Calculation indices value
 type Value = DataFrame;
 
-fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
+fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
     // FattyAcid
     let Some(data_type) = data_frame.schema().get(FATTY_ACID) else {
         polars_bail!(SchemaMismatch: "The `FATTY_ACID` field was not found in the scheme");
@@ -80,189 +89,193 @@ fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
     let &DataType::Array(box DataType::Float64, length) = data_type else {
         polars_bail!(SchemaMismatch: r#"Invalid "STEREOSPECIFIC_NUMBERS123.Array" data type: expected `Array(Float64)`, got = `{data_type}`"#);
     };
-    return Ok(length as _);
+    return Ok(length);
 }
 
-fn compute(key: Key, length: u64) -> PolarsResult<Value> {
-    let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    let fatty_acid = || col(FATTY_ACID).fatty_acid();
-    let values = |expr: Expr| {
+fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    let length = length(&key.frame)?;
+    let iter = |expr: Expr| {
         (0..length).map(move |index| {
             expr.clone()
                 .struct_()
                 .field_by_name("Array")
                 .arr()
-                .get(lit(index), false)
+                .get(lit(index as IdxSize), false)
         })
     };
-    let stereospecific_numbers = |expr: Expr| -> PolarsResult<Expr> {
+    let sample = |name: &str, f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
+        concat_arr(iter(col(name)).map(f).collect())
+    };
+    let stereospecific_numbers = |name: &str, f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
         Ok(as_struct(vec![
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().monounsaturated(value))
-                    .collect(),
+            sample(name, f)?.arr().mean().alias("Mean"),
+            sample(name, f)?
+                .arr()
+                .std(key.ddof)
+                .alias("StandardDeviation"),
+            sample(name, f)?.alias("Sample"),
+        ])
+        .alias(name))
+    };
+    let property = |f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
+        Ok(as_struct(vec![
+            stereospecific_numbers(STEREOSPECIFIC_NUMBERS123, f)?,
+            stereospecific_numbers(STEREOSPECIFIC_NUMBERS13, f)?,
+            stereospecific_numbers(STEREOSPECIFIC_NUMBERS2, f)?,
+        ]))
+    };
+    Ok(lazy_frame.select([
+        property(monounsaturated)?.alias("Monounsaturated"),
+        property(polyunsaturated)?.alias("Polyunsaturated"),
+        property(saturated)?.alias("Saturated"),
+        property(trans)?.alias("Trans"),
+        property(|expr| unsaturated(expr, None))?.alias("Unsaturated"),
+        property(|expr| unsaturated(expr, NonZeroI8::new(-9)))?.alias("Unsaturated-9"),
+        property(|expr| unsaturated(expr, NonZeroI8::new(-6)))?.alias("Unsaturated-6"),
+        property(|expr| unsaturated(expr, NonZeroI8::new(-3)))?.alias("Unsaturated-3"),
+        property(|expr| unsaturated(expr, NonZeroI8::new(9)))?.alias("Unsaturated9"),
+        property(eicosapentaenoic_and_docosahexaenoic)?.alias("EicosapentaenoicAndDocosahexaenoic"),
+        property(fish_lipid_quality)?.alias("FishLipidQuality"),
+        property(health_promoting_index)?.alias("HealthPromotingIndex"),
+        property(hypocholesterolemic_to_hypercholesterolemic)?
+            .alias("HypocholesterolemicToHypercholesterolemic"),
+        property(index_of_atherogenicity)?.alias("IndexOfAtherogenicity"),
+        property(index_of_thrombogenicity)?.alias("IndexOfThrombogenicity"),
+        property(linoleic_to_alpha_linolenic)?.alias("LinoleicToAlphaLinolenic"),
+        property(polyunsaturated_6_to_polyunsaturated_3)?
+            .alias("Polyunsaturated-6ToPolyunsaturated-3"),
+        property(polyunsaturated_to_saturated)?.alias("PolyunsaturatedToSaturated"),
+        property(unsaturation_index)?.alias("UnsaturationIndex"),
+        property(iodine_value)?.alias("IodineValue"),
+    ]))
+}
+
+fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    let stereospecific_numbers = |expr: Expr| -> PolarsResult<Expr> {
+        Ok(expr.clone().struct_().with_fields(vec![
+            expr.clone()
+                .struct_()
+                .field_by_name("Mean")
+                .precision(key.precision, key.significant)
+                .cast(DataType::String),
+            format_standard_deviation(
+                expr.clone()
+                    .struct_()
+                    .field_by_name("StandardDeviation")
+                    .precision(key.precision, key.significant),
             )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().polyunsaturated(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().saturated(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().trans(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, None))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-9)))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-6)))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(-3)))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturated(value, NonZeroI8::new(9)))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().eicosapentaenoic_and_docosahexaenoic(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().fish_lipid_quality(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().health_promoting_index(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().hypocholesterolemic_to_hypercholesterolemic(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().index_of_atherogenicity(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().index_of_thrombogenicity(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().linoleic_to_alpha_linolenic(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().polyunsaturated_6_to_polyunsaturated_3(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().polyunsaturated_to_saturated(value))
-                    .collect(),
-            )?,
-            concat_arr(
-                values(expr.clone())
-                    .map(|value| fatty_acid().unsaturation_index(value))
-                    .collect(),
+            format_sample(
+                expr.struct_().field_by_name("Sample").arr().eval(
+                    element()
+                        .precision(key.precision, key.significant)
+                        .cast(DataType::String),
+                    false,
+                ),
             )?,
         ]))
     };
-    lazy_frame = lazy_frame.select([
-        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS123))?.alias(STEREOSPECIFIC_NUMBERS123),
-        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS13))?.alias(STEREOSPECIFIC_NUMBERS13),
-        stereospecific_numbers(col(STEREOSPECIFIC_NUMBERS2))?.alias(STEREOSPECIFIC_NUMBERS2),
-    ]);
-    // Mean and standard deviation
-    let exprs = STEREOSPECIFIC_NUMBERS
-        .into_iter()
-        .map(|stereospecific_numbers| {
-            as_struct(
-                key.indices
-                    .iter_visible()
-                    .map(|name| {
-                        as_struct(vec![
-                            col(stereospecific_numbers)
-                                .struct_()
-                                .field_by_name(name)
-                                .clone()
-                                .arr()
-                                .mean()
-                                .alias("Mean"),
-                            col(stereospecific_numbers)
-                                .struct_()
-                                .field_by_name(name)
-                                .clone()
-                                .arr()
-                                .std(key.ddof)
-                                .alias("StandardDeviation"),
-                            col(stereospecific_numbers)
-                                .struct_()
-                                .field_by_name(name)
-                                .alias("Array"),
-                        ])
-                        .alias(name)
-                    })
-                    .collect(),
-            )
-            .alias(stereospecific_numbers)
-        })
-        .collect::<Vec<_>>();
-    lazy_frame = lazy_frame.select(exprs);
-    // Format
-    lazy_frame = lazy_frame
-        .unnest(all(), Some(PlSmallStr::from_static("_")))
-        .unnest(all(), Some(PlSmallStr::from_static("_")))
-        .with_columns([
-            col(r#"^.*_Mean$"#).precision(key.precision, key.significant),
-            col(r#"^.*_StandardDeviation$"#).precision(key.precision, key.significant),
-            col(r#"^.*_Array$"#)
-                .arr()
-                .eval(element().precision(key.precision, key.significant), false),
-        ]);
-    let exprs = STEREOSPECIFIC_NUMBERS.map(|stereospecific_number| {
-        as_struct(
-            key.indices
-                .iter_visible()
-                .map(|name| {
-                    as_struct(vec![
-                        col(format!("{stereospecific_number}_{name}_Mean")).alias("Mean"),
-                        col(format!("{stereospecific_number}_{name}_StandardDeviation"))
-                            .alias("StandardDeviation"),
-                        col(format!("{stereospecific_number}_{name}_Array")).alias("Array"),
-                    ])
-                    .alias(name)
-                })
-                .collect(),
-        )
-        .alias(stereospecific_number)
-    });
-    lazy_frame = lazy_frame.select(exprs);
-    lazy_frame.collect()
+    let property = |name: &str| -> PolarsResult<Expr> {
+        Ok(as_struct(vec![
+            stereospecific_numbers(col(name).struct_().field_by_name(STEREOSPECIFIC_NUMBERS123))?,
+            stereospecific_numbers(col(name).struct_().field_by_name(STEREOSPECIFIC_NUMBERS13))?,
+            stereospecific_numbers(col(name).struct_().field_by_name(STEREOSPECIFIC_NUMBERS2))?,
+        ])
+        .alias(name))
+    };
+    Ok(lazy_frame.select([
+        property("Monounsaturated")?,
+        property("Polyunsaturated")?,
+        property("Saturated")?,
+        property("Trans")?,
+        property("Unsaturated")?,
+        property("Unsaturated-9")?,
+        property("Unsaturated-6")?,
+        property("Unsaturated-3")?,
+        property("Unsaturated9")?,
+        property("EicosapentaenoicAndDocosahexaenoic")?,
+        property("FishLipidQuality")?,
+        property("HealthPromotingIndex")?,
+        property("HypocholesterolemicToHypercholesterolemic")?,
+        property("IndexOfAtherogenicity")?,
+        property("IndexOfThrombogenicity")?,
+        property("LinoleicToAlphaLinolenic")?,
+        property("Polyunsaturated-6ToPolyunsaturated-3")?,
+        property("PolyunsaturatedToSaturated")?,
+        property("UnsaturationIndex")?,
+        property("IodineValue")?,
+    ]))
+}
+
+fn monounsaturated(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().monounsaturated(expr)
+}
+
+fn polyunsaturated(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().polyunsaturated(expr)
+}
+
+fn saturated(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().saturated(expr)
+}
+
+fn trans(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().trans(expr)
+}
+
+fn unsaturated(expr: Expr, offset: Option<NonZeroI8>) -> Expr {
+    col(FATTY_ACID).fatty_acid().unsaturated(expr, offset)
+}
+
+fn eicosapentaenoic_and_docosahexaenoic(expr: Expr) -> Expr {
+    col(FATTY_ACID)
+        .fatty_acid()
+        .eicosapentaenoic_and_docosahexaenoic(expr)
+}
+
+fn fish_lipid_quality(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().fish_lipid_quality(expr)
+}
+
+fn health_promoting_index(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().health_promoting_index(expr)
+}
+
+fn hypocholesterolemic_to_hypercholesterolemic(expr: Expr) -> Expr {
+    col(FATTY_ACID)
+        .fatty_acid()
+        .hypocholesterolemic_to_hypercholesterolemic(expr)
+}
+
+fn index_of_atherogenicity(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().index_of_atherogenicity(expr)
+}
+
+fn index_of_thrombogenicity(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().index_of_thrombogenicity(expr)
+}
+
+fn linoleic_to_alpha_linolenic(expr: Expr) -> Expr {
+    col(FATTY_ACID)
+        .fatty_acid()
+        .linoleic_to_alpha_linolenic(expr)
+}
+
+fn polyunsaturated_6_to_polyunsaturated_3(expr: Expr) -> Expr {
+    col(FATTY_ACID)
+        .fatty_acid()
+        .polyunsaturated_6_to_polyunsaturated_3(expr)
+}
+
+fn polyunsaturated_to_saturated(expr: Expr) -> Expr {
+    col(FATTY_ACID)
+        .fatty_acid()
+        .polyunsaturated_to_saturated(expr)
+}
+
+fn unsaturation_index(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().unsaturation_index(expr)
+}
+
+fn iodine_value(expr: Expr) -> Expr {
+    (expr * col(FATTY_ACID).fatty_acid().iodine_value()).sum()
 }

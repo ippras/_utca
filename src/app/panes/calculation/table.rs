@@ -9,10 +9,11 @@ use crate::{
         panes::MARGIN,
         states::calculation::State,
     },
-    utils::HashedDataFrame,
+    utils::{HashedDataFrame, egui::ResponseExt},
 };
 use egui::{
-    Frame, Id, Label, Margin, Response, RichText, TextStyle, TextWrapMode, Ui, Widget, WidgetText,
+    Frame, Grid, Id, Label, Margin, Response, RichText, TextStyle, TextWrapMode, Ui, Widget,
+    WidgetText,
 };
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
@@ -167,7 +168,29 @@ impl TableView<'_> {
             }
             (row, bottom::LABEL) => {
                 if let Some(text) = data_frame[LABEL].str()?.get(row) {
-                    Label::new(text).truncate().ui(ui);
+                    Label::new(text).truncate().ui(ui).try_on_hover_ui(
+                        |ui| -> PolarsResult<()> {
+                            ui.heading(ui.localize("Properties"));
+                            Grid::new(ui.next_auto_id())
+                                .show(ui, |ui| {
+                                    ui.label(ui.localize("IodineValue"));
+                                    ui.label(
+                                        data_frame["Properties.IodineValue"].get(row)?.str_value(),
+                                    );
+                                    ui.end_row();
+
+                                    ui.label(ui.localize("RelativeAtomicMass"));
+                                    ui.label(
+                                        data_frame["Properties.RelativeAtomicMass"]
+                                            .get(row)?
+                                            .str_value(),
+                                    );
+                                    ui.end_row();
+                                    Ok(())
+                                })
+                                .inner
+                        },
+                    )?;
                 }
             }
             (row, bottom::FA) => {

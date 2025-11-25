@@ -647,6 +647,7 @@ impl Indices {
             Index::new("Polyunsaturated-6ToPolyunsaturated-3"),
             Index::new("PolyunsaturatedToSaturated"),
             Index::new("UnsaturationIndex"),
+            Index::new("IodineValue"),
         ])
     }
 

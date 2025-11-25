@@ -277,20 +277,32 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
     //         |_, field| Ok(field.clone()),
     //     ));
     // }
+    // Properties
+    lazy_frame = lazy_frame.with_columns([
+        format_float(
+            col(FATTY_ACID).fatty_acid().iodine_value(),
+            Key {
+                percent: false,
+                ..key
+            },
+        )
+        .alias("Properties.IodineValue"),
+        format_float(
+            col(FATTY_ACID).fatty_acid().relative_atomic_mass(None),
+            Key {
+                percent: false,
+                ..key
+            },
+        )
+        .alias("Properties.RelativeAtomicMass"),
+    ]);
     // Concat
     lazy_frame = concat_lf_diagonal([lazy_frame, sum], Default::default())?;
     Ok(lazy_frame)
 }
 
 fn format_float(expr: Expr, key: Key) -> Expr {
-    float(
-        expr,
-        Key {
-            significant: false,
-            ..key
-        },
-    )
-    .cast(DataType::String)
+    float(expr, key).cast(DataType::String)
 }
 
 fn format_standard_deviation(expr: Expr, key: Key) -> PolarsResult<Expr> {
