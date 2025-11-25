@@ -203,3 +203,9 @@ SortByMinorMajor = Sort
 
 Normalization = Normalization
     .hover = Normalization kind.
+
+Properties = Properties
+IodineValue = Iodine value
+    .hover = Iodine value.
+RelativeAtomicMass = Relative atomic mass
+    .hover = Relative atomic mass.

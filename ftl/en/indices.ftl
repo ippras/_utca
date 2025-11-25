@@ -46,3 +46,27 @@ Indices_PolyunsaturatedToSaturated = Polyunsaturated to Saturated
 Indices_UnsaturationIndex = Unsaturation Index
     .abbreviation = UI
     .hover = Unsaturation Index.
+
+Indices_IodineValue = Iodine value
+    .abbreviation = IV
+    .hover = Iodine value
+    .doi = { $Source ->
+        *[Aocs] [AOCS recommended practice Cd 1c-85](https://library.aocs.org/Cd-1c-85/1)
+        [Wang2012] [Wang et al. (2012)](https://doi.org/10.1016/S1872-5813(12)60018-8)
+    }
+CetaneNumber = Cetane number
+    .abbreviation = CN
+    .hover = Cetane number
+    .doi = [Wang et al. (2012)](https://doi.org/10.1016/S1872-5813(12)60018-8)
+OxidativeStability = Oxidative stability
+    .abbreviation = OS
+    .hover = Oxidative stability.
+    .doi = [Wang et al. (2012)](https://doi.org/10.1016/S1872-5813(12)60018-8)
+LongChainSaturatedFactor = Long Chain Saturated factor
+    .abbreviation = LCSF
+    .hover = Long Chain Saturated factor.
+    .doi = [Ramos et al. (2009)](https://doi.org/10.1016/j.biortech.2008.06.039)
+ColdFilterPluggingPoint = Cold filter plugging point
+    .abbreviation = CFPP
+    .hover = Cold filter plugging point.
+    .doi = [Wang et al. (2012)](https://doi.org/10.1016/S1872-5813(12)60018-8)
