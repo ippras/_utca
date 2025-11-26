@@ -1,6 +1,6 @@
 # Oxidation stability (OS)
 
-$OS = –0.0384 * DU + 7.770$ ([Wang *et al.*, 2012])
+$OS = -0.0384 * DU + 7.770$ ([Wang *et al.*, 2012])
 
 ## Biodiesel standards
 

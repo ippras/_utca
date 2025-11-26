@@ -1,6 +1,6 @@
 # Cetane number
 
-$CN = –0.1209 * DU + 65.0958$ ([Wang *et al.*, 2012])
+$CN = -0.1209 * DU + 65.0958$ ([Wang *et al.*, 2012])
 
 The cetane number (CN) is the ability of fuel to ignite quickly after being
 injected and a higher value indicates better ignition quality of fuel. This is

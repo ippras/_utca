@@ -6,6 +6,10 @@ use crate::{
     app::{
         computers::calculation::{
             Computed as CalculationComputed, Key as CalculationKey,
+            biodiesel_properties::{
+                Computed as CalculationBiodieselPropertiesComputed,
+                Key as CalculationBiodieselPropertiesKey,
+            },
             correlations::{
                 Computed as CalculationCorrelationsComputed, Key as CalculationCorrelationsKey,
             },
@@ -220,6 +224,16 @@ impl Pane {
             .on_hover_ui(|ui| {
                 ui.label(ui.localize("Index.hover"));
             });
+            ui.toggle_value(
+                &mut state.windows.open_properties,
+                (
+                    RichText::new(SIGMA).heading(),
+                    RichText::new(ui.localize("Properties")).heading(),
+                ),
+            )
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Properties.hover"));
+            });
         });
     }
 
@@ -411,6 +425,7 @@ impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
         self.correlations_window(ui, state);
         self.indices_window(ui, state);
+        self.properties_window(ui, state);
         self.settings_window(ui, state);
     }
 
@@ -470,6 +485,28 @@ impl Pane {
                 .caches
                 .cache::<CalculationIndicesComputed>()
                 .get(CalculationIndicesKey::new(&self.target, settings))
+        });
+        Indices::new(&data_frame, settings).show(ui).inner
+    }
+
+    fn properties_window(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SIGMA} Calculation properties"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Properties"))
+            .default_pos(ui.next_widget_position())
+            .open(&mut state.windows.open_properties)
+            .show(ui.ctx(), |ui| self.properties_content(ui, &state.settings));
+    }
+
+    #[instrument(skip_all, err)]
+    fn properties_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<CalculationBiodieselPropertiesComputed>()
+                .get(CalculationBiodieselPropertiesKey::new(
+                    &self.target,
+                    settings,
+                ))
         });
         Indices::new(&data_frame, settings).show(ui).inner
     }

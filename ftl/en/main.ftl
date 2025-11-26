@@ -205,6 +205,7 @@ Normalization = Normalization
     .hover = Normalization kind.
 
 Properties = Properties
+    .hover = Properties.
 IodineValue = Iodine value
     .hover = Iodine value.
 RelativeAtomicMass = Relative atomic mass
