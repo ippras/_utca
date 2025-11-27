@@ -7,7 +7,6 @@ use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_ext::expr::{ExprExt, ExprIfExt};
-use std::num::NonZeroI8;
 use tracing::instrument;
 
 const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
@@ -15,6 +14,9 @@ const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
     STEREOSPECIFIC_NUMBERS13,
     STEREOSPECIFIC_NUMBERS2,
 ];
+
+const ARRAY: &str = r#"^.*\.Array$"#;
+const MEAN: &str = r#"^.*\.Mean$"#;
 
 /// Calculation biodiesel properties computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -26,7 +28,7 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        compute(key, length(&key.frame)?)
+        compute(key)
     }
 }
 
@@ -61,81 +63,95 @@ impl<'a> Key<'a> {
 /// Calculation biodiesel properties value
 type Value = DataFrame;
 
-fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
-    // FattyAcid
-    let Some(data_type) = data_frame.schema().get(FATTY_ACID) else {
-        polars_bail!(SchemaMismatch: "The `FATTY_ACID` field was not found in the scheme");
-    };
-    polars_ensure!(*data_type == data_type!(FATTY_ACID), SchemaMismatch: "Invalid `FATTY_ACID` data type: expected `FATTY_ACID`, got = `{data_type}`");
-    // Value
-    let Some(data_type) = data_frame.schema().get(STEREOSPECIFIC_NUMBERS123) else {
-        polars_bail!(SchemaMismatch: r#"The "{STEREOSPECIFIC_NUMBERS123}" field was not found in the scheme"#);
-    };
-    let DataType::Struct(fields) = data_type else {
-        polars_bail!(SchemaMismatch: r#"Invalid "{STEREOSPECIFIC_NUMBERS123}" data type: expected `Struct`, got = `{data_type}`"#);
-    };
-    let Some(array) = fields.iter().find(|field| field.name() == "Array") else {
-        polars_bail!(SchemaMismatch: r#"The "STEREOSPECIFIC_NUMBERS123.Array" field was not found in the scheme"#);
-    };
-    let data_type = array.dtype();
-    let &DataType::Array(box DataType::Float64, length) = data_type else {
-        polars_bail!(SchemaMismatch: r#"Invalid "STEREOSPECIFIC_NUMBERS123.Array" data type: expected `Array(Float64)`, got = `{data_type}`"#);
-    };
-    return Ok(length as _);
-}
-
-fn compute(key: Key, length: u64) -> PolarsResult<Value> {
+fn compute(key: Key) -> PolarsResult<Value> {
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
     println!(
         "lazy_frame PRO 0: {}",
         lazy_frame.clone().collect().unwrap()
     );
+    // Пока не будет готов
+    // https://github.com/pola-rs/polars/pull/23316
     lazy_frame = lazy_frame
+        .with_row_index("Index", None)
         .unnest(
             // cols([formatcp!(r#"^StereospecificNumbers\d+$"#)]),
             cols([STEREOSPECIFIC_NUMBERS123]),
             Some(PlSmallStr::from_static(".")),
         )
         .select([
-            col(FATTY_ACID)
-                .fatty_acid()
-                .cetane_number(col(r#"^.*\.Mean$"#))
-                .percent_if(true)
-                .name()
-                .replace("Mean", "CetaneNumber", true),
-            col(FATTY_ACID)
-                .fatty_acid()
-                .cold_filter_plugging_point(col(r#"^.*\.Mean$"#))
-                .percent_if(true)
-                .name()
-                .replace("Mean", "ColdFilterPluggingPoint", true),
-            col(FATTY_ACID)
-                .fatty_acid()
-                .degree_of_unsaturation(col(r#"^.*\.Mean$"#))
-                .percent_if(true)
-                .name()
-                .replace("Mean", "DegreeOfUnsaturation", true),
-            BiodieselProperties::iodine_value(col(FATTY_ACID).fatty_acid(), col(r#"^.*\.Mean$"#))
-                .percent_if(true)
-                .name()
-                .replace("Mean", "IodineValue", true),
-            col(FATTY_ACID)
-                .fatty_acid()
-                .long_chain_saturated_factor(col(r#"^.*\.Mean$"#))
-                .percent_if(true)
-                .name()
-                .replace("Mean", "LongChainSaturatedFactor", true),
-            col(FATTY_ACID)
-                .fatty_acid()
-                .oxidation_stability(col(r#"^.*\.Mean$"#))
-                .percent_if(true)
-                .name()
-                .replace("Mean", "OxidationStability", true),
+            col("Index"),
+            // .eval(
+            //     col(FATTY_ACID)
+            //         .fatty_acid()
+            //         .cetane_number(element())
+            //         .percent_if(true)
+            //         .name()
+            //         .replace("Array", "CetaneNumber.Array", true),
+            //     false,
+            // )
+            col(ARRAY)
+                .arr()
+                // .eval(
+                //     as_struct(vec![element().cum_count(false).alias("Index"), element()]),
+                //     false,
+                // )
+                .explode(),
+            // .implode(),
+            // col(FATTY_ACID)
+            //     .fatty_acid()
+            //     .cetane_number(col(MEAN))
+            //     .percent_if(true)
+            //     .name()
+            //     .replace("Mean", "CetaneNumber.Mean", true),
+            // col(FATTY_ACID)
+            //     .fatty_acid()
+            //     .cold_filter_plugging_point(col(MEAN))
+            //     .percent_if(true)
+            //     .name()
+            //     .replace("Mean", "ColdFilterPluggingPoint.Mean", true),
+            // col(FATTY_ACID)
+            //     .fatty_acid()
+            //     .degree_of_unsaturation(col(MEAN))
+            //     .percent_if(true)
+            //     .name()
+            //     .replace("Mean", "DegreeOfUnsaturation.Mean", true),
+            // BiodieselProperties::iodine_value(col(FATTY_ACID).fatty_acid(), col(MEAN))
+            //     .percent_if(true)
+            //     .name()
+            //     .replace("Mean", "IodineValue.Mean", true),
+            // col(FATTY_ACID)
+            //     .fatty_acid()
+            //     .long_chain_saturated_factor(col(MEAN))
+            //     .percent_if(true)
+            //     .name()
+            //     .replace("Mean", "LongChainSaturatedFactor.Mean", true),
+            // col(FATTY_ACID)
+            //     .fatty_acid()
+            //     .oxidation_stability(col(MEAN))
+            //     .percent_if(true)
+            //     .name()
+            //     .replace("Mean", "OxidationStability.Mean", true),
         ]);
     println!(
         "lazy_frame PRO 1: {}",
         lazy_frame.clone().collect().unwrap()
     );
+    lazy_frame = lazy_frame.with_columns([as_struct(vec![col(ARRAY)])]);
+    println!(
+        "lazy_frame PRO 2: {}",
+        lazy_frame.clone().collect().unwrap()
+    );
+    lazy_frame = lazy_frame.group_by("Index").agg([
+        col(ARRAY),
+        //    col("rain").sum().alias("sum_rain"),
+        //    col("rain").quantile(lit(0.5), QuantileMethod::Nearest).alias("median_rain"),
+    ]);
+    // lazy_frame = lazy_frame.unnest(cols(["*"]), Some(PlSmallStr::from_static(".")));
+    println!(
+        "lazy_frame PRO 3: {}",
+        lazy_frame.clone().collect().unwrap()
+    );
+    std::process::exit(1);
     // let fatty_acid = || col(FATTY_ACID).fatty_acid();
     // let values = |expr: Expr| {
     //     (0..length).map(move |index| {
