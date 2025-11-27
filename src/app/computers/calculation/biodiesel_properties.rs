@@ -74,8 +74,8 @@ fn compute(key: Key) -> PolarsResult<Value> {
     lazy_frame = lazy_frame
         .with_row_index("Index", None)
         .unnest(
-            // cols([formatcp!(r#"^StereospecificNumbers\d+$"#)]),
-            cols([STEREOSPECIFIC_NUMBERS123]),
+            cols([formatcp!(r#"^StereospecificNumbers\d+$"#)]),
+            // cols([STEREOSPECIFIC_NUMBERS123]),
             Some(PlSmallStr::from_static(".")),
         )
         .select([
@@ -89,13 +89,12 @@ fn compute(key: Key) -> PolarsResult<Value> {
             //         .replace("Array", "CetaneNumber.Array", true),
             //     false,
             // )
-            col(ARRAY)
-                .arr()
-                // .eval(
-                //     as_struct(vec![element().cum_count(false).alias("Index"), element()]),
-                //     false,
-                // )
-                .explode(),
+            col(ARRAY),
+            // .arr()
+            // .eval(
+            //     as_struct(vec![element().cum_count(false).alias("Index"), element()]),
+            //     false,
+            // )
             // .implode(),
             // col(FATTY_ACID)
             //     .fatty_acid()
@@ -131,7 +130,8 @@ fn compute(key: Key) -> PolarsResult<Value> {
             //     .percent_if(true)
             //     .name()
             //     .replace("Mean", "OxidationStability.Mean", true),
-        ]);
+        ])
+        .explode(cols([ARRAY]));
     println!(
         "lazy_frame PRO 1: {}",
         lazy_frame.clone().collect().unwrap()
