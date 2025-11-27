@@ -22,6 +22,14 @@ pub(crate) mod markdown {
     pub const POLYUNSATURATED_TO_SATURATED: &str = asset!("/doc/en/Indices/PolyunsaturatedToSaturated.md");
     pub const TRANS: &str = asset!("/doc/en/Indices/Trans.md");
     pub const UNSATURATION_INDEX: &str = asset!("/doc/en/Indices/UnsaturationIndex.md");
+
+    // Properties
+    pub const CETANE_NUMBER: &str = asset!("/doc/en/Properties/CetaneNumber.md");
+    pub const COLD_FILTER_PLUGGING_POINT: &str = asset!("/doc/en/Properties/ColdFilterPluggingPoint.md");
+    pub const DEGREE_OF_UNSATURATION: &str = asset!("/doc/en/Properties/DegreeOfUnsaturation.md");
+    pub const IODINE_VALUE: &str = asset!("/doc/en/Properties/IodineValue.md");
+    pub const LONG_CHAIN_SATURATED_FACTOR: &str = asset!("/doc/en/Properties/LongChainSaturatedFactor.md");
+    pub const OXIDATION_STABILITY: &str = asset!("/doc/en/Properties/OxidationStability.md");
 }
 
 #[rustfmt::skip]

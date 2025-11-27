@@ -35,3 +35,9 @@ StereospecificNumber = { $number ->
         [13] SN-1,3
         *[other] SN
     }
+
+Property = { $PluralCategory ->
+    *[one] Property
+    [other] Properties
+}
+    .hover = Properties.
