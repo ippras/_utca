@@ -9,11 +9,10 @@ use crate::{
             correlations::{
                 Computed as CalculationCorrelationsComputed, Key as CalculationCorrelationsKey,
             },
-            properties::{
-                Computed as CalculationPropertiesComputed, Key as CalculationPropertiesKey,
+            sum::{
+                Computed as CalculationSumComputed, Key as CalculationSumKey,
                 biodiesel::{
-                    Computed as CalculationPropertiesBiodieselComputed,
-                    Key as CalculationPropertiesBiodieselKey,
+                    Computed as CalculationSumBiodieselComputed, Key as CalculationSumBiodieselKey,
                 },
             },
         },
@@ -217,7 +216,7 @@ impl Pane {
                 ui.label(ui.localize("Correlation.hover"));
             });
             ui.toggle_value(
-                &mut state.windows.open_properties,
+                &mut state.windows.open_sum,
                 (
                     RichText::new(SIGMA).heading(),
                     RichText::new(ui.localize("Property?PluralCategory=other")).heading(),
@@ -227,7 +226,7 @@ impl Pane {
                 ui.label(ui.localize("Property.hover"));
             });
             ui.toggle_value(
-                &mut state.windows.open_biodiesel_properties,
+                &mut state.windows.open_biodiesel_sum,
                 (
                     RichText::new(SIGMA).heading(),
                     RichText::new(ui.localize("BiodieselProperties")).heading(),
@@ -426,8 +425,8 @@ impl Pane {
 impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
         self.correlations_window(ui, state);
-        self.properties_window(ui, state);
-        self.biodiesel_properties_window(ui, state);
+        self.sum_window(ui, state);
+        self.biodiesel_sum_window(ui, state);
         self.settings_window(ui, state);
     }
 
@@ -466,49 +465,42 @@ impl Pane {
         Ok(())
     }
 
-    fn properties_window(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SIGMA} Calculation properties"))
-            .id(ui.auto_id_with(ID_SOURCE).with("Properties"))
+    fn sum_window(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SIGMA} Calculation sum"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Sum"))
             .default_pos(ui.next_widget_position())
-            .open(&mut state.windows.open_properties)
-            .show(ui.ctx(), |ui| self.properties_content(ui, &state.settings));
+            .open(&mut state.windows.open_sum)
+            .show(ui.ctx(), |ui| self.sum_content(ui, &state.settings));
     }
 
     #[instrument(skip_all, err)]
-    fn properties_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
+    fn sum_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CalculationPropertiesComputed>()
-                .get(CalculationPropertiesKey::new(&self.target, settings))
+                .cache::<CalculationSumComputed>()
+                .get(CalculationSumKey::new(&self.target, settings))
         });
         Properties::new(&data_frame, settings).show(ui).inner
     }
 
-    fn biodiesel_properties_window(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SIGMA} Calculation biodiesel properties"))
-            .id(ui.auto_id_with(ID_SOURCE).with("BiodieselProperties"))
+    fn biodiesel_sum_window(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SIGMA} Calculation biodiesel sum"))
+            .id(ui.auto_id_with(ID_SOURCE).with("BiodieselSum"))
             .default_pos(ui.next_widget_position())
-            .open(&mut state.windows.open_biodiesel_properties)
+            .open(&mut state.windows.open_biodiesel_sum)
             .show(ui.ctx(), |ui| {
-                self.biodiesel_properties_content(ui, &state.settings)
+                self.biodiesel_sum_content(ui, &state.settings)
             });
     }
 
     #[instrument(skip_all, err)]
-    fn biodiesel_properties_content(
-        &mut self,
-        ui: &mut Ui,
-        settings: &Settings,
-    ) -> PolarsResult<()> {
+    fn biodiesel_sum_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CalculationPropertiesBiodieselComputed>()
-                .get(CalculationPropertiesBiodieselKey::new(
-                    &self.target,
-                    settings,
-                ))
+                .cache::<CalculationSumBiodieselComputed>()
+                .get(CalculationSumBiodieselKey::new(&self.target, settings))
         });
         Properties::new(&data_frame, settings).show(ui).inner
     }

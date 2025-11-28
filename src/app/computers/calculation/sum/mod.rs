@@ -12,10 +12,10 @@ use polars_ext::expr::ExprExt;
 use std::num::NonZeroI8;
 use tracing::instrument;
 
-/// Calculation indices computed
+/// Calculation general sum computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
 
-/// Calculation indices computer
+/// Calculation general sum computer
 #[derive(Default)]
 pub(crate) struct Computer;
 
@@ -41,7 +41,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
     }
 }
 
-/// Calculation indices key
+/// Calculation general sum key
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
@@ -65,7 +65,7 @@ impl<'a> Key<'a> {
     }
 }
 
-/// Calculation indices value
+/// Calculation general sum value
 type Value = DataFrame;
 
 fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
