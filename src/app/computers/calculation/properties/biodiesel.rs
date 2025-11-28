@@ -22,8 +22,16 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let length = length(&key.frame)?;
-        compute(key, length)
+        let mut lazy_frame = key.frame.data_frame.clone().lazy();
+        // Filter minor
+        if key.filter {
+            lazy_frame = lazy_frame.filter(col("Filter"));
+        }
+        // Compute
+        lazy_frame = compute(lazy_frame, key)?;
+        // Format
+        lazy_frame = format(lazy_frame, key)?;
+        lazy_frame.collect()
     }
 }
 
@@ -118,16 +126,10 @@ fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
     polars_bail!(SchemaMismatch: "Invalid calculation properties biodiesel schema: expected `{SCHEMA:?}`, got = `{schema:?}`");
 }
 
-fn compute(key: Key, length: usize) -> PolarsResult<Value> {
+fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    let length = length(&key.frame)?;
     // Пока не будет готов
     // https://github.com/pola-rs/polars/pull/23316
-    let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    // Filter minor
-    if key.filter {
-        // true or null (standard)
-        lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
-    }
-    // Calculate
     let iter = |expr: Expr| {
         (0..length).map(move |index| {
             expr.clone()
@@ -158,15 +160,17 @@ fn compute(key: Key, length: usize) -> PolarsResult<Value> {
             stereospecific_numbers(STEREOSPECIFIC_NUMBERS2, f)?,
         ]))
     };
-    lazy_frame = lazy_frame.select([
+    Ok(lazy_frame.select([
         property(cetane_number)?.alias("CetaneNumber"),
         property(cold_filter_plugging_point)?.alias("ColdFilterPluggingPoint"),
         property(degree_of_unsaturation)?.alias("DegreeOfUnsaturation"),
         property(iodine_value)?.alias("IodineValue"),
         property(long_chain_saturated_factor)?.alias("LongChainSaturatedFactor"),
         property(oxidation_stability)?.alias("OxidationStability"),
-    ]);
-    // Format
+    ]))
+}
+
+fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let stereospecific_numbers = |expr: Expr| -> PolarsResult<Expr> {
         Ok(expr.clone().struct_().with_fields(vec![
             expr.clone()
@@ -193,7 +197,7 @@ fn compute(key: Key, length: usize) -> PolarsResult<Value> {
             )?,
         ]))
     };
-    let format = |name: &str| -> PolarsResult<Expr> {
+    let property = |name: &str| -> PolarsResult<Expr> {
         Ok(as_struct(vec![
             stereospecific_numbers(col(name).struct_().field_by_name(STEREOSPECIFIC_NUMBERS123))?,
             stereospecific_numbers(col(name).struct_().field_by_name(STEREOSPECIFIC_NUMBERS13))?,
@@ -201,15 +205,14 @@ fn compute(key: Key, length: usize) -> PolarsResult<Value> {
         ])
         .alias(name))
     };
-    lazy_frame = lazy_frame.select([
-        format("CetaneNumber")?,
-        format("ColdFilterPluggingPoint")?,
-        format("DegreeOfUnsaturation")?,
-        format("IodineValue")?,
-        format("LongChainSaturatedFactor")?,
-        format("OxidationStability")?,
-    ]);
-    lazy_frame.collect()
+    Ok(lazy_frame.select([
+        property("CetaneNumber")?,
+        property("ColdFilterPluggingPoint")?,
+        property("DegreeOfUnsaturation")?,
+        property("IodineValue")?,
+        property("LongChainSaturatedFactor")?,
+        property("OxidationStability")?,
+    ]))
 }
 
 fn cetane_number(expr: Expr) -> Expr {
