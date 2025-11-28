@@ -530,6 +530,5 @@ impl Pane {
 }
 
 mod correlations;
-mod indices;
 mod properties;
 mod table;

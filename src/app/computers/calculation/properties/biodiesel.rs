@@ -172,17 +172,20 @@ fn compute(key: Key, length: usize) -> PolarsResult<Value> {
             expr.clone()
                 .struct_()
                 .field_by_name("Mean")
+                .percent()
                 .precision(key.precision, key.significant)
                 .cast(DataType::String),
             format_standard_deviation(
                 expr.clone()
                     .struct_()
                     .field_by_name("StandardDeviation")
+                    .percent()
                     .precision(key.precision, key.significant),
             )?,
             format_sample(
                 expr.struct_().field_by_name("Sample").arr().eval(
                     element()
+                        .percent()
                         .precision(key.precision, key.significant)
                         .cast(DataType::String),
                     false,
@@ -210,37 +213,29 @@ fn compute(key: Key, length: usize) -> PolarsResult<Value> {
 }
 
 fn cetane_number(expr: Expr) -> Expr {
-    col(FATTY_ACID).fatty_acid().cetane_number(expr).percent()
+    col(FATTY_ACID).fatty_acid().cetane_number(expr)
 }
 
 fn cold_filter_plugging_point(expr: Expr) -> Expr {
     col(FATTY_ACID)
         .fatty_acid()
         .cold_filter_plugging_point(expr)
-        .percent()
 }
 
 fn degree_of_unsaturation(expr: Expr) -> Expr {
-    col(FATTY_ACID)
-        .fatty_acid()
-        .degree_of_unsaturation(expr)
-        .percent()
+    col(FATTY_ACID).fatty_acid().degree_of_unsaturation(expr)
 }
 
 fn iodine_value(expr: Expr) -> Expr {
-    BiodieselProperties::iodine_value(col(FATTY_ACID).fatty_acid(), expr).percent()
+    BiodieselProperties::iodine_value(col(FATTY_ACID).fatty_acid(), expr)
 }
 
 fn long_chain_saturated_factor(expr: Expr) -> Expr {
     col(FATTY_ACID)
         .fatty_acid()
         .long_chain_saturated_factor(expr)
-        .percent()
 }
 
 fn oxidation_stability(expr: Expr) -> Expr {
-    col(FATTY_ACID)
-        .fatty_acid()
-        .oxidation_stability(expr)
-        .percent()
+    col(FATTY_ACID).fatty_acid().oxidation_stability(expr)
 }

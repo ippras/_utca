@@ -12,12 +12,6 @@ use polars_ext::expr::ExprExt;
 use std::num::NonZeroI8;
 use tracing::instrument;
 
-const STEREOSPECIFIC_NUMBERS: [&str; 3] = [
-    STEREOSPECIFIC_NUMBERS123,
-    STEREOSPECIFIC_NUMBERS13,
-    STEREOSPECIFIC_NUMBERS2,
-];
-
 /// Calculation indices computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
 
@@ -28,7 +22,17 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        compute(key, length(&key.frame)?)
+        let mut lazy_frame = key.frame.data_frame.clone().lazy();
+        // Filter minor
+        if !key.save {
+            // true or null (standard)
+            lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
+        }
+        // Compute
+        lazy_frame = compute(lazy_frame, key)?;
+        // Format
+        lazy_frame = format(lazy_frame, key)?;
+        lazy_frame.collect()
     }
 }
 
@@ -65,7 +69,7 @@ impl<'a> Key<'a> {
 /// Calculation indices value
 type Value = DataFrame;
 
-fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
+fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
     // FattyAcid
     let Some(data_type) = data_frame.schema().get(FATTY_ACID) else {
         polars_bail!(SchemaMismatch: "The `FATTY_ACID` field was not found in the scheme");
@@ -85,24 +89,18 @@ fn length(data_frame: &DataFrame) -> PolarsResult<u64> {
     let &DataType::Array(box DataType::Float64, length) = data_type else {
         polars_bail!(SchemaMismatch: r#"Invalid "STEREOSPECIFIC_NUMBERS123.Array" data type: expected `Array(Float64)`, got = `{data_type}`"#);
     };
-    return Ok(length as _);
+    return Ok(length);
 }
 
-fn compute(key: Key, length: u64) -> PolarsResult<Value> {
-    let mut lazy_frame = key.frame.data_frame.clone().lazy();
-    // Filter minor
-    if !key.save {
-        // true or null (standard)
-        lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
-    }
-    // Calculate
+fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    let length = length(&key.frame)?;
     let iter = |expr: Expr| {
         (0..length).map(move |index| {
             expr.clone()
                 .struct_()
                 .field_by_name("Array")
                 .arr()
-                .get(lit(index), false)
+                .get(lit(index as IdxSize), false)
         })
     };
     let sample = |name: &str, f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
@@ -118,248 +116,6 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
             sample(name, f)?.alias("Sample"),
         ])
         .alias(name))
-        // Ok(as_struct(vec![
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .monounsaturated(value)
-        //                     .alias("Monounsaturated")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .polyunsaturated(value)
-        //                     .alias("Polyunsaturated")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .saturated(value)
-        //                     .alias("Saturated")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| col(FATTY_ACID).fatty_acid().trans(value).alias("Trans"))
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .unsaturated(value, None)
-        //                     .alias("Unsaturated")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .unsaturated(value, NonZeroI8::new(-9))
-        //                     .alias("Unsaturated_9")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .unsaturated(value, NonZeroI8::new(-6))
-        //                     .alias("Unsaturated_6")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .unsaturated(value, NonZeroI8::new(-3))
-        //                     .alias("Unsaturated_3")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .unsaturated(value, NonZeroI8::new(9))
-        //                     .alias("Unsaturated9")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .eicosapentaenoic_and_docosahexaenoic(value)
-        //                     .alias("EicosapentaenoicAndDocosahexaenoic")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .fish_lipid_quality(value)
-        //                     .alias("FishLipidQuality")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .health_promoting_index(value)
-        //                     .alias("HealthPromotingIndex")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .hypocholesterolemic_to_hypercholesterolemic(value)
-        //                     .alias("HypocholesterolemicToHypercholesterolemic")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .index_of_atherogenicity(value)
-        //                     .alias("IndexOfAtherogenicity")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .index_of_thrombogenicity(value)
-        //                     .alias("IndexOfThrombogenicity")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .linoleic_to_alpha_linolenic(value)
-        //                     .alias("LinoleicToAlphaLinolenic")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .polyunsaturated_6_to_polyunsaturated_3(value)
-        //                     .alias("Polyunsaturated_6ToPolyunsaturated_3")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .polyunsaturated_to_saturated(value)
-        //                     .alias("PolyunsaturatedToSaturated")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 col(FATTY_ACID)
-        //                     .fatty_acid()
-        //                     .unsaturation_index(value)
-        //                     .alias("UnsaturationIndex")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     // P
-        //     concat_arr(
-        //         iter(expr.clone())
-        //             .map(|value| {
-        //                 (value
-        //                     * col(FATTY_ACID)
-        //                         .fatty_acid()
-        //                         .iodine_value()
-        //                         .alias("IodineValue"))
-        //                 .sum()
-        //                 .alias("IodineValue")
-        //             })
-        //             .collect(),
-        //     )?,
-        //     // concat_arr(
-        //     //     values(expr.clone())
-        //     //         .map(|value| {
-        //     //             (lit(0.6683) * fatty_acid().unsaturation_index(value) + lit(0.250364))
-        //     //                 .alias("IodineValue.Wang2012")
-        //     //         })
-        //     //         .collect(),
-        //     // )?,
-        //     // concat_arr(
-        //     //     values(expr.clone())
-        //     //         .map(|value| {
-        //     //             (lit(-0.1209) * fatty_acid().unsaturation_index(value) + lit(0.650958))
-        //     //                 .alias("CetaneNumber")
-        //     //         })
-        //     //         .collect(),
-        //     // )?,
-        //     // concat_arr(
-        //     //     values(expr.clone())
-        //     //         .map(|value| {
-        //     //             (lit(-0.0384) * fatty_acid().degree_of_unsaturation(value) + lit(0.777))
-        //     //                 .alias("OxidativeStability")
-        //     //         })
-        //     //         .collect(),
-        //     // )?,
-        //     // concat_arr(
-        //     //     values(expr.clone())
-        //     //         .map(|value| {
-        //     //             (lit(1.7556) * fatty_acid().degree_of_unsaturation(value) + lit(-0.14772))
-        //     //                 .alias("ColdFilterPluggingPoint")
-        //     //         })
-        //     //         .collect(),
-        //     // )?,
-        //     // concat_arr(
-        //     //     values(expr.clone())
-        //     //         .map(|value| {
-        //     //             fatty_acid()
-        //     //                 .long_chain_saturated_factor(value)
-        //     //                 .alias("LongChainSaturatedFactor")
-        //     //         })
-        //     //         .collect(),
-        //     // )?,
-        // ]))
     };
     let property = |f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
         Ok(as_struct(vec![
@@ -368,7 +124,7 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
             stereospecific_numbers(STEREOSPECIFIC_NUMBERS2, f)?,
         ]))
     };
-    lazy_frame = lazy_frame.select([
+    Ok(lazy_frame.select([
         property(monounsaturated)?.alias("Monounsaturated"),
         property(polyunsaturated)?.alias("Polyunsaturated"),
         property(saturated)?.alias("Saturated"),
@@ -391,51 +147,63 @@ fn compute(key: Key, length: u64) -> PolarsResult<Value> {
         property(polyunsaturated_to_saturated)?.alias("PolyunsaturatedToSaturated"),
         property(unsaturation_index)?.alias("UnsaturationIndex"),
         property(iodine_value)?.alias("IodineValue"),
-    ]);
-    // Format
-    lazy_frame = lazy_frame
-        .unnest(all(), Some(PlSmallStr::from_static(".")))
-        .unnest(all(), Some(PlSmallStr::from_static(".")))
-        .with_columns([
-            col(r#"^.*Mean$"#)
+    ]))
+}
+
+fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    let stereospecific_numbers = |expr: Expr| -> PolarsResult<Expr> {
+        Ok(expr.clone().struct_().with_fields(vec![
+            expr.clone()
+                .struct_()
+                .field_by_name("Mean")
                 .precision(key.precision, key.significant)
                 .cast(DataType::String),
             format_standard_deviation(
-                col(r#"^.*StandardDeviation$"#).precision(key.precision, key.significant),
+                expr.clone()
+                    .struct_()
+                    .field_by_name("StandardDeviation")
+                    .precision(key.precision, key.significant),
             )?,
             format_sample(
-                col(r#"^.*Sample$"#).arr().eval(
+                expr.struct_().field_by_name("Sample").arr().eval(
                     element()
                         .precision(key.precision, key.significant)
                         .cast(DataType::String),
                     false,
                 ),
             )?,
-        ]);
-    lazy_frame = lazy_frame.select(
-        key.indices
-            .iter_visible()
-            .map(|name| {
-                as_struct(
-                    STEREOSPECIFIC_NUMBERS
-                        .map(|stereospecific_numbers| {
-                            as_struct(vec![
-                                col(format!("{name}.{stereospecific_numbers}.Mean")).alias("Mean"),
-                                col(format!("{name}.{stereospecific_numbers}.StandardDeviation"))
-                                    .alias("StandardDeviation"),
-                                col(format!("{name}.{stereospecific_numbers}.Sample"))
-                                    .alias("Sample"),
-                            ])
-                            .alias(stereospecific_numbers)
-                        })
-                        .to_vec(),
-                )
-                .alias(name)
-            })
-            .collect::<Vec<_>>(),
-    );
-    println!("lazy_frame I 3: {}", lazy_frame.clone().collect().unwrap());
-    lazy_frame.collect()
+        ]))
+    };
+    let property = |name: &str| -> PolarsResult<Expr> {
+        Ok(as_struct(vec![
+            stereospecific_numbers(col(name).struct_().field_by_name(STEREOSPECIFIC_NUMBERS123))?,
+            stereospecific_numbers(col(name).struct_().field_by_name(STEREOSPECIFIC_NUMBERS13))?,
+            stereospecific_numbers(col(name).struct_().field_by_name(STEREOSPECIFIC_NUMBERS2))?,
+        ])
+        .alias(name))
+    };
+    Ok(lazy_frame.select([
+        property("Monounsaturated")?,
+        property("Polyunsaturated")?,
+        property("Saturated")?,
+        property("Trans")?,
+        property("Unsaturated")?,
+        property("Unsaturated-9")?,
+        property("Unsaturated-6")?,
+        property("Unsaturated-3")?,
+        property("Unsaturated9")?,
+        property("EicosapentaenoicAndDocosahexaenoic")?,
+        property("FishLipidQuality")?,
+        property("HealthPromotingIndex")?,
+        property("HypocholesterolemicToHypercholesterolemic")?,
+        property("IndexOfAtherogenicity")?,
+        property("IndexOfThrombogenicity")?,
+        property("LinoleicToAlphaLinolenic")?,
+        property("Polyunsaturated-6ToPolyunsaturated-3")?,
+        property("PolyunsaturatedToSaturated")?,
+        property("UnsaturationIndex")?,
+        property("IodineValue")?,
+    ]))
 }
 
 fn monounsaturated(expr: Expr) -> Expr {
@@ -509,5 +277,5 @@ fn unsaturation_index(expr: Expr) -> Expr {
 }
 
 fn iodine_value(expr: Expr) -> Expr {
-    col(FATTY_ACID).fatty_acid().iodine_value().sum()
+    (expr * col(FATTY_ACID).fatty_acid().iodine_value()).sum()
 }
