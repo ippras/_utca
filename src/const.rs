@@ -10,7 +10,8 @@ pub(crate) mod markdown {
     // Correlations
     pub const CORRELATIONS: &str = asset!("/doc/en/Correlations/Correlations.md");
 
-    // Indices
+    // Properties
+    // pub const CONJUGATED: &str = asset!("/doc/en/Indices/Conjugated.md");
     pub const EICOSAPENTAENOIC_AND_DOCOSAHEXAENOIC: &str = asset!("/doc/en/Indices/EicosapentaenoicAndDocosahexaenoic.md");
     pub const FISH_LIPID_QUALITY: &str = asset!("/doc/en/Indices/FishLipidQuality.md");
     pub const HEALTH_PROMOTING_INDEX: &str = asset!("/doc/en/Indices/HealthPromotingIndex.md");
@@ -23,7 +24,7 @@ pub(crate) mod markdown {
     pub const TRANS: &str = asset!("/doc/en/Indices/Trans.md");
     pub const UNSATURATION_INDEX: &str = asset!("/doc/en/Indices/UnsaturationIndex.md");
 
-    // Properties
+    // Biodiesel properties
     pub const CETANE_NUMBER: &str = asset!("/doc/en/Properties/CetaneNumber.md");
     pub const COLD_FILTER_PLUGGING_POINT: &str = asset!("/doc/en/Properties/ColdFilterPluggingPoint.md");
     pub const DEGREE_OF_UNSATURATION: &str = asset!("/doc/en/Properties/DegreeOfUnsaturation.md");
