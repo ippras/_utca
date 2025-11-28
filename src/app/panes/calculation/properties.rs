@@ -1,8 +1,12 @@
 use crate::app::states::calculation::Settings;
 #[cfg(feature = "markdown")]
 use crate::r#const::markdown::{
-    CETANE_NUMBER, COLD_FILTER_PLUGGING_POINT, DEGREE_OF_UNSATURATION, IODINE_VALUE,
-    LONG_CHAIN_SATURATED_FACTOR, OXIDATION_STABILITY,
+    CETANE_NUMBER, COLD_FILTER_PLUGGING_POINT, DEGREE_OF_UNSATURATION,
+    EICOSAPENTAENOIC_AND_DOCOSAHEXAENOIC, FISH_LIPID_QUALITY, HEALTH_PROMOTING_INDEX,
+    HYPOCHOLESTEROLEMIC_TO_HYPERCHOLESTEROLEMIC, INDEX_OF_ATHEROGENICITY, INDEX_OF_THROMBOGENICITY,
+    IODINE_VALUE, LINOLEIC_TO_ALPHA_LINOLENIC, LONG_CHAIN_SATURATED_FACTOR, OXIDATION_STABILITY,
+    POLYUNSATURATED_6_TO_POLYUNSATURATED_3, POLYUNSATURATED_TO_SATURATED, TRANS,
+    UNSATURATION_INDEX,
 };
 use egui::{Grid, InnerResponse, Response, TextWrapMode, Ui, Widget, WidgetText};
 #[cfg(feature = "markdown")]
@@ -103,6 +107,28 @@ impl Widget for Properties<'_> {
 #[cfg(feature = "markdown")]
 fn asset(index: &str) -> &str {
     match index {
+        // "Conjugated" => CONJUGATED,
+        // "Monounsaturated" => MONOUNSATURATED,
+        // "Polyunsaturated" => POLYUNSATURATED,
+        // "Saturated" => SATURATED,
+        // "Trans" => TRANS,
+        // "Unsaturated-3" => UNSATURATED_3,
+        // "Unsaturated-6" => UNSATURATED_6,
+        // "Unsaturated-9" => UNSATURATED_9,
+        // "Unsaturated" => UNSATURATED,
+        // "Unsaturated9" => UNSATURATED9,
+        "EicosapentaenoicAndDocosahexaenoic" => EICOSAPENTAENOIC_AND_DOCOSAHEXAENOIC,
+        "FishLipidQuality" => FISH_LIPID_QUALITY,
+        "HealthPromotingIndex" => HEALTH_PROMOTING_INDEX,
+        "HypocholesterolemicToHypercholesterolemic" => HYPOCHOLESTEROLEMIC_TO_HYPERCHOLESTEROLEMIC,
+        "IndexOfAtherogenicity" => INDEX_OF_ATHEROGENICITY,
+        "IndexOfThrombogenicity" => INDEX_OF_THROMBOGENICITY,
+        "LinoleicToAlphaLinolenic" => LINOLEIC_TO_ALPHA_LINOLENIC,
+        "Polyunsaturated-6ToPolyunsaturated-3" => POLYUNSATURATED_6_TO_POLYUNSATURATED_3,
+        "PolyunsaturatedToSaturated" => POLYUNSATURATED_TO_SATURATED,
+        "UnsaturationIndex" => UNSATURATION_INDEX,
+        "IodineValue" => IODINE_VALUE,
+        // Biodiesel properties
         "CetaneNumber" => CETANE_NUMBER,
         "ColdFilterPluggingPoint" => COLD_FILTER_PLUGGING_POINT,
         "DegreeOfUnsaturation" => DEGREE_OF_UNSATURATION,
