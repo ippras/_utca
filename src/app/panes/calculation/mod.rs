@@ -9,10 +9,12 @@ use crate::{
             correlations::{
                 Computed as CalculationCorrelationsComputed, Key as CalculationCorrelationsKey,
             },
-            indices::{Computed as CalculationIndicesComputed, Key as CalculationIndicesKey},
-            properties::biodiesel::{
-                Computed as CalculationPropertiesBiodieselComputed,
-                Key as CalculationPropertiesBiodieselKey,
+            properties::{
+                Computed as CalculationPropertiesComputed, Key as CalculationPropertiesKey,
+                biodiesel::{
+                    Computed as CalculationPropertiesBiodieselComputed,
+                    Key as CalculationPropertiesBiodieselKey,
+                },
             },
         },
         identifiers::COMPOSE,
@@ -477,8 +479,8 @@ impl Pane {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CalculationIndicesComputed>()
-                .get(CalculationIndicesKey::new(&self.target, settings))
+                .cache::<CalculationPropertiesComputed>()
+                .get(CalculationPropertiesKey::new(&self.target, settings))
         });
         Properties::new(&data_frame, settings).show(ui).inner
     }
