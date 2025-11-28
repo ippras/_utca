@@ -151,7 +151,7 @@ impl Settings {
             ui.end_row();
             self.sort_thresholded(ui);
             ui.end_row();
-            self.save_thresholded(ui);
+            self.filter_thresholded(ui);
             ui.end_row();
 
             if self.index.is_none() {
@@ -349,12 +349,12 @@ impl Settings {
             });
     }
 
-    /// Save thresholded
-    fn save_thresholded(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("SaveThreshold")).on_hover_ui(|ui| {
-            ui.label(ui.localize("SaveThreshold.hover"));
+    /// Filter thresholded
+    fn filter_thresholded(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("FilterThreshold")).on_hover_ui(|ui| {
+            ui.label(ui.localize("FilterThreshold.hover"));
         });
-        ui.checkbox(&mut self.threshold.save, ());
+        ui.checkbox(&mut self.threshold.filter, ());
     }
 
     /// Sort thresholded
@@ -512,7 +512,7 @@ impl Settings {
                 .0
                 .iter()
                 .filter(|index| index.visible)
-                .map(|index| ui.localize(&format!("Indices_{}", index.name))),
+                .map(|index| ui.localize(&index.name)),
             1
         );
         ComboBox::from_id_salt(ui.auto_id_with("Indices"))
@@ -628,6 +628,7 @@ pub(crate) struct Indices(Vec<Index>);
 impl Indices {
     pub(crate) fn new() -> Self {
         Self(vec![
+            Index::new("Conjugated"),
             Index::new("Saturated"),
             Index::new("Monounsaturated"),
             Index::new("Polyunsaturated"),
@@ -684,7 +685,7 @@ impl Indices {
                         ui.label(DOTS_SIX_VERTICAL);
                     });
                     ui.checkbox(&mut index.visible, "");
-                    let mut text = RichText::new(ui.localize(&format!("Indices_{}", index.name)));
+                    let mut text = RichText::new(ui.localize(&index.name));
                     if !visible {
                         text = text.weak();
                     }
@@ -773,18 +774,18 @@ impl Display for StereospecificNumbers {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub(crate) struct Threshold {
     pub(crate) auto: f64,
+    pub(crate) filter: bool,
     pub(crate) is_auto: bool,
     pub(crate) manual: Vec<bool>,
-    pub(crate) save: bool,
 }
 
 impl Threshold {
     pub(crate) fn new() -> Self {
         Self {
             auto: 0.0,
+            filter: false,
             is_auto: true,
             manual: Vec::new(),
-            save: true,
         }
     }
 }
@@ -792,8 +793,8 @@ impl Threshold {
 impl Hash for Threshold {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.auto.ord().hash(state);
+        self.filter.hash(state);
         self.is_auto.hash(state);
         self.manual.hash(state);
-        self.save.hash(state);
     }
 }

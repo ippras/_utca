@@ -1,5 +1,8 @@
 # Properties
 
+Conjugated = Conjugated
+    .abbreviation = CFA
+    .hover = Sum of conjugated fatty acids.
 Monounsaturated = Monounsaturated
     .abbreviation = MUFA
     .hover = Sum of monounsaturated fatty acids.
@@ -49,9 +52,9 @@ UnsaturationIndex = Unsaturation Index
     .abbreviation = UI
     .hover = Unsaturation Index.
 
-IodineValue = Iodine value
+IodineValue = Iodine value
     .abbreviation = IV
-    .hover = Iodine value
+    .hover = Iodine value
     .doi = { $Source ->
         *[Aocs] [AOCS recommended practice Cd 1c-85](https://library.aocs.org/Cd-1c-85/1)
         [Wang2012] [Wang et al. (2012)](https://doi.org/10.1016/S1872-5813(12)60018-8)
@@ -59,23 +62,23 @@ IodineValue = Iodine value
 
 ## Biodiesel properties
 
-BiodieselProperties = Biodiesel properties
-    .hover = Biodiesel properties.
-CetaneNumber = Cetane number
+BiodieselProperties = Biodiesel properties
+    .hover = Biodiesel properties.
+CetaneNumber = Cetane number
     .abbreviation = CN
-    .hover = Cetane number
-ColdFilterPluggingPoint = Cold filter plugging point
+    .hover = Cetane number
+ColdFilterPluggingPoint = Cold filter plugging point
     .abbreviation = CFPP
-    .hover = Cold filter plugging point.
-DegreeOfUnsaturation = Degree of unsaturation
+    .hover = Cold filter plugging point.
+DegreeOfUnsaturation = Degree of unsaturation
     .abbreviation = DU
-    .hover = Degree of unsaturation.
-IodineValue = Iodine value
+    .hover = Degree of unsaturation.
+IodineValue = Iodine value
     .abbreviation = IV
-    .hover = Iodine value
-LongChainSaturatedFactor = Long Chain Saturated factor
+    .hover = Iodine value
+LongChainSaturatedFactor = Long Chain Saturated factor
     .abbreviation = LCSF
-    .hover = Long Chain Saturated factor.
-OxidationStability = Oxidation stability
+    .hover = Long Chain Saturated factor.
+OxidationStability = Oxidation stability
     .abbreviation = OS
-    .hover = Oxidation stability.
+    .hover = Oxidation stability

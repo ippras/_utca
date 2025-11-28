@@ -116,9 +116,9 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 #[derive(Clone, Copy, Debug, Hash)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
+    pub(crate) filter: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
-    pub(crate) save: bool,
     pub(crate) significant: bool,
     pub(crate) sort: bool,
 }
@@ -127,9 +127,9 @@ impl<'a> Key<'a> {
     pub(crate) fn new(frame: &'a HashedDataFrame, settings: &Settings) -> Self {
         Self {
             frame,
+            filter: settings.threshold.filter,
             percent: settings.percent,
             precision: settings.precision,
-            save: settings.threshold.save,
             significant: settings.significant,
             sort: settings.sort_by_minor_major,
         }
@@ -193,7 +193,7 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
         ),
     ]);
     // Filter minor
-    if !key.save {
+    if key.filter {
         // true or null (standard)
         lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
     } else if key.sort {
