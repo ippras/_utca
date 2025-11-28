@@ -31,17 +31,18 @@ impl Computer {
             ]))
         };
         let mut lazy_frame = compute(&frames[0], "[0]")?;
-        println!("spec 0: {}", lazy_frame.clone().collect().unwrap());
+        // println!("spec 0: {}", lazy_frame.clone().collect().unwrap());
         for (index, frame) in frames[1..].iter().enumerate() {
             lazy_frame = lazy_frame.join(
-                compute(frame, &index.to_string())?,
+                compute(frame, &format!("[{}]", index + 1))?,
                 [col(LABEL), col(TRIACYLGLYCEROL)],
                 [col(LABEL), col(TRIACYLGLYCEROL)],
                 JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
             );
         }
-        println!("spec 1: {}", lazy_frame.clone().collect().unwrap());
-        lazy_frame = lazy_frame.select(mean_and_standard_deviation(key.ddof)?);
+        // println!("spec 1: {}", lazy_frame.clone().collect().unwrap());
+        // Mean, standard deviation, sample
+        lazy_frame = mean_and_standard_deviation(lazy_frame, key)?;
         // println!("spec 2: {}", lazy_frame.clone().collect().unwrap());
         HashedDataFrame::new(lazy_frame.collect()?)
     }
@@ -99,19 +100,30 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     }
 }
 
-fn mean_and_standard_deviation(ddof: u8) -> PolarsResult<[Expr; 3]> {
-    let array = || concat_arr(vec![all().exclude_cols([LABEL, TRIACYLGLYCEROL]).as_expr()]);
-    Ok([
-        col(LABEL),
-        col(TRIACYLGLYCEROL),
+fn mean_and_standard_deviation(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    let sample = || concat_arr(vec![col(r#"^Value\[\d+\]$"#)]);
+    Ok(lazy_frame.with_column(
         as_struct(vec![
-            array()?.arr().mean().alias("Mean"),
-            array()?.arr().std(ddof).alias("StandardDeviation"),
-            array()?.alias("Array"),
+            sample()?.arr().mean().alias("Mean"),
+            sample()?.arr().std(key.ddof).alias("StandardDeviation"),
+            sample()?.alias("Array"),
         ])
         .alias("Value"),
-    ])
+    ))
 }
+// fn mean_and_standard_deviation(ddof: u8) -> PolarsResult<[Expr; 3]> {
+//     let sample = || concat_arr(vec![col(r#"^Value\[\d+\]$"#)]);
+//     Ok([
+//         col(LABEL),
+//         col(TRIACYLGLYCEROL),
+//         as_struct(vec![
+//             sample()?.arr().mean().alias("Mean"),
+//             sample()?.arr().std(ddof).alias("StandardDeviation"),
+//             sample()?.alias("Array"),
+//         ])
+//         .alias("Value"),
+//     ])
+// }
 
 mod gunstone;
 mod martinez_force;

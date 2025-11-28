@@ -1,4 +1,4 @@
-use self::{plot::PlotView, table::TableView};
+use self::{plot::PlotView, sum::Sum, table::TableView};
 use super::{Behavior, MARGIN};
 use crate::{
     app::{
@@ -381,7 +381,7 @@ impl Pane {
     #[instrument(skip_all, err)]
     fn sum_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
         // Species
-        let data_frame = ui.memory_mut(|memory| {
+        let frame = ui.memory_mut(|memory| {
             memory
                 .caches
                 .cache::<SpeciesComputed>()
@@ -391,13 +391,14 @@ impl Pane {
             memory
                 .caches
                 .cache::<SumSymmetryComputed>()
-                .get(SumSymmetryKey::new(&data_frame, settings))
+                .get(SumSymmetryKey::new(&frame, settings))
         });
-        println!("data_frame: {data_frame}");
-        // Properties::new(&data_frame, settings).show(ui).inner
-        Ok(())
+        // println!("data_frame: {}", data_frame);
+        // println!("data_frame: {data_frame}");
+        Sum::new(&data_frame, settings).show(ui).inner
     }
 }
 
 mod plot;
+mod sum;
 mod table;

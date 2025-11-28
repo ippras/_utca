@@ -1,4 +1,4 @@
-use self::{correlations::Correlations, properties::Properties, table::TableView};
+use self::{correlations::Correlations, sum::Sum, table::TableView};
 use super::{Behavior, MARGIN};
 #[cfg(feature = "markdown")]
 use crate::r#const::markdown::CORRELATIONS;
@@ -481,7 +481,7 @@ impl Pane {
                 .cache::<CalculationSumComputed>()
                 .get(CalculationSumKey::new(&self.target, settings))
         });
-        Properties::new(&data_frame, settings).show(ui).inner
+        Sum::new(&data_frame, settings).show(ui).inner
     }
 
     fn biodiesel_sum_window(&mut self, ui: &mut Ui, state: &mut State) {
@@ -502,7 +502,7 @@ impl Pane {
                 .cache::<CalculationSumBiodieselComputed>()
                 .get(CalculationSumBiodieselKey::new(&self.target, settings))
         });
-        Properties::new(&data_frame, settings).show(ui).inner
+        Sum::new(&data_frame, settings).show(ui).inner
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
@@ -524,5 +524,5 @@ impl Pane {
 }
 
 mod correlations;
-mod properties;
+mod sum;
 mod table;

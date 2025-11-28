@@ -14,13 +14,13 @@ use egui_ext::Markdown as _;
 use egui_l20n::UiExt;
 use polars::prelude::*;
 
-/// Properties widget
-pub(crate) struct Properties<'a> {
+/// Sum widget
+pub(crate) struct Sum<'a> {
     data_frame: &'a DataFrame,
     settings: &'a Settings,
 }
 
-impl<'a> Properties<'a> {
+impl<'a> Sum<'a> {
     pub(crate) fn new(data_frame: &'a DataFrame, settings: &'a Settings) -> Self {
         Self {
             data_frame,
@@ -29,7 +29,7 @@ impl<'a> Properties<'a> {
     }
 
     pub(crate) fn show(self, ui: &mut Ui) -> InnerResponse<PolarsResult<()>> {
-        Grid::new(ui.auto_id_with("Properties")).show(ui, |ui| -> PolarsResult<()> {
+        Grid::new(ui.auto_id_with("Sum")).show(ui, |ui| -> PolarsResult<()> {
             ui.heading(ui.localize("Property?PluralCategory=one"));
             ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                 .on_hover_ui(|ui| {
@@ -98,7 +98,7 @@ impl<'a> Properties<'a> {
     }
 }
 
-impl Widget for Properties<'_> {
+impl Widget for Sum<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
         self.show(ui).response
     }
