@@ -265,7 +265,7 @@ fn mean_and_standard_deviation(expr: Expr, ddof: u8) -> PolarsResult<Expr> {
 
 pub(crate) mod correlations;
 pub(crate) mod display;
-pub(crate) mod properties;
+pub(crate) mod sum;
 
 #[cfg(test)]
 mod test {

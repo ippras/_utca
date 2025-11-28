@@ -4,11 +4,12 @@ use crate::{
     app::{
         computers::composition::{
             Computed as CompositionComputed, Key as CompositionKey,
-            filtered::{Computed as FilteredCompositionComputed, Key as FilteredCompositionKey},
-            species::{Computed as CompositionSpeciesComputed, Key as CompositionSpeciesKey},
-            unique::{Computed as UniqueCompositionComputed, Key as UniqueCompositionKey},
+            filtered::{Computed as FilteredComputed, Key as FilteredKey},
+            species::{Computed as SpeciesComputed, Key as SpeciesKey},
+            sum::symmetry::{Computed as SumSymmetryComputed, Key as SumSymmetryKey},
+            unique::{Computed as UniqueComputed, Key as UniqueKey},
         },
-        states::composition::{State, View},
+        states::composition::{Settings, State, View},
     },
     export::{ron, xlsx},
     text::Text,
@@ -157,6 +158,9 @@ impl Pane {
         // Settings
         ui.settings_button(&mut state.windows.open_settings);
         ui.separator();
+        // Sum
+        self.sum_button(ui, state);
+        ui.separator();
         // Save
         self.save_button(ui, state);
         ui.separator();
@@ -208,6 +212,22 @@ impl Pane {
         });
     }
 
+    /// Sum button
+    fn sum_button(&self, ui: &mut Ui, state: &mut State) {
+        ui.menu_button(RichText::new(SIGMA).heading(), |ui| {
+            ui.toggle_value(
+                &mut state.windows.open_sum,
+                (
+                    RichText::new(SIGMA).heading(),
+                    RichText::new(ui.localize("Property?PluralCategory=other")).heading(),
+                ),
+            )
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("Property.hover"));
+            });
+        });
+    }
+
     /// Save button
     fn save_button(&self, ui: &mut Ui, state: &State) {
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
@@ -252,13 +272,10 @@ impl Pane {
     #[instrument(skip_all, err)]
     fn save_xlsx(&self, ui: &mut Ui, name: impl Debug + Display, state: &State) -> Result<()> {
         let data_frame = ui.memory_mut(|memory| {
-            memory
-                .caches
-                .cache::<FilteredCompositionComputed>()
-                .get(FilteredCompositionKey {
-                    data_frame: &self.target,
-                    settings: &state.settings,
-                })
+            memory.caches.cache::<FilteredComputed>().get(FilteredKey {
+                data_frame: &self.target,
+                settings: &state.settings,
+            })
         });
         let data_frame = data_frame.data_frame.unnest(["Keys"], None)?;
         let _ = xlsx::save(&data_frame, &format!("{name}.utca.xlsx"));
@@ -282,13 +299,10 @@ impl Pane {
 
     fn data(&self, ui: &Ui, state: &State) -> PolarsResult<DataFrame> {
         let data_frame = ui.memory_mut(|memory| {
-            memory
-                .caches
-                .cache::<FilteredCompositionComputed>()
-                .get(FilteredCompositionKey {
-                    data_frame: &self.target,
-                    settings: &state.settings,
-                })
+            memory.caches.cache::<FilteredComputed>().get(FilteredKey {
+                data_frame: &self.target,
+                settings: &state.settings,
+            })
         });
         data_frame
             .data_frame
@@ -307,8 +321,8 @@ impl Pane {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CompositionSpeciesComputed>()
-                .get(CompositionSpeciesKey::new(&self.frames, &state.settings))
+                .cache::<SpeciesComputed>()
+                .get(SpeciesKey::new(&self.frames, &state.settings))
         });
         // Composition
         self.target = ui.memory_mut(|memory| {
@@ -320,13 +334,10 @@ impl Pane {
         });
         // Filtered
         let filtered_data_frame = ui.memory_mut(|memory| {
-            memory
-                .caches
-                .cache::<FilteredCompositionComputed>()
-                .get(FilteredCompositionKey {
-                    data_frame: &self.target,
-                    settings: &state.settings,
-                })
+            memory.caches.cache::<FilteredComputed>().get(FilteredKey {
+                data_frame: &self.target,
+                settings: &state.settings,
+            })
         });
         match state.settings.view {
             View::Plot => PlotView::new(&filtered_data_frame, state).show(ui),
@@ -338,34 +349,53 @@ impl Pane {
 impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
         self.settings_window(ui, state);
+        self.sum_window(ui, state);
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
         if state.settings.discriminants.is_empty() {
             let unique = ui.memory_mut(|memory| {
-                memory
-                    .caches
-                    .cache::<UniqueCompositionComputed>()
-                    .get(UniqueCompositionKey {
-                        frames: &self.frames,
-                    })
+                memory.caches.cache::<UniqueComputed>().get(UniqueKey {
+                    frames: &self.frames,
+                })
             });
             state.settings.discriminants = unique.into_iter().collect();
         }
-        if let Some(inner_response) =
-            Window::new(format!("{SLIDERS_HORIZONTAL} Composition settings"))
-                .id(ui.auto_id_with(ID_SOURCE))
-                .default_pos(ui.next_widget_position())
-                .open(&mut state.windows.open_settings)
-                .show(ui.ctx(), |ui| {
-                    state.settings.show(ui, &self.target);
-                })
-        {
-            inner_response
-                .response
-                .on_hover_text(self.title(state.settings.index).to_string())
-                .on_hover_text(self.id().to_string());
-        }
+        Window::new(format!("{SLIDERS_HORIZONTAL} Composition settings"))
+            .id(ui.auto_id_with(ID_SOURCE))
+            .default_pos(ui.next_widget_position())
+            .open(&mut state.windows.open_settings)
+            .show(ui.ctx(), |ui| {
+                state.settings.show(ui, &self.target);
+            });
+    }
+
+    fn sum_window(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SIGMA} Composition sum"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Sum"))
+            .default_pos(ui.next_widget_position())
+            .open(&mut state.windows.open_sum)
+            .show(ui.ctx(), |ui| self.sum_content(ui, &state.settings));
+    }
+
+    #[instrument(skip_all, err)]
+    fn sum_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
+        // Species
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<SpeciesComputed>()
+                .get(SpeciesKey::new(&self.frames, settings))
+        });
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<SumSymmetryComputed>()
+                .get(SumSymmetryKey::new(&data_frame, settings))
+        });
+        println!("data_frame: {data_frame}");
+        // Properties::new(&data_frame, settings).show(ui).inner
+        Ok(())
     }
 }
 

@@ -12,10 +12,10 @@ use polars_ext::expr::ExprExt;
 use std::sync::LazyLock;
 use tracing::instrument;
 
-/// Calculation biodiesel properties computed
+/// Calculation biodiesel sum computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
 
-/// Calculation biodiesel properties computer
+/// Calculation biodiesel sum computer
 #[derive(Default)]
 pub(crate) struct Computer;
 
@@ -41,7 +41,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
     }
 }
 
-/// Calculation biodiesel properties key
+/// Calculation biodiesel sum key
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
@@ -63,7 +63,7 @@ impl<'a> Key<'a> {
     }
 }
 
-/// Calculation biodiesel properties value
+/// Calculation biodiesel sum value
 type Value = DataFrame;
 
 fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
