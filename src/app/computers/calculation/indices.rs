@@ -24,7 +24,7 @@ impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
         // Filter minor
-        if !key.save {
+        if key.filter {
             // true or null (standard)
             lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
         }
@@ -47,9 +47,9 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
     pub(crate) ddof: u8,
+    pub(crate) filter: bool,
     pub(crate) indices: &'a Indices,
     pub(crate) precision: usize,
-    pub(crate) save: bool,
     pub(crate) significant: bool,
 }
 
@@ -58,9 +58,9 @@ impl<'a> Key<'a> {
         Self {
             frame,
             ddof: settings.ddof,
+            filter: settings.threshold.filter,
             indices: &settings.indices,
             precision: settings.precision,
-            save: settings.threshold.save,
             significant: settings.significant,
         }
     }
@@ -125,6 +125,7 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         ]))
     };
     Ok(lazy_frame.select([
+        property(conjugated)?.alias("Conjugated"),
         property(monounsaturated)?.alias("Monounsaturated"),
         property(polyunsaturated)?.alias("Polyunsaturated"),
         property(saturated)?.alias("Saturated"),
@@ -134,6 +135,7 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         property(|expr| unsaturated(expr, NonZeroI8::new(-6)))?.alias("Unsaturated-6"),
         property(|expr| unsaturated(expr, NonZeroI8::new(-3)))?.alias("Unsaturated-3"),
         property(|expr| unsaturated(expr, NonZeroI8::new(9)))?.alias("Unsaturated9"),
+        //
         property(eicosapentaenoic_and_docosahexaenoic)?.alias("EicosapentaenoicAndDocosahexaenoic"),
         property(fish_lipid_quality)?.alias("FishLipidQuality"),
         property(health_promoting_index)?.alias("HealthPromotingIndex"),
@@ -183,15 +185,17 @@ fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         .alias(name))
     };
     Ok(lazy_frame.select([
+        property("Conjugated")?,
         property("Monounsaturated")?,
         property("Polyunsaturated")?,
         property("Saturated")?,
         property("Trans")?,
-        property("Unsaturated")?,
-        property("Unsaturated-9")?,
-        property("Unsaturated-6")?,
         property("Unsaturated-3")?,
+        property("Unsaturated-6")?,
+        property("Unsaturated-9")?,
+        property("Unsaturated")?,
         property("Unsaturated9")?,
+        //
         property("EicosapentaenoicAndDocosahexaenoic")?,
         property("FishLipidQuality")?,
         property("HealthPromotingIndex")?,
@@ -204,6 +208,10 @@ fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         property("UnsaturationIndex")?,
         property("IodineValue")?,
     ]))
+}
+
+fn conjugated(expr: Expr) -> Expr {
+    col(FATTY_ACID).fatty_acid().conjugated(expr)
 }
 
 fn monounsaturated(expr: Expr) -> Expr {

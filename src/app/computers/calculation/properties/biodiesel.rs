@@ -38,8 +38,8 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
     pub(crate) ddof: u8,
+    pub(crate) filter: bool,
     pub(crate) precision: usize,
-    pub(crate) save: bool,
     pub(crate) significant: bool,
 }
 
@@ -48,8 +48,8 @@ impl<'a> Key<'a> {
         Self {
             frame,
             ddof: settings.ddof,
+            filter: settings.threshold.filter,
             precision: settings.precision,
-            save: settings.threshold.save,
             significant: settings.significant,
         }
     }
@@ -123,7 +123,7 @@ fn compute(key: Key, length: usize) -> PolarsResult<Value> {
     // https://github.com/pola-rs/polars/pull/23316
     let mut lazy_frame = key.frame.data_frame.clone().lazy();
     // Filter minor
-    if !key.save {
+    if key.filter {
         // true or null (standard)
         lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
     }
