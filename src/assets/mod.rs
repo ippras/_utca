@@ -4,7 +4,7 @@ use metadata::polars::MetaDataFrame;
 use std::sync::LazyLock;
 
 macro ron($name:literal) {
-    LazyLock::new(|| parse(include_bytes!($name)).expect(concat!("preset ", $name)))
+    LazyLock::new(|| parse(include_bytes!($name)).expect(concat!("ron asset ", $name)))
 }
 
 fn parse(bytes: &[u8]) -> Result<HashedMetaDataFrame> {

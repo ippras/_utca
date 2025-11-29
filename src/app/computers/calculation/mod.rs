@@ -130,7 +130,6 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     } else {
         lazy_frame.with_column(lit(Series::from_iter(&key.threshold.manual)).alias("Filter"))
     };
-    println!("lazy_frame 1: {}", lazy_frame.clone().collect().unwrap());
     // Calculate
     lazy_frame = lazy_frame.with_columns([
         sn13(sn123.clone(), sn2.clone(), key),

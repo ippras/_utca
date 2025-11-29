@@ -30,9 +30,9 @@ impl Computer {
         // │ ---                               ┆ ---                              ┆ ---                       │
         // │ struct[3]                         ┆ struct[3]                        ┆ struct[3]                 │
         // ╞═══════════════════════════════════╪══════════════════════════════════╪═══════════════════════════╡
-        let data_frame = key.data_frame;
+        let data_frame = key.frame;
         let length = length(data_frame)?;
-        let mut lazy_frame = key.data_frame.data_frame.clone().lazy();
+        let mut lazy_frame = key.frame.data_frame.clone().lazy();
         lazy_frame = compute(lazy_frame, length, key)?;
         lazy_frame.collect()
     }
@@ -47,7 +47,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 /// Composition key
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub(crate) struct Key<'a> {
-    pub(crate) data_frame: &'a HashedDataFrame,
+    pub(crate) frame: &'a HashedDataFrame,
     pub(crate) index: Option<usize>,
     pub(crate) adduct: OrderedFloat<f64>,
     pub(crate) ddof: u8,
@@ -60,7 +60,7 @@ pub(crate) struct Key<'a> {
 impl<'a> Key<'a> {
     pub(crate) fn new(data_frame: &'a HashedDataFrame, settings: &'a Settings) -> Self {
         Self {
-            data_frame,
+            frame: data_frame,
             index: settings.index,
             adduct: OrderedFloat(settings.adduct),
             ddof: settings.ddof,
@@ -144,12 +144,16 @@ fn compose(mut lazy_frame: LazyFrame, length: usize, key: Key) -> PolarsResult<L
             match selection.composition {
                 MASS_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .relative_atomic_mass(Some(lit(key.adduct.0)))
-                    .round(key.round_mass, RoundMode::HalfToEven)
+                    .map(|_| {
+                        col(TRIACYLGLYCEROL)
+                            .triacylglycerol()
+                            .relative_atomic_mass(Some(lit(key.adduct.0)))
+                            .round(key.round_mass, RoundMode::HalfToEven)
+                    })
                     .alias("MMC"),
                 MASS_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .map_expr(|expr| {
+                    .map(|expr| {
                         expr.fatty_acid()
                             .relative_atomic_mass(None)
                             .round(key.round_mass, RoundMode::HalfToEven)
@@ -157,11 +161,15 @@ fn compose(mut lazy_frame: LazyFrame, length: usize, key: Key) -> PolarsResult<L
                     .alias("MSC"),
                 ECN_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .equivalent_carbon_number()
+                    .map(|_| {
+                        col(TRIACYLGLYCEROL)
+                            .triacylglycerol()
+                            .equivalent_carbon_number()
+                    })
                     .alias("NMC"),
                 ECN_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().equivalent_carbon_number())
+                    .map(|expr| expr.fatty_acid().equivalent_carbon_number())
                     .alias("NSC"),
                 SPECIES_MONO => col(LABEL)
                     .triacylglycerol()
@@ -176,25 +184,25 @@ fn compose(mut lazy_frame: LazyFrame, length: usize, key: Key) -> PolarsResult<L
                     .triacylglycerol()
                     .non_stereospecific(|expr| expr.fatty_acid().is_saturated().not())
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().r#type())
+                    .map(|expr| expr.fatty_acid().r#type())
                     .alias("TMC"),
                 TYPE_POSITIONAL => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .positional(|expr| expr.fatty_acid().is_saturated().not())
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().r#type())
+                    .map(|expr| expr.fatty_acid().r#type())
                     .alias("TPC"),
                 TYPE_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().r#type())
+                    .map(|expr| expr.fatty_acid().r#type())
                     .alias("TSC"),
                 UNSATURATION_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .unsaturation()
+                    .map(|_| col(TRIACYLGLYCEROL).triacylglycerol().unsaturation())
                     .alias("UMC"),
                 UNSATURATION_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
-                    .map_expr(|expr| expr.fatty_acid().unsaturation())
+                    .map(|expr| expr.fatty_acid().unsaturation())
                     .alias("USC"),
             }
             .alias(format!("Key{index}")),

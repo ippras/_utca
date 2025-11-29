@@ -60,10 +60,10 @@ fn custom_visuals<T: BorrowMut<Visuals>>(mut visuals: T) -> T {
 pub struct App {
     // Panels
     left_panel: bool,
-    // Panes
-    tree: Tree<Pane>,
     // Data
     data: Data,
+    // Panes
+    tree: Tree<Pane>,
 }
 
 impl Default for App {

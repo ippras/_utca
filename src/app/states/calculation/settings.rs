@@ -188,7 +188,7 @@ impl Settings {
         ui.end_row();
     }
 
-    // Float precision
+    // Significant
     fn significant(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Significant")).on_hover_ui(|ui| {
             ui.label(ui.localize("Significant.hover"));

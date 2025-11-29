@@ -9,11 +9,8 @@ use crate::{
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::ExprIfExt as _;
-use std::{
-    hash::{Hash, Hasher},
-    iter::once,
-};
+use polars_ext::expr::{ExprExt, ExprIfExt as _};
+use std::iter::once;
 
 /// Display composition computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -24,11 +21,13 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let mut lazy_frame = key.data_frame.data_frame.clone().lazy();
-        println!(
-            "composition::display 0: {}",
-            lazy_frame.clone().collect().unwrap()
-        );
+        // ┌─────────────────┬────────────────────────────────┬───────────────────────────────────────────────┐
+        // │ Keys            ┆ Values                         ┆ Species                                       │
+        // │ ---             ┆ ---                            ┆ ---                                           │
+        // │ struct[1]       ┆ array[struct[3], n]            ┆ list[struct[3]]                               │
+        // ╞═════════════════╪════════════════════════════════╪═══════════════════════════════════════════════╡
+        let mut lazy_frame = key.frame.data_frame.clone().lazy();
+        // println!("display 0: {}", lazy_frame.clone().collect().unwrap());
         lazy_frame = format(lazy_frame, key)?;
         let data_frame = lazy_frame.collect()?;
         Ok(data_frame)
@@ -42,28 +41,24 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 }
 
 /// Display composition key
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Hash, Copy, Debug)]
 pub(crate) struct Key<'a> {
-    pub(crate) data_frame: &'a HashedDataFrame,
+    pub(crate) frame: &'a HashedDataFrame,
     pub(crate) percent: bool,
+    pub(crate) precision: usize,
     pub(crate) selections: &'a Vec<Selection>,
+    pub(crate) significant: bool,
 }
 
 impl<'a> Key<'a> {
     pub(crate) fn new(data_frame: &'a HashedDataFrame, settings: &'a Settings) -> Self {
         Self {
-            data_frame,
+            frame: data_frame,
             percent: settings.percent,
+            precision: settings.precision,
             selections: &settings.selections,
+            significant: settings.significant,
         }
-    }
-}
-
-impl Hash for Key<'_> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.data_frame.hash.hash(state);
-        self.percent.hash(state);
-        self.selections.hash(state);
     }
 }
 
@@ -72,58 +67,59 @@ type Value = DataFrame;
 
 fn format(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     // Restructure
-    let exprs = key
-        .selections
-        .iter()
-        .enumerate()
-        .map(|(index, selection)| {
-            as_struct(vec![
-                col("Keys")
-                    .struct_()
-                    .field_by_index(index as _)
-                    .alias("Key"),
-                col("Values")
-                    .arr()
-                    .get(lit(index as u32), false)
-                    .alias("Value"),
-            ])
-            .alias(index.to_string())
-        })
-        .chain(once(col("Species")))
-        .collect::<Vec<_>>();
-    lazy_frame = lazy_frame.select(exprs);
-    // println!("Display 2: {}", lazy_frame.clone().collect().unwrap());
-    // Форматирование
+    lazy_frame = lazy_frame.select(
+        (0..key.selections.len())
+            .map(|index| {
+                as_struct(vec![
+                    col("Keys")
+                        .struct_()
+                        .field_by_index(index as _)
+                        .alias("Key"),
+                    col("Values")
+                        .arr()
+                        .get(lit(index as IdxSize), false)
+                        .alias("Value"),
+                ])
+                .alias(index.to_string())
+            })
+            .chain(once(col("Species")))
+            .collect::<Vec<_>>(),
+    );
+    // Format
     let species = col("Species").list().eval(as_struct(vec![
         {
-            let label = || col("").struct_().field_by_name(LABEL);
+            let label = element().struct_().field_by_name(LABEL).triacylglycerol();
             format_str(
                 "[{}; {}; {}]",
                 [
-                    label().triacylglycerol().stereospecific_number1(),
-                    label().triacylglycerol().stereospecific_number2(),
-                    label().triacylglycerol().stereospecific_number3(),
+                    label.clone().stereospecific_number1(),
+                    label.clone().stereospecific_number2(),
+                    label.stereospecific_number3(),
                 ],
             )?
             .alias(LABEL)
         },
         {
-            let triacylglycerol = || col("").struct_().field_by_name(TRIACYLGLYCEROL);
+            let triacylglycerol = {
+                element()
+                    .struct_()
+                    .field_by_name(TRIACYLGLYCEROL)
+                    .triacylglycerol()
+            };
             format_str(
                 "[{}; {}; {}]",
                 [
-                    triacylglycerol()
-                        .triacylglycerol()
+                    triacylglycerol
+                        .clone()
                         .stereospecific_number1()
                         .fatty_acid()
                         .format(),
-                    triacylglycerol()
-                        .triacylglycerol()
+                    triacylglycerol
+                        .clone()
                         .stereospecific_number2()
                         .fatty_acid()
                         .format(),
-                    triacylglycerol()
-                        .triacylglycerol()
+                    triacylglycerol
                         .stereospecific_number3()
                         .fatty_acid()
                         .format(),
@@ -131,12 +127,13 @@ fn format(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             )?
             .alias(TRIACYLGLYCEROL)
         },
-        col("")
+        element()
             .struct_()
             .field_by_name("Value")
             .struct_()
             .field_by_name("Mean")
             .percent_if(key.percent)
+            .precision(key.precision, key.significant)
             .alias("Value"),
     ]));
     let exprs = key
@@ -145,51 +142,45 @@ fn format(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         .enumerate()
         .map(|(index, selection)| {
             // Value
-            let percent = |name| {
+            let field = |name| {
                 col(index.to_string())
                     .struct_()
                     .field_by_name("Value")
                     .struct_()
                     .field_by_name(name)
-                    .percent_if(key.percent)
             };
             let value = as_struct(vec![
-                percent("Mean"),
-                percent("StandardDeviation"),
-                percent("Array"),
+                field("Mean")
+                    .percent_if(key.percent)
+                    .precision(key.precision, key.significant),
+                field("StandardDeviation")
+                    .percent_if(key.percent)
+                    .precision(key.precision, key.significant),
+                field("Array").arr().eval(
+                    element()
+                        .percent_if(key.percent)
+                        .precision(key.precision, key.significant),
+                    false,
+                ),
             ]);
             // Key
-            let key = || col(index.to_string()).struct_().field_by_name("Key");
+            let key = col(index.to_string())
+                .struct_()
+                .field_by_name("Key")
+                .triacylglycerol();
+            let args = [
+                key.clone().stereospecific_number1(),
+                key.clone().stereospecific_number2(),
+                key.stereospecific_number3(),
+            ];
             let key = match selection.composition {
-                ECN_MONO | MASS_MONO | UNSATURATION_MONO => {
-                    format_str("({}/3; {}/3; {}/3)", [key(), key(), key()])?
-                }
-                SPECIES_MONO | TYPE_MONO => format_str(
-                    "({}/3; {}/3; {}/3)",
-                    [
-                        key().triacylglycerol().stereospecific_number1(),
-                        key().triacylglycerol().stereospecific_number2(),
-                        key().triacylglycerol().stereospecific_number3(),
-                    ],
-                )?,
                 ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO | UNSATURATION_STEREO => {
-                    format_str(
-                        "[{}; {}; {}]",
-                        [
-                            key().triacylglycerol().stereospecific_number1(),
-                            key().triacylglycerol().stereospecific_number2(),
-                            key().triacylglycerol().stereospecific_number3(),
-                        ],
-                    )?
+                    format_str("[{}; {}; {}]", args)?
                 }
-                SPECIES_POSITIONAL | TYPE_POSITIONAL => format_str(
-                    "{{}/2; {}; {}/2}",
-                    [
-                        key().triacylglycerol().stereospecific_number1(),
-                        key().triacylglycerol().stereospecific_number2(),
-                        key().triacylglycerol().stereospecific_number3(),
-                    ],
-                )?,
+                SPECIES_POSITIONAL | TYPE_POSITIONAL => format_str("[{}/2; {}; {}/2]", args)?,
+                ECN_MONO | MASS_MONO | SPECIES_MONO | TYPE_MONO | UNSATURATION_MONO => {
+                    format_str("[{}/3; {}/3; {}/3]", args)?
+                }
             };
             Ok(as_struct(vec![key.alias("Key"), value.alias("Value")]).alias(index.to_string()))
         })
@@ -197,96 +188,3 @@ fn format(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         .collect::<PolarsResult<Vec<_>>>()?;
     Ok(lazy_frame.select(exprs))
 }
-
-fn _format(column: Column) -> PolarsResult<Option<Column>> {
-    // match column.dtype() {
-    //     DataType::UInt64 => todo!(),
-    //     DataType::Float64 => todo!(),
-    //     DataType::Decimal(_, _) => todo!(),
-    //     DataType::String => todo!(),
-    //     DataType::Binary => todo!(),
-    //     DataType::BinaryOffset => todo!(),
-    //     DataType::Date => todo!(),
-    //     DataType::Datetime(time_unit, time_zone) => todo!(),
-    //     DataType::Duration(time_unit) => todo!(),
-    //     DataType::Time => todo!(),
-    //     DataType::Array(data_type, _) => todo!(),
-    //     DataType::List(data_type) => todo!(),
-    //     DataType::Null => todo!(),
-    //     DataType::Categorical(categories, categorical_mapping) => todo!(),
-    //     DataType::Enum(frozen_categories, categorical_mapping) => todo!(),
-    //     DataType::Struct(fields) => todo!(),
-    //     _ => column,
-    // }
-    let fields = column
-        .struct_()?
-        .fields_as_series()
-        .into_iter()
-        .map(|series| {
-            series
-                .iter()
-                .map(|any_value| any_value.str_value())
-                .collect::<StringChunked>()
-                .into_series()
-                .with_name(series.name().clone())
-        })
-        .collect::<Vec<_>>();
-    Ok(Some(
-        StructChunked::from_series(PlSmallStr::EMPTY, column.len(), fields.iter())?.into_column(),
-    ))
-}
-
-// fn calculation(key: Key) -> PolarsResult<Expr> {
-//     match key.kind {
-//         Kind::Enrichment => format_str(
-//             "{} / {}",
-//             [
-//                 col(STEREOSPECIFIC_NUMBERS2)
-//                     .struct_()
-//                     .field_by_name("Experimental")
-//                     .struct_()
-//                     .field_by_name("Mean")
-//                     .percent_if(key.percent),
-//                 col(STEREOSPECIFIC_NUMBERS123)
-//                     .struct_()
-//                     .field_by_name("Experimental")
-//                     .struct_()
-//                     .field_by_name("Mean")
-//                     .percent_if(key.percent),
-//             ],
-//         ),
-//         Kind::Selectivity => format_str(
-//             "({} / {}) / ({} / {})",
-//             [
-//                 col(STEREOSPECIFIC_NUMBERS2)
-//                     .struct_()
-//                     .field_by_name("Experimental")
-//                     .struct_()
-//                     .field_by_name("Mean")
-//                     .percent_if(key.percent),
-//                 col(STEREOSPECIFIC_NUMBERS123)
-//                     .struct_()
-//                     .field_by_name("Experimental")
-//                     .struct_()
-//                     .field_by_name("Mean")
-//                     .percent_if(key.percent),
-//                 col(STEREOSPECIFIC_NUMBERS2)
-//                     .struct_()
-//                     .field_by_name("Experimental")
-//                     .struct_()
-//                     .field_by_name("Mean")
-//                     .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
-//                     .sum()
-//                     .percent_if(key.percent),
-//                 col(STEREOSPECIFIC_NUMBERS123)
-//                     .struct_()
-//                     .field_by_name("Experimental")
-//                     .struct_()
-//                     .field_by_name("Mean")
-//                     .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
-//                     .sum()
-//                     .percent_if(key.percent),
-//             ],
-//         ),
-//     }
-// }

@@ -3,22 +3,15 @@ use crate::{
     app::{
         computers::composition::display::{Computed as DisplayComputed, Key as DisplayKey},
         panes::MARGIN,
-        states::composition::{
-            ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
-            SPECIES_STEREO, Settings, State, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
-            UNSATURATION_MONO, UNSATURATION_STEREO,
-        },
+        states::composition::State,
         widgets::FloatWidget,
     },
     text::Text,
     utils::{HashedDataFrame, egui::ResponseExt as _},
 };
-use egui::{
-    Color32, Frame, Grid, Id, Label, Margin, Response, RichText, ScrollArea, Stroke, TextStyle, Ui,
-    Widget,
-};
+use egui::{Context, Frame, Grid, Id, Label, Margin, Response, ScrollArea, TextStyle, Ui, Widget};
 use egui_l20n::{ResponseExt as _, UiExt as _};
-use egui_phosphor::regular::HASH;
+use egui_phosphor::regular::{HASH, LIST};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use itertools::Itertools as _;
 use lipid::prelude::*;
@@ -29,8 +22,6 @@ use std::{
     ops::{Add, Range},
 };
 use tracing::instrument;
-
-const INDEX: Range<usize> = 0..1;
 
 /// Composition table
 #[derive(Debug)]
@@ -55,9 +46,10 @@ impl TableView<'_> {
             TableState::reset(ui.ctx(), id);
             self.state.reset_table_state = false;
         }
-        let height = ui.text_style_height(&TextStyle::Heading);
+        let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
         let num_rows = self.data_frame.height() as u64 + 1;
         let num_columns = self.state.settings.selections.len() * 2 + 1;
+        // let top = vec![0..1, 1..num_columns, num_columns..num_columns + 1];
         let top = vec![0..1, 1..num_columns];
         let mut middle = vec![0..1];
         const STEP: usize = 2;
@@ -89,7 +81,7 @@ impl TableView<'_> {
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
         match (row, column) {
-            (0, INDEX) => {
+            (0, top::INDEX) => {
                 ui.heading(HASH).on_hover_localized("Index");
             }
             (0, _) => {
@@ -138,15 +130,21 @@ impl TableView<'_> {
         column: Range<usize>,
     ) -> PolarsResult<()> {
         match (row, column) {
-            (row, INDEX) => {
+            (row, top::INDEX) => {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
                         .cache::<DisplayComputed>()
                         .get(DisplayKey::new(self.data_frame, &self.state.settings))
                 });
-                ui.label(row.to_string())
-                    .species(data_frame["Species"].as_materialized_series(), row)?;
+                ui.horizontal(|ui| -> PolarsResult<()> {
+                    ui.menu_button(LIST, |ui| self.list_button_content(ui, &data_frame, row))
+                        .inner
+                        .transpose()?;
+                    ui.label(row.to_string());
+                    Ok(())
+                })
+                .inner?;
             }
             (row, column) => {
                 let data_frame = ui.memory_mut(|memory| {
@@ -233,6 +231,49 @@ impl TableView<'_> {
                     }
                 }
             }
+        }
+        Ok(())
+    }
+
+    fn list_button_content(
+        &self,
+        ui: &mut Ui,
+        data_frame: &DataFrame,
+        row: usize,
+    ) -> PolarsResult<()> {
+        let species_series = data_frame["Species"].as_materialized_series();
+        if let Some(species) = species_series.list()?.get_as_series(row) {
+            ui.heading("Species")
+                .on_hover_text(species.len().to_string());
+            ui.separator();
+            ScrollArea::vertical()
+                .auto_shrink([false, true])
+                .max_height(ui.spacing().combo_height)
+                .show(ui, |ui| {
+                    Grid::new(ui.next_auto_id())
+                        .show(ui, |ui| -> PolarsResult<()> {
+                            for (index, (label, value)) in species
+                                .struct_()?
+                                .field_by_name(LABEL)?
+                                .str()?
+                                .iter()
+                                .zip(species.struct_()?.field_by_name("Value")?.f64()?)
+                                .enumerate()
+                            {
+                                ui.label(index.to_string());
+                                if let Some(label) = label {
+                                    ui.label(label);
+                                }
+                                if let Some(value) = value {
+                                    ui.label(value.to_string());
+                                }
+                                ui.end_row();
+                            }
+                            Ok(())
+                        })
+                        .inner
+                })
+                .inner?;
         }
         Ok(())
     }
@@ -462,6 +503,10 @@ impl TableDelegate for TableView<'_> {
                 let _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
             });
     }
+
+    fn row_top_offset(&self, ctx: &Context, _table_id: Id, row_nr: u64) -> f32 {
+        row_nr as f32 * (ctx.style().spacing.interact_size.y + 2.0 * MARGIN.y)
+    }
 }
 
 fn array_value<T>(
@@ -572,4 +617,10 @@ impl ResponseExt for Response {
         }
         Ok(self)
     }
+}
+
+mod top {
+    use super::*;
+
+    pub(super) const INDEX: Range<usize> = 0..1;
 }

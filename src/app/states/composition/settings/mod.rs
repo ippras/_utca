@@ -20,8 +20,9 @@ use egui::{
     containers::menu::{MenuButton, MenuConfig},
     emath::Float,
 };
+use egui_dnd::dnd;
 use egui_l20n::UiExt;
-use egui_phosphor::regular::{BOOKMARK, CHART_BAR, ERASER, MINUS, PLUS, TABLE};
+use egui_phosphor::regular::{BOOKMARK, CHART_BAR, DOTS_SIX_VERTICAL, ERASER, MINUS, PLUS, TABLE};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
@@ -121,9 +122,14 @@ impl Settings {
                 //     );
                 // }
 
-                self.compose(ui, target);
                 self.method(ui);
-                self.discriminants(ui);
+                if self.method == Method::Gunstone {
+                    ui.label(ui.localize("Gunstone"));
+                    ui.separator();
+                    ui.end_row();
+                    self.discriminants(ui);
+                }
+                self.compose(ui, target);
 
                 self.adduct(ui);
                 self.round_mass(ui);
@@ -172,152 +178,6 @@ impl Settings {
                 }
             });
         });
-    }
-
-    /// Compose
-    fn compose(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
-        // Compose
-        ui.label(ui.localize("Compose"));
-        ui.horizontal(|ui| {
-            MenuButton::new(PLUS)
-                .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-                .ui(ui, |ui| {
-                    let max_height = ui.spacing().combo_height;
-                    ScrollArea::vertical()
-                        .max_height(max_height)
-                        .show(ui, |ui| {
-                            let id = ui.auto_id_with(Id::new("Composition"));
-                            let mut current_value = ui.data_mut(|data| {
-                                data.get_temp::<Option<Composition>>(id).flatten()
-                            });
-                            for selected_value in COMPOSITIONS {
-                                let response = ui
-                                    .selectable_value(
-                                        &mut current_value,
-                                        Some(selected_value),
-                                        ui.localize(selected_value.text()),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(ui.localize(selected_value.hover_text()));
-                                    });
-                                if response.clicked() {
-                                    self.selections.push(Selection {
-                                        composition: selected_value,
-                                        filter: Default::default(),
-                                    });
-                                    current_value = None;
-                                }
-                            }
-                            ui.data_mut(|data| data.insert_temp(id, current_value));
-                        });
-                });
-            if ui
-                .button((
-                    BOOKMARK,
-                    ui.localize(SPECIES_POSITIONAL.abbreviation_text()),
-                ))
-                .clicked()
-            {
-                self.selections = vec![Selection {
-                    composition: SPECIES_POSITIONAL,
-                    filter: Filter::new(),
-                }];
-            };
-            if ui
-                .button((BOOKMARK, ui.localize(SPECIES_MONO.abbreviation_text())))
-                .clicked()
-            {
-                self.selections = vec![Selection {
-                    composition: SPECIES_MONO,
-                    filter: Filter::new(),
-                }];
-            };
-            if ui
-                .button((BOOKMARK, ui.localize(TYPE_POSITIONAL.abbreviation_text())))
-                .clicked()
-            {
-                self.selections = vec![Selection {
-                    composition: TYPE_POSITIONAL,
-                    filter: Filter::new(),
-                }];
-            };
-        });
-        ui.end_row();
-        let mut index = 0;
-        self.selections.retain_mut(|selection| {
-            let mut keep = true;
-            ui.label("");
-            ui.horizontal(|ui| {
-                // Delete
-                keep = !ui.button(MINUS).clicked();
-                ComboBox::from_id_salt(ui.next_auto_id())
-                    .selected_text(ui.localize(selection.composition.text()))
-                    .show_ui(ui, |ui| {
-                        for composition in COMPOSITIONS {
-                            if ui
-                                .selectable_value(
-                                    &mut selection.composition,
-                                    composition,
-                                    ui.localize(composition.text()),
-                                )
-                                .on_hover_ui(|ui| {
-                                    ui.label(ui.localize(composition.hover_text()));
-                                })
-                                .changed()
-                            {
-                                selection.filter = Default::default();
-                            }
-                        }
-                    })
-                    .response
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize(selection.composition.hover_text()));
-                    });
-                // Filter
-                // let data_frame = ui.memory_mut(|memory| {
-                //     memory
-                //         .caches
-                //         .cache::<UniqueCompositionComputed>()
-                //         .get(UniqueCompositionKey {
-                //             data_frame,
-                //             selections: &self.confirmable.selections,
-                //         })
-                // });
-                // if let Some(series) = ui.memory_mut(|memory| {
-                //     memory
-                //         .caches
-                //         .cache::<UniqueCompositionComputed>()
-                //         .get(UniqueCompositionKey { data_frame, index })
-                // }) {
-                //     // ui.add(FilterWidget::new(selection, &series).percent(self.percent));
-                // }
-                if let Some(series) = target["Keys"]
-                    .struct_()
-                    .unwrap()
-                    .fields_as_series()
-                    .get(index)
-                {
-                    let series = series.unique().unwrap().sort(Default::default()).unwrap();
-                    FilterWidget::new(selection, &series)
-                        .percent(self.percent)
-                        .ui(ui);
-                }
-            });
-            ui.end_row();
-            index += 1;
-            keep
-        });
-        // Если пуст, то вставляет значение по умолчанию (не может быть пустым).
-        if self.selections.is_empty() {
-            self.selections.push(Selection::new());
-        }
-    }
-
-    /// Discriminants
-    fn discriminants(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Discriminants"));
-        self.discriminants.show(ui);
-        ui.end_row();
     }
 
     /// Precision
@@ -411,6 +271,148 @@ impl Settings {
             .on_hover_ui(|ui| {
                 ui.label(ui.localize(self.method.hover_text()));
             });
+        ui.end_row();
+    }
+
+    /// Discriminants
+    fn discriminants(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Discriminants"));
+        self.discriminants.show(ui);
+        ui.end_row();
+    }
+
+    /// Compose
+    fn compose(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
+        // Compose
+        ui.label(ui.localize("Compose"));
+        // Plus, bookmarks
+        ui.horizontal(|ui| {
+            MenuButton::new(PLUS)
+                .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+                .ui(ui, |ui| {
+                    let max_height = ui.spacing().combo_height;
+                    ScrollArea::vertical()
+                        .max_height(max_height)
+                        .show(ui, |ui| {
+                            let id = ui.auto_id_with(Id::new("Composition"));
+                            let mut current_value = ui.data_mut(|data| {
+                                data.get_temp::<Option<Composition>>(id).flatten()
+                            });
+                            for selected_value in COMPOSITIONS {
+                                let response = ui
+                                    .selectable_value(
+                                        &mut current_value,
+                                        Some(selected_value),
+                                        ui.localize(selected_value.text()),
+                                    )
+                                    .on_hover_ui(|ui| {
+                                        ui.label(ui.localize(selected_value.hover_text()));
+                                    });
+                                if response.clicked() {
+                                    self.selections.push(Selection {
+                                        composition: selected_value,
+                                        filter: Default::default(),
+                                    });
+                                    current_value = None;
+                                }
+                            }
+                            ui.data_mut(|data| data.insert_temp(id, current_value));
+                        });
+                });
+            if ui
+                .button((
+                    BOOKMARK,
+                    ui.localize(SPECIES_POSITIONAL.abbreviation_text()),
+                ))
+                .clicked()
+            {
+                self.selections = vec![Selection {
+                    composition: SPECIES_POSITIONAL,
+                    filter: Filter::new(),
+                }];
+            };
+            if ui
+                .button((BOOKMARK, ui.localize(SPECIES_MONO.abbreviation_text())))
+                .clicked()
+            {
+                self.selections = vec![Selection {
+                    composition: SPECIES_MONO,
+                    filter: Filter::new(),
+                }];
+            };
+            if ui
+                .button((BOOKMARK, ui.localize(TYPE_POSITIONAL.abbreviation_text())))
+                .clicked()
+            {
+                self.selections = vec![Selection {
+                    composition: TYPE_POSITIONAL,
+                    filter: Filter::new(),
+                }];
+            };
+        });
+        ui.end_row();
+        // Minus, selections
+        let mut delete = None;
+        ui.label("");
+        ui.vertical(|ui| {
+            let response = dnd(ui, ui.next_auto_id()).show_vec(
+                &mut self.selections,
+                |ui, selection, handle, state| {
+                    ui.horizontal(|ui| {
+                        handle.ui(ui, |ui| {
+                            ui.label(DOTS_SIX_VERTICAL);
+                        });
+                        // Delete
+                        delete = delete.or(ui.button(MINUS).clicked().then_some(state.index));
+                        ComboBox::from_id_salt(ui.next_auto_id())
+                            .selected_text(ui.localize(selection.composition.text()))
+                            .show_ui(ui, |ui| {
+                                for composition in COMPOSITIONS {
+                                    if ui
+                                        .selectable_value(
+                                            &mut selection.composition,
+                                            composition,
+                                            ui.localize(composition.text()),
+                                        )
+                                        .on_hover_ui(|ui| {
+                                            ui.label(ui.localize(composition.hover_text()));
+                                        })
+                                        .changed()
+                                    {
+                                        selection.filter = Default::default();
+                                    }
+                                }
+                            })
+                            .response
+                            .on_hover_ui(|ui| {
+                                ui.label(ui.localize(selection.composition.hover_text()));
+                            });
+                        if let Some(series) = target["Keys"]
+                            .struct_()
+                            .unwrap()
+                            .fields_as_series()
+                            .get(state.index)
+                        {
+                            let series = series.unique().unwrap().sort(Default::default()).unwrap();
+                            FilterWidget::new(selection, &series)
+                                .percent(self.percent)
+                                .ui(ui);
+                        }
+                    });
+                    // ui.end_row();
+                },
+            );
+            if let Some(index) = delete {
+                self.selections.remove(index);
+            }
+            if response.is_drag_finished() {
+                response.update_vec(&mut self.selections);
+            }
+            // Если пуст, то вставляет значение по умолчанию (не может быть пустым).
+            if self.selections.is_empty() {
+                self.selections.push(Selection::new());
+            }
+        });
         ui.end_row();
     }
 

@@ -2,8 +2,6 @@ use super::Discriminants;
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_ext::expr::ExprExt as _;
-// [Oleic; Linoleic; Linoleic] 4.4797253361117946
-// [Linoleic; Oleic; Linoleic] 4.4797253361117946
 
 // 0.0 + 0.048672 + 0.000623 + 0.950705 = 1.0
 // let u = 1.0 - s;
@@ -53,10 +51,9 @@ pub(super) fn compute(
         col(STEREOSPECIFIC_NUMBERS123).alias("Value"),
     ]);
     println!("lazy_frame g1: {}", lazy_frame.clone().collect().unwrap());
-    let factor = gunstone_factor(lazy_frame.clone())?;
-    println!("factor: {factor}");
-    //
-    println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
+    let factors = factors(lazy_frame.clone())?;
+    println!("factor: {}", factors.clone().collect().unwrap());
+    // println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
     let discriminants = &discriminants.0;
     let discriminants = df! {
         LABEL => Series::from_iter(discriminants.keys().cloned()),
@@ -65,204 +62,194 @@ pub(super) fn compute(
         "Factor3" => Series::from_iter(discriminants.values().map(|values| values[2])),
     }?;
     println!("Discriminants: {discriminants}");
-    lazy_frame = lazy_frame
-        .join(
-            discriminants.lazy(),
-            [col(LABEL)],
-            [col(LABEL)],
-            JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
-        )
-        .select([
-            col(LABEL),
-            col(FATTY_ACID),
-            (col("Value") * col("Factor1")).alias("Value1"),
-            (col("Value") * col("Factor2")).alias("Value2"),
-            (col("Value") * col("Factor3")).alias("Value3"),
-            // col("Value") * col("Factor"),
-            // col("Value") * col("Factor").arr().get(lit(0), false),
-            // col("Value") * col("Factor").arr().get(lit(1), false),
-            // col("Value") * col("Factor").arr().get(lit(2), false),
-        ]);
-    println!("lazy_frame g25: {}", lazy_frame.clone().collect().unwrap());
-    lazy_frame = gunstone_cartesian_product(lazy_frame)?;
+    // lazy_frame = lazy_frame
+    //     .join(
+    //         discriminants.lazy(),
+    //         [col(LABEL)],
+    //         [col(LABEL)],
+    //         JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
+    //     )
+    //     .select([
+    //         col(LABEL),
+    //         col(FATTY_ACID),
+    //         (col("Value") * col("Factor1")).alias("Value1"),
+    //         (col("Value") * col("Factor2")).alias("Value2"),
+    //         (col("Value") * col("Factor3")).alias("Value3"),
+    //     ]);
+    lazy_frame = lazy_frame.select([
+        col(LABEL),
+        col(FATTY_ACID),
+        col("Value").alias("Value1"),
+        col("Value").alias("Value2"),
+        col("Value").alias("Value3"),
+    ]);
+    println!("lazy_frame g2: {}", lazy_frame.clone().collect().unwrap());
+    lazy_frame = cartesian_product(lazy_frame)?;
     println!("lazy_frame g3: {}", lazy_frame.clone().collect().unwrap());
     lazy_frame = lazy_frame
         .with_column(
-            col(FATTY_ACID)
+            col(TRIACYLGLYCEROL)
                 .triacylglycerol()
                 .map_expr(|expr| expr.fatty_acid().is_unsaturated(None))
                 .triacylglycerol()
                 .sum()
-                .alias("TMC"),
+                .alias("MTC"),
         )
         .join(
-            factor.lazy(),
-            [col("TMC")],
-            [col("TMC")],
+            factors,
+            [col("MTC")],
+            [col("MTC")],
             JoinArgs::new(JoinType::Left).with_coalesce(JoinCoalesce::CoalesceColumns),
         )
         .select([
             col(LABEL),
-            col(FATTY_ACID),
+            col(TRIACYLGLYCEROL),
             (col("Value") * col("Factor")).normalize(),
         ]);
     println!("lazy_frame g4: {}", lazy_frame.clone().collect().unwrap());
     Ok(lazy_frame)
 }
 
-fn gunstone_factor(lazy_frame: LazyFrame) -> PolarsResult<DataFrame> {
-    let data_frame = lazy_frame
-        .clone()
-        .select([
-            col("Value")
-                .nullify(col("FattyAcid").fatty_acid().is_saturated())
-                .alias("S"),
-            col("Value")
-                .nullify(col("FattyAcid").fatty_acid().is_unsaturated(None))
-                .alias("U"),
-        ])
-        .sum()
-        .collect()?;
-    println!(
-        "АФСЕЩК: {}",
-        lazy_frame
-            .clone()
-            .with_columns([
-                col("Value")
-                    .nullify(col("FattyAcid").fatty_acid().is_saturated())
-                    .sum()
-                    .alias("S"),
-                col("Value")
-                    .nullify(col("FattyAcid").fatty_acid().is_unsaturated(None))
-                    .sum()
-                    .alias("U"),
-            ])
-            .with_columns([
-                ternary_expr(
-                    col("S").lt_eq(lit(2.0 / 3.0)),
-                    lit(0.0),
-                    lit(1) - lit(3) * col("U")
-                )
-                .alias("S_3"),
-                ternary_expr(
-                    col("S").lt_eq(lit(2.0 / 3.0)),
-                    (lit(3.0 / 2.0) * col("S")).pow(2),
-                    lit(3) * col("U"),
-                )
-                .alias("S_2U"),
-                ternary_expr(
-                    col("S").lt_eq(lit(2.0 / 3.0)),
-                    lit(3.0 / 2.0) * col("S") * (lit(3) * col("U") - lit(1)),
-                    lit(0),
-                )
-                .alias("SU_2"),
-                ternary_expr(
-                    col("S").lt_eq(lit(2.0 / 3.0)),
-                    (lit(1) - lit(3.0 / 2.0) * col("S")).pow(2),
-                    lit(0.0),
-                )
-                .alias("U_3"),
-            ])
-            .collect()?
-    );
-    let s = data_frame["S"].f64()?.first().unwrap();
-    let u = data_frame["U"].f64()?.first().unwrap();
-    // assert!(1.0 - u - s <= f64::EPSILON, "s + u != 1.0");
-    // [SSS]
-    let s3 = if s <= 2.0 / 3.0 { 0.0 } else { 3.0 * s - 2.0 } / s.powi(3);
-    // [SSU], [USS], [SUS]
-    let s2u = if s <= 2.0 / 3.0 {
-        (3.0 * s / 2.0).powi(2)
-    } else {
-        3.0 * u
-    } / (3.0 * s.powi(2) * u);
-    // [SUU], [USU], [UUS]
-    let su2 = if s <= 2.0 / 3.0 {
-        3.0 * s * (3.0 * u - 1.0) / 2.0
-    } else {
-        0.0
-    } / (3.0 * s * u.powi(2));
-    // [UUU]
-    let u3 = if s <= 2.0 / 3.0 {
-        ((3.0 * u - 1.0) / 2.0).powi(2)
-    } else {
-        0.0
-    } / u.powi(3);
-    let factor = df! {
-        "TMC" => Series::from_iter([0, 1, 2, 3]),
-        "Factor" => Series::from_iter([s3, s2u, su2, u3]),
-    }?;
-    Ok(factor)
+// 0.055395+0.944605=1
+// 0.0+0.006904+0.152377+0.840718=0.999999
+fn factors(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
+    // lazy_frame = lazy_frame
+    //     .clone()
+    //     .select([
+    //         col("Value")
+    //             .nullify(col(FATTY_ACID).fatty_acid().is_saturated())
+    //             .alias("S"),
+    //         col("Value")
+    //             .nullify(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
+    //             .alias("U"),
+    //     ])
+    //     .sum();
+    // println!("lazy_frame gx1: {}", lazy_frame.clone().collect().unwrap());
+    let predicate = col("S").lt_eq(lit(2.0 / 3.0));
+    // S, U
+    lazy_frame = lazy_frame.select([
+        col("Value")
+            .nullify(col(FATTY_ACID).fatty_acid().is_saturated())
+            .sum()
+            .alias("S"),
+        col("Value")
+            .nullify(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
+            .sum()
+            .alias("U"),
+    ]);
+    println!("lazy_frame gx1: {}", lazy_frame.clone().collect().unwrap());
+    // [S/3;S/3;S/3], [S/3;S/3;U/3], [S/3;U/3;U/3], [U/3;U/3;U/3]
+    lazy_frame = lazy_frame.select([
+        ternary_expr(predicate.clone(), lit(0.0), lit(1) - lit(3) * col("U")).alias("S_3"),
+        ternary_expr(
+            predicate.clone(),
+            (lit(3.0 / 2.0) * col("S")).pow(2),
+            lit(3) * col("U"),
+        )
+        .alias("S_2U"),
+        ternary_expr(
+            predicate.clone(),
+            lit(3.0 / 2.0) * col("S") * (lit(3) * col("U") - lit(1)),
+            lit(0),
+        )
+        .alias("SU_2"),
+        ternary_expr(
+            predicate,
+            (lit(1) - lit(3.0 / 2.0) * col("S")).pow(2),
+            lit(0.0),
+        )
+        .alias("U_3"),
+    ]);
+    println!("lazy_frame gx2: {}", lazy_frame.clone().collect().unwrap());
+    // Unpivot
+    lazy_frame = lazy_frame
+        .unpivot(UnpivotArgsDSL {
+            on: by_name(["S_3", "S_2U", "SU_2", "U_3"], true),
+            index: empty(),
+            variable_name: None,
+            value_name: Some(PlSmallStr::from_static("Factor")),
+        })
+        .with_row_index("MTC", None)
+        .select([col("MTC"), col("Factor")]);
+    println!("lazy_frame gx3: {}", lazy_frame.clone().collect().unwrap());
+    // let s = data_frame["S"].f64()?.first().unwrap();
+    // let u = data_frame["U"].f64()?.first().unwrap();
+    // // assert!(1.0 - u - s <= f64::EPSILON, "s + u != 1.0");
+    // // [SSS]
+    // let s3 = if s <= 2.0 / 3.0 { 0.0 } else { 3.0 * s - 2.0 } / s.powi(3);
+    // // [SSU], [USS], [SUS]
+    // let s2u = if s <= 2.0 / 3.0 {
+    //     (3.0 * s / 2.0).powi(2)
+    // } else {
+    //     3.0 * u
+    // } / (3.0 * s.powi(2) * u);
+    // // [SUU], [USU], [UUS]
+    // let su2 = if s <= 2.0 / 3.0 {
+    //     3.0 * s * (3.0 * u - 1.0) / 2.0
+    // } else {
+    //     0.0
+    // } / (3.0 * s * u.powi(2));
+    // // [UUU]
+    // let u3 = if s <= 2.0 / 3.0 {
+    //     ((3.0 * u - 1.0) / 2.0).powi(2)
+    // } else {
+    //     0.0
+    // } / u.powi(3);
+    // let factor = df! {
+    //     "TMC" => Series::from_iter([0, 1, 2, 3]),
+    //     "Factor" => Series::from_iter([s3, s2u, su2, u3]),
+    // }?;
+    Ok(lazy_frame)
 }
 
-fn gunstone_cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
+fn cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
+    // Cartesian product (TAG from FA)
     lazy_frame = lazy_frame
         .clone()
         .select([as_struct(vec![
-            col("Label"),
-            col("FattyAcid"),
+            col(LABEL),
+            col(FATTY_ACID),
             col("Value1").alias("Value"),
         ])
-        .alias("StereospecificNumber1")])
+        .alias(STEREOSPECIFIC_NUMBERS1)])
         .cross_join(
             lazy_frame.clone().select([as_struct(vec![
-                col("Label"),
-                col("FattyAcid"),
+                col(LABEL),
+                col(FATTY_ACID),
                 col("Value2").alias("Value"),
             ])
-            .alias("StereospecificNumber2")]),
+            .alias(STEREOSPECIFIC_NUMBERS2)]),
             None,
         )
         .cross_join(
             lazy_frame.clone().select([as_struct(vec![
-                col("Label"),
-                col("FattyAcid"),
+                col(LABEL),
+                col(FATTY_ACID),
                 col("Value3").alias("Value"),
             ])
-            .alias("StereospecificNumber3")]),
+            .alias(STEREOSPECIFIC_NUMBERS3)]),
             None,
         );
     // Restruct
+    let label = |name| col(name).struct_().field_by_name(LABEL).alias(name);
+    let fatty_acid = |name| col(name).struct_().field_by_name(FATTY_ACID).alias(name);
+    let value = |name| col(name).struct_().field_by_name("Value");
     lazy_frame = lazy_frame.select([
         as_struct(vec![
-            col("StereospecificNumber1")
-                .struct_()
-                .field_by_name("Label")
-                .alias("StereospecificNumber1"),
-            col("StereospecificNumber2")
-                .struct_()
-                .field_by_name("Label")
-                .alias("StereospecificNumber2"),
-            col("StereospecificNumber3")
-                .struct_()
-                .field_by_name("Label")
-                .alias("StereospecificNumber3"),
+            label(STEREOSPECIFIC_NUMBERS1),
+            label(STEREOSPECIFIC_NUMBERS2),
+            label(STEREOSPECIFIC_NUMBERS3),
         ])
-        .alias("Label"),
+        .alias(LABEL),
         as_struct(vec![
-            col("StereospecificNumber1")
-                .struct_()
-                .field_by_name("FattyAcid")
-                .alias("StereospecificNumber1"),
-            col("StereospecificNumber2")
-                .struct_()
-                .field_by_name("FattyAcid")
-                .alias("StereospecificNumber2"),
-            col("StereospecificNumber3")
-                .struct_()
-                .field_by_name("FattyAcid")
-                .alias("StereospecificNumber3"),
+            fatty_acid(STEREOSPECIFIC_NUMBERS1),
+            fatty_acid(STEREOSPECIFIC_NUMBERS2),
+            fatty_acid(STEREOSPECIFIC_NUMBERS3),
         ])
-        .alias("FattyAcid"),
-        col("StereospecificNumber1")
-            .struct_()
-            .field_by_name("Value")
-            * col("StereospecificNumber2")
-                .struct_()
-                .field_by_name("Value")
-            * col("StereospecificNumber3")
-                .struct_()
-                .field_by_name("Value"),
+        .alias(TRIACYLGLYCEROL),
+        value(STEREOSPECIFIC_NUMBERS1)
+            * value(STEREOSPECIFIC_NUMBERS2)
+            * value(STEREOSPECIFIC_NUMBERS3),
     ]);
     Ok(lazy_frame)
 }
@@ -273,7 +260,7 @@ fn gunstone_cartesian_product(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFra
 // u3: ((3.0 * u - 1.0) / 2.0).powi(2),
 // fn gunstone1(series: &Series) -> PolarsResult<Series> {
 //     let triacylglycerol = series.struct_()?.field_by_name("Triacylglycerol")?.f64()?;
-//     let fatty_acid = series.struct_()?.field_by_name("FattyAcid")?.fa();
+//     let fatty_acid = series.struct_()?.field_by_name(FATTY_ACID)?.fa();
 //     let Some(s) = triacylglycerol.filter(fatty_acid).sum() else {
 //         polars_bail!(NoData: "Triacylglycerol");
 //     };
