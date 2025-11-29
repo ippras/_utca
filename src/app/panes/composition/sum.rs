@@ -30,14 +30,54 @@ impl<'a> Sum<'a> {
 
     pub(crate) fn show(self, ui: &mut Ui) -> InnerResponse<PolarsResult<()>> {
         Grid::new(ui.auto_id_with("Sum")).show(ui, |ui| -> PolarsResult<()> {
-            ui.heading(ui.localize("Property?PluralCategory=one"));
+            ui.heading(ui.localize("Symmetry"));
             ui.heading(ui.localize("Value")).on_hover_ui(|ui| {
                 ui.label(ui.localize("Value.hover"));
             });
             ui.end_row();
-            for column in self.data_frame.get_columns() {
-                self.property(ui, column)?;
+            for row in 0..self.data_frame.height() {
+                let group = self.data_frame["Group"].str()?.get(row);
+                ui.label(group.unwrap_or("-"));
+                let series = &self.data_frame["Value"];
+                let mean_series = series.struct_()?.field_by_name("Mean")?;
+                let standard_deviation_series =
+                    series.struct_()?.field_by_name("StandardDeviation")?;
+                let standard_deviation = standard_deviation_series.str()?.get(row);
+                let text = match mean_series.str()?.get(row) {
+                    Some(mean)
+                        if self.settings.display_standard_deviation
+                            && let Some(standard_deviation) = standard_deviation =>
+                    {
+                        WidgetText::from(format!("{mean} {standard_deviation}"))
+                    }
+                    Some(mean) => WidgetText::from(mean.to_string()),
+                    None => WidgetText::from("-"),
+                };
+                let mut response = ui.label(text);
+                if response.hovered() {
+                    // Standard deviation
+                    if let Some(text) = standard_deviation {
+                        response = response.on_hover_ui(|ui| {
+                            ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                            ui.heading(ui.localize("StandardDeviation"));
+                            ui.label(text);
+                        });
+                    }
+                    // Sample
+                    let sample_series = series.struct_()?.field_by_name("Sample")?;
+                    if let Some(text) = sample_series.str()?.get(row) {
+                        response = response.on_hover_ui(|ui| {
+                            ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                            ui.heading(ui.localize("Sample"));
+                            ui.label(text);
+                        });
+                    }
+                }
+                ui.end_row();
             }
+            // for column in self.data_frame.get_columns() {
+            //     self.property(ui, column)?;
+            // }
             Ok(())
         })
     }

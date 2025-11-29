@@ -209,3 +209,9 @@ RelativeAtomicMass = Relative atomic mass
 
 Sample = Sample
     .hover = Sample.
+Symmetry = Symmetry
+    .hover = Symmetry.
+Group = Group
+    .hover = Group.
+Value = Value
+    .hover = Value.

@@ -12,7 +12,7 @@ use egui::{
 };
 use lipid::prelude::*;
 use polars::prelude::*;
-use std::{collections::VecDeque, convert::identity, sync::LazyLock};
+use std::{convert::identity, sync::LazyLock};
 use tracing::instrument;
 
 /// Composition computed
@@ -53,7 +53,7 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) order: Order,
     pub(crate) round_mass: u32,
-    pub(crate) selections: &'a VecDeque<Selection>,
+    pub(crate) selections: &'a Vec<Selection>,
     pub(crate) sort: Sort,
 }
 

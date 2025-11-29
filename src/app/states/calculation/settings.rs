@@ -106,20 +106,12 @@ impl Settings {
             ui.visuals_mut().button_frame = true;
 
             self.precision(ui);
-            ui.end_row();
             self.significant(ui);
-            ui.end_row();
             self.percent(ui);
-            ui.end_row();
             self.display_standard_deviation(ui);
-            ui.end_row();
             self.normalize_factors(ui);
-            ui.end_row();
-
             self.sticky(ui);
-            ui.end_row();
             self.truncate(ui);
-            ui.end_row();
 
             ui.heading("Parameters");
             ui.separator();
@@ -193,6 +185,7 @@ impl Settings {
             ui.label(ui.localize("Precision.hover"));
         });
         Slider::new(&mut self.precision, 1..=MAX_PRECISION).ui(ui);
+        ui.end_row();
     }
 
     // Float precision
@@ -201,6 +194,7 @@ impl Settings {
             ui.label(ui.localize("Significant.hover"));
         });
         ui.checkbox(&mut self.significant, ());
+        ui.end_row();
     }
 
     /// Percent
@@ -209,6 +203,7 @@ impl Settings {
             ui.label(ui.localize("Percent.hover"));
         });
         ui.checkbox(&mut self.percent, ());
+        ui.end_row();
     }
 
     /// Standard deviation
@@ -218,6 +213,7 @@ impl Settings {
                 ui.label(ui.localize("StandardDeviation.hover"));
             });
         ui.checkbox(&mut self.display_standard_deviation, ());
+        ui.end_row();
     }
 
     /// Normalize factors
@@ -226,6 +222,7 @@ impl Settings {
             ui.label(ui.localize("NormalizeFactors.hover"));
         });
         ui.checkbox(&mut self.normalize_factors, ());
+        ui.end_row();
     }
 
     /// Sticky columns
@@ -234,6 +231,7 @@ impl Settings {
             ui.label(ui.localize("StickyColumns.hover"));
         });
         Slider::new(&mut self.table.sticky_columns, 0..=8).ui(ui);
+        ui.end_row();
     }
 
     /// Truncate headers
@@ -242,6 +240,7 @@ impl Settings {
             ui.label(ui.localize("TruncateHeaders.hover"));
         });
         ui.checkbox(&mut self.table.truncate_headers, ());
+        ui.end_row();
     }
 
     /// Standard

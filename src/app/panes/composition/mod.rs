@@ -25,10 +25,7 @@ use egui::{
     TopBottomPanel, Ui, Window, util::hash,
 };
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{
-    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, FLOPPY_DISK, INTERSECT_THREE, LIST, SIGMA,
-    SLIDERS_HORIZONTAL, X,
-};
+use egui_phosphor::regular::{FLOPPY_DISK, INTERSECT_THREE, LIST, SIGMA, SLIDERS_HORIZONTAL, X};
 use egui_tiles::{TileId, UiResponse};
 use metadata::{
     AUTHORS, DATE, DEFAULT_VERSION, DESCRIPTION, Metadata, NAME, VERSION, polars::MetaDataFrame,
@@ -219,11 +216,11 @@ impl Pane {
                 &mut state.windows.open_sum,
                 (
                     RichText::new(SIGMA).heading(),
-                    RichText::new(ui.localize("Property?PluralCategory=other")).heading(),
+                    RichText::new(ui.localize("Symmetry")).heading(),
                 ),
             )
             .on_hover_ui(|ui| {
-                ui.label(ui.localize("Property.hover"));
+                ui.label(ui.localize("Symmetry.hover"));
             });
         });
     }
@@ -362,7 +359,7 @@ impl Pane {
             state.settings.discriminants = unique.into_iter().collect();
         }
         Window::new(format!("{SLIDERS_HORIZONTAL} Composition settings"))
-            .id(ui.auto_id_with(ID_SOURCE))
+            .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
             .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_settings)
             .show(ui.ctx(), |ui| {
@@ -371,8 +368,8 @@ impl Pane {
     }
 
     fn sum_window(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SIGMA} Composition sum"))
-            .id(ui.auto_id_with(ID_SOURCE).with("Sum"))
+        Window::new(format!("{SIGMA} Composition symmetry"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Symmetry"))
             .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_sum)
             .show(ui.ctx(), |ui| self.sum_content(ui, &state.settings));
@@ -393,8 +390,6 @@ impl Pane {
                 .cache::<SumSymmetryComputed>()
                 .get(SumSymmetryKey::new(&frame, settings))
         });
-        // println!("data_frame: {}", data_frame);
-        // println!("data_frame: {data_frame}");
         Sum::new(&data_frame, settings).show(ui).inner
     }
 }

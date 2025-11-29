@@ -1,10 +1,7 @@
 use super::ID_SOURCE;
 use crate::{
     app::{
-        computers::composition::display::{
-            Computed as DisplayCompositionComputed, Key as DisplayCompositionKey,
-            Kind as DisplayCompositionKind,
-        },
+        computers::composition::display::{Computed as DisplayComputed, Key as DisplayKey},
         panes::MARGIN,
         states::composition::{
             ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
@@ -145,19 +142,8 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayCompositionComputed>()
-                        .get(DisplayCompositionKey {
-                            data_frame: self.data_frame,
-                            kind: DisplayCompositionKind::Enrichment,
-                            percent: self.state.settings.percent,
-                            compositions: &self
-                                .state
-                                .settings
-                                .selections
-                                .iter()
-                                .map(|selection| selection.composition)
-                                .collect::<Vec<_>>(),
-                        })
+                        .cache::<DisplayComputed>()
+                        .get(DisplayKey::new(self.data_frame, &self.state.settings))
                 });
                 ui.label(row.to_string())
                     .species(data_frame["Species"].as_materialized_series(), row)?;
@@ -166,19 +152,8 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayCompositionComputed>()
-                        .get(DisplayCompositionKey {
-                            data_frame: self.data_frame,
-                            kind: DisplayCompositionKind::Enrichment,
-                            percent: self.state.settings.percent,
-                            compositions: &self
-                                .state
-                                .settings
-                                .selections
-                                .iter()
-                                .map(|selection| selection.composition)
-                                .collect::<Vec<_>>(),
-                        })
+                        .cache::<DisplayComputed>()
+                        .get(DisplayKey::new(self.data_frame, &self.state.settings))
                 });
                 let index = (column.start + 1) / 2 - 1;
                 let name = &*index.to_string();

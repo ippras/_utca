@@ -24,19 +24,18 @@ use egui_l20n::UiExt;
 use egui_phosphor::regular::{BOOKMARK, CHART_BAR, ERASER, MINUS, PLUS, TABLE};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::VecDeque,
-    hash::{Hash, Hasher},
-};
+use std::hash::{Hash, Hasher};
 
 /// Composition settings
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub(crate) struct Settings {
     pub(crate) index: Option<usize>,
 
+    pub(crate) display_standard_deviation: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
     pub(crate) resizable: bool,
+    pub(crate) significant: bool,
     pub(crate) sticky_columns: usize,
 
     pub(crate) view: View,
@@ -47,7 +46,7 @@ pub(crate) struct Settings {
     pub(crate) method: Method,
     pub(crate) order: Order,
     pub(crate) round_mass: u32,
-    pub(crate) selections: VecDeque<Selection>,
+    pub(crate) selections: Vec<Selection>,
     pub(crate) show_filtered: bool,
     pub(crate) sort: Sort,
     // Gunstone method
@@ -56,14 +55,16 @@ pub(crate) struct Settings {
 
 impl Settings {
     pub(crate) fn new() -> Self {
-        let mut selections = VecDeque::new();
-        selections.push_front(Selection::new());
+        let mut selections = Vec::new();
+        selections.push(Selection::new());
         Self {
             index: None,
-
+            // Display
+            display_standard_deviation: true,
             percent: true,
             precision: 1,
             resizable: false,
+            significant: false,
             sticky_columns: 0,
 
             view: View::Table,
@@ -85,8 +86,10 @@ impl Settings {
     pub(crate) fn show(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
         ScrollArea::vertical().show(ui, |ui| {
             Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
-                self.percent(ui);
                 self.precision(ui);
+                self.significant(ui);
+                self.percent(ui);
+                self.display_standard_deviation(ui);
                 self.sticky_columns(ui);
 
                 ui.separator();
@@ -198,7 +201,7 @@ impl Settings {
                                         ui.label(ui.localize(selected_value.hover_text()));
                                     });
                                 if response.clicked() {
-                                    self.selections.push_front(Selection {
+                                    self.selections.push(Selection {
                                         composition: selected_value,
                                         filter: Default::default(),
                                     });
@@ -215,31 +218,28 @@ impl Settings {
                 ))
                 .clicked()
             {
-                self.selections = VecDeque::new();
-                self.selections.push_front(Selection {
+                self.selections = vec![Selection {
                     composition: SPECIES_POSITIONAL,
                     filter: Filter::new(),
-                });
+                }];
             };
             if ui
                 .button((BOOKMARK, ui.localize(SPECIES_MONO.abbreviation_text())))
                 .clicked()
             {
-                self.selections = VecDeque::new();
-                self.selections.push_front(Selection {
+                self.selections = vec![Selection {
                     composition: SPECIES_MONO,
                     filter: Filter::new(),
-                });
+                }];
             };
             if ui
                 .button((BOOKMARK, ui.localize(TYPE_POSITIONAL.abbreviation_text())))
                 .clicked()
             {
-                self.selections = VecDeque::new();
-                self.selections.push_front(Selection {
+                self.selections = vec![Selection {
                     composition: TYPE_POSITIONAL,
                     filter: Filter::new(),
-                });
+                }];
             };
         });
         ui.end_row();
@@ -309,7 +309,7 @@ impl Settings {
         });
         // Если пуст, то вставляет значение по умолчанию (не может быть пустым).
         if self.selections.is_empty() {
-            self.selections.push_front(Selection::new());
+            self.selections.push(Selection::new());
         }
     }
 
@@ -329,6 +329,15 @@ impl Settings {
         ui.end_row();
     }
 
+    // Float precision
+    fn significant(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("Significant")).on_hover_ui(|ui| {
+            ui.label(ui.localize("Significant.hover"));
+        });
+        ui.checkbox(&mut self.significant, ());
+        ui.end_row();
+    }
+
     /// Percent
     fn percent(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Percent")).on_hover_ui(|ui| {
@@ -344,6 +353,16 @@ impl Settings {
             ui.label(ui.localize("StickyColumns.hover"));
         });
         Slider::new(&mut self.sticky_columns, 0..=self.selections.len() * 2 + 1).ui(ui);
+        ui.end_row();
+    }
+
+    /// Standard deviation
+    fn display_standard_deviation(&mut self, ui: &mut Ui) {
+        ui.label(ui.localize("StandardDeviation"))
+            .on_hover_ui(|ui| {
+                ui.label(ui.localize("StandardDeviation.hover"));
+            });
+        ui.checkbox(&mut self.display_standard_deviation, ());
         ui.end_row();
     }
 
