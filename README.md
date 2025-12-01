@@ -7,6 +7,8 @@ image:https://img.shields.io/github/actions/workflow/status/ippras/utca-source/p
 
 Ultimate Triacylglycerol Calculation Application
 
+[fips.ru](https://fips.ru/registers-doc-view/fips_servlet?DB=EVM&DocNumber=2024691787)
+
 == Documentation
 
 |===

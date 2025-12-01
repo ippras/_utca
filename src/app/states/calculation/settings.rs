@@ -270,7 +270,7 @@ impl Settings {
                     ui.label(ui.localize(self.standard.hover_text()));
                 });
             if ui.button((BOOKMARK, "17:0")).clicked() {
-                self.standard = Standard(Some("Margaric".to_owned()))
+                self.standard = Standard(Some("Margaric".to_owned()));
             };
         });
     }
