@@ -76,6 +76,7 @@ impl Hash for HashedDataFrame {
 
 pub fn hash_data_frame(data_frame: &mut DataFrame) -> PolarsResult<u64> {
     Ok(data_frame
+        .with_row_index(PlSmallStr::EMPTY, None)?
         .hash_rows(Some(PlSeedableRandomStateQuality::fixed()))?
         .xor_reduce()
         .unwrap_or_default())
