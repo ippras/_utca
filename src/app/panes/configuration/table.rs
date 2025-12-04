@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use egui::{Context, Event, Frame, Id, Margin, TextStyle, TextWrapMode, Ui};
-use egui_l20n::UiExt as _;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{ARROW_FAT_UP, HASH, MINUS, PLUS};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use lipid::prelude::*;
@@ -107,9 +107,7 @@ impl TableView<'_> {
         }
         match (row, column) {
             (0, INDEX) => {
-                ui.heading(HASH).on_hover_ui(|ui| {
-                    ui.label(ui.localize("Index"));
-                });
+                ui.heading(HASH).on_hover_localized("Index");
             }
             (0, LABEL) => {
                 let response = ui.heading(ui.localize("Label"));
@@ -125,18 +123,14 @@ impl TableView<'_> {
             }
             (0, FA) => {
                 ui.heading(ui.localize("FattyAcid.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("FattyAcid"));
-                    });
+                    .on_hover_localized("FattyAcid");
             }
             (0, SN2_OR_SN1223) => {
                 let name = self.data.get_columns()[3].name();
                 if name == STEREOSPECIFIC_NUMBERS2 {
                     let response = ui
                         .heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("StereospecificNumber?number=2"));
-                        });
+                        .on_hover_localized("StereospecificNumber?number=2");
                     if self.state.settings.edit_table && response.hovered() {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
@@ -149,9 +143,7 @@ impl TableView<'_> {
                 } else if name == STEREOSPECIFIC_NUMBERS12_23 {
                     let response = ui
                         .heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("StereospecificNumber?number=1223"));
-                        });
+                        .on_hover_localized("StereospecificNumber?number=1223");
                     if self.state.settings.edit_table && response.hovered() {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
@@ -166,9 +158,7 @@ impl TableView<'_> {
             (0, SN123) => {
                 let response = ui
                     .heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=123"));
-                    });
+                    .on_hover_localized("StereospecificNumber?number=123");
                 if self.state.settings.edit_table && response.hovered() {
                     ui.ctx().input(|input| {
                         for event in &input.raw.events {

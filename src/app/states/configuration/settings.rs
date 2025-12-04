@@ -4,7 +4,7 @@ use egui::{
     Grid, PopupCloseBehavior, Slider, Ui, Widget as _,
     containers::menu::{MenuButton, MenuConfig},
 };
-use egui_l20n::UiExt as _;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{BOOKMARK, FUNNEL};
 use serde::{Deserialize, Serialize};
 
@@ -73,9 +73,8 @@ impl Settings {
 
     // Float precision
     fn float_precision(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Precision.hover"));
-        });
+        ui.label(ui.localize("Precision"))
+            .on_hover_localized("Precision.hover");
         ui.horizontal(|ui| {
             Slider::new(&mut self.float_precision, 0..=MAX_PRECISION).ui(ui);
             if ui.button((BOOKMARK, "3")).clicked() {
@@ -86,26 +85,22 @@ impl Settings {
 
     /// Sticky columns
     fn sticky_columns(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
-            ui.label(ui.localize("StickyColumns.hover"));
-        });
+        ui.label(ui.localize("StickyColumns"))
+            .on_hover_localized("StickyColumns.hover");
         Slider::new(&mut self.sticky_columns, 0..=8).ui(ui);
     }
 
     /// Truncate headers
     fn truncate_headers(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("TruncateHeaders")).on_hover_ui(|ui| {
-            ui.label(ui.localize("TruncateHeaders.hover"));
-        });
+        ui.label(ui.localize("TruncateHeaders"))
+            .on_hover_localized("TruncateHeaders.hover");
         ui.checkbox(&mut self.truncate_headers, ());
     }
 
     /// Filter
     fn column_filter(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("FilterTableColumns"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("FilterTableColumns.hover"));
-            });
+            .on_hover_localized("FilterTableColumns.hover");
         MenuButton::new(FUNNEL)
             .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
             .ui(ui, |ui| {
@@ -115,17 +110,15 @@ impl Settings {
 
     /// Names
     fn hover_names(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Names")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Names.hover"));
-        });
+        ui.label(ui.localize("Names"))
+            .on_hover_localized("Names.hover");
         ui.checkbox(&mut self.hover_names, "");
     }
 
     /// Properties
     fn hover_properties(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Properties")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Properties.hover"));
-        });
+        ui.label(ui.localize("Properties"))
+            .on_hover_localized("Properties.hover");
         ui.checkbox(&mut self.hover_properties, "");
     }
 }

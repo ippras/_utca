@@ -31,16 +31,13 @@ impl<'a> Indices<'a> {
         Grid::new(ui.auto_id_with("Indices")).show(ui, |ui| -> PolarsResult<()> {
             ui.heading(ui.localize("Index"));
             ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StereospecificNumber?number=123"));
+                .on_hover_localized("StereospecificNumber?number=123");
                 });
             ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StereospecificNumber?number=13"));
+                .on_hover_localized("StereospecificNumber?number=13");
                 });
             ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StereospecificNumber?number=2"));
+                .on_hover_localized("StereospecificNumber?number=2");
                 });
             ui.end_row();
             for index in self.settings.indices.iter_visible() {

@@ -18,22 +18,22 @@ use crate::{
         },
         identifiers::COMPOSE,
         states::calculation::{Settings, State},
+        widgets::{ResetButton, ResizeButton, SettingsButton},
     },
     export::ron,
     utils::{
         HashedDataFrame, HashedMetaDataFrame,
-        egui::UiExt as _,
         metadata::{authors, date, description, name},
     },
 };
 use anyhow::Result;
 use egui::{
     CentralPanel, CursorIcon, Frame, Id, MenuBar, Response, RichText, ScrollArea, TextStyle,
-    TopBottomPanel, Ui, Window, util::hash,
+    TopBottomPanel, Ui, Widget as _, Window, util::hash,
 };
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
-use egui_l20n::UiExt as _;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{
     CALCULATOR, FLOPPY_DISK, INTERSECT_THREE, LIST, SIGMA, SLIDERS_HORIZONTAL, X,
 };
@@ -145,9 +145,7 @@ impl Pane {
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        let mut response = ui.heading(CALCULATOR).on_hover_ui(|ui| {
-            ui.label(ui.localize("Calculation"));
-        });
+        let mut response = ui.heading(CALCULATOR).on_hover_localized("Calculation");
         response |= ui.heading(self.title(state.settings.index));
         response = response
             .on_hover_text(format!("{}/{:x}", self.id(), self.target.hash))
@@ -156,13 +154,10 @@ impl Pane {
         // List
         self.list_button(ui, state);
         ui.separator();
-        // Reset
-        ui.reset_button(&mut state.settings.table.reset_state);
-        // Resize
-        ui.resize_button(&mut state.settings.table.resizable);
+        ResetButton::new(&mut state.settings.table.reset_state).ui(ui);
+        ResizeButton::new(&mut state.settings.table.resizable).ui(ui);
         ui.separator();
-        // Settings
-        ui.settings_button(&mut state.windows.open_settings);
+        SettingsButton::new(&mut state.windows.open_settings).ui(ui);
         ui.separator();
         // Sum
         self.sum_button(ui, state);
@@ -198,9 +193,7 @@ impl Pane {
             }
         })
         .response
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("List"));
-        });
+        .on_hover_localized("List");
     }
 
     fn sum_button(&self, ui: &mut Ui, state: &mut State) {
@@ -212,9 +205,7 @@ impl Pane {
                     RichText::new(ui.localize("Correlation?PluralCategory=other")).heading(),
                 ),
             )
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Correlation.hover"));
-            });
+            .on_hover_localized("Correlation.hover");
             ui.toggle_value(
                 &mut state.windows.open_sum,
                 (
@@ -222,9 +213,7 @@ impl Pane {
                     RichText::new(ui.localize("Property?PluralCategory=other")).heading(),
                 ),
             )
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Property.hover"));
-            });
+            .on_hover_localized("Property.hover");
             ui.toggle_value(
                 &mut state.windows.open_biodiesel_sum,
                 (
@@ -232,18 +221,14 @@ impl Pane {
                     RichText::new(ui.localize("BiodieselProperties")).heading(),
                 ),
             )
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("BiodieselProperties.hover"));
-            });
+            .on_hover_localized("BiodieselProperties.hover");
         });
     }
 
     fn composition_button(&self, ui: &mut Ui, state: &mut State) {
         if ui
             .button(RichText::new(INTERSECT_THREE).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Composition"));
-            })
+            .on_hover_localized("Composition")
             .clicked()
         {
             let _ = self.composition_content(ui, state);
@@ -298,9 +283,7 @@ impl Pane {
             let name = meta.format(".");
             if ui
                 .button((FLOPPY_DISK, "RON"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("Save"));
-                })
+                .on_hover_localized("Save")
                 .on_hover_ui(|ui| {
                     ui.label(format!("{name}.fa.utca.ron"));
                 })
@@ -310,9 +293,7 @@ impl Pane {
             }
             if ui
                 .button((FLOPPY_DISK, "PARQUET"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("Save"));
-                })
+                .on_hover_localized("Save")
                 .on_hover_ui(|ui| {
                     ui.label(format!("{name}.fa.utca.parquet"));
                 })

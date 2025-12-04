@@ -34,6 +34,6 @@ impl Widget for ResetButton<'_> {
             atoms.heading()
         };
         ui.toggle_value(self.selected, atoms)
-            .on_hover_localized("ResetState")
+            .on_hover_localized("Reset")
     }
 }

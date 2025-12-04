@@ -1,16 +1,20 @@
 use self::table::TableView;
 use super::{Behavior, MARGIN};
 use crate::{
-    app::{identifiers::CALCULATE, states::configuration::State},
+    app::{
+        identifiers::CALCULATE,
+        states::configuration::State,
+        widgets::{EditButton, ResetButton, ResizeButton, SettingsButton},
+    },
     export,
-    utils::{HashedDataFrame, HashedMetaDataFrame, egui::UiExt as _},
+    utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use anyhow::Result;
 use egui::{
     CentralPanel, CursorIcon, Frame, Id, MenuBar, Response, RichText, ScrollArea, TextStyle,
-    TextWrapMode, TopBottomPanel, Ui, Window, util::hash,
+    TextWrapMode, TopBottomPanel, Ui, Widget as _, Window, util::hash,
 };
-use egui_l20n::UiExt as _;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{
     CALCULATOR, ERASER, FLOPPY_DISK, LIST, NOTE_PENCIL, SLIDERS_HORIZONTAL, TAG, TRASH, X,
 };
@@ -124,9 +128,7 @@ impl Pane {
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        let mut response = ui.heading(NOTE_PENCIL).on_hover_ui(|ui| {
-            ui.label(ui.localize("Configuration"));
-        });
+        let mut response = ui.heading(NOTE_PENCIL).on_hover_localized("Configuration");
         response |= ui.heading(self.title(Some(state.settings.index)));
         response = response
             .on_hover_text(self.id().to_string())
@@ -151,25 +153,18 @@ impl Pane {
             }
         })
         .response
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("List"));
-        });
+        .on_hover_localized("List");
         ui.separator();
-        // Reset
-        ui.reset_button(&mut state.reset_table);
-        // Resize
-        ui.resize_button(&mut state.settings.resize_table);
-        // Edit
-        ui.edit(&mut state.settings.edit_table);
+        ResetButton::new(&mut state.reset_table).ui(ui);
+        ResizeButton::new(&mut state.settings.resize_table).ui(ui);
+        EditButton::new(&mut state.settings.edit_table).ui(ui);
         // Clear
         ui.add_enabled_ui(
             state.settings.edit_table && self.frames[state.settings.index].data.height() > 0,
             |ui| {
                 if ui
                     .button(RichText::new(ERASER).heading())
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("ClearTable"));
-                    })
+                    .on_hover_localized("ClearTable")
                     .clicked()
                 {
                     let data_frame = &mut self.frames[state.settings.index].data;
@@ -181,9 +176,7 @@ impl Pane {
         ui.add_enabled_ui(state.settings.edit_table && self.frames.len() > 1, |ui| {
             if ui
                 .button(RichText::new(TRASH).heading())
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("DeleteTable"));
-                })
+                .on_hover_localized("DeleteTable")
                 .clicked()
             {
                 self.frames.remove(state.settings.index);
@@ -191,7 +184,7 @@ impl Pane {
             }
         });
         ui.separator();
-        ui.settings_button(&mut state.windows.open_settings);
+        SettingsButton::new(&mut state.windows.open_settings).ui(ui);
         ui.separator();
         self.save_button(ui, state);
         ui.separator();
@@ -206,9 +199,7 @@ impl Pane {
             let name = self.frames[state.settings.index].meta.format(".");
             if ui
                 .button((FLOPPY_DISK, "RON"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("Save"));
-                })
+                .on_hover_localized("Save")
                 .on_hover_ui(|ui| {
                     ui.label(format!("{name}.fa.utca.ron"));
                 })
@@ -231,9 +222,7 @@ impl Pane {
     fn calculation_button(&self, ui: &mut Ui) {
         if ui
             .button(RichText::new(CALCULATOR).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Calculation"));
-            })
+            .on_hover_localized("Calculation")
             .clicked()
         {
             ui.data_mut(|data| {

@@ -11,7 +11,7 @@ use crate::r#const::markdown::{
 use egui::{Grid, InnerResponse, Response, TextWrapMode, Ui, Widget, WidgetText};
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
-use egui_l20n::UiExt;
+use egui_l20n::prelude::*;
 use polars::prelude::*;
 
 /// Sum widget
@@ -32,17 +32,11 @@ impl<'a> Sum<'a> {
         Grid::new(ui.auto_id_with("Sum")).show(ui, |ui| -> PolarsResult<()> {
             ui.heading(ui.localize("Property?PluralCategory=one"));
             ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StereospecificNumber?number=123"));
-                });
+                .on_hover_localized("StereospecificNumber?number=123");
             ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StereospecificNumber?number=13"));
-                });
+                .on_hover_localized("StereospecificNumber?number=13");
             ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("StereospecificNumber?number=2"));
-                });
+                .on_hover_localized("StereospecificNumber?number=2");
             ui.end_row();
             for column in self.data_frame.get_columns() {
                 self.property(ui, column)?;

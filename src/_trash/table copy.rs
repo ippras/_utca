@@ -100,8 +100,7 @@ impl TableView<'_> {
             // Top
             (0, ID) => {
                 ui.heading(ui.localize("Identifier.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("Identifier"));
+                    .on_hover_localized("Identifier");
                     });
             }
             (0, EXPERIMENTAL) => {
@@ -115,8 +114,7 @@ impl TableView<'_> {
             }
             // Middle
             (1, id::INDEX) => {
-                ui.heading(HASH).on_hover_ui(|ui| {
-                    ui.label(ui.localize("Index"));
+                ui.heading(HASH).on_hover_localized("Index");
                 });
             }
             (1, id::LABEL) => {
@@ -124,76 +122,64 @@ impl TableView<'_> {
             }
             (1, id::FA) => {
                 ui.heading(ui.localize("FattyAcid.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("FattyAcid"));
+                    .on_hover_localized("FattyAcid");
                     });
             }
             (1, experimental::TAG) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=123"));
+                    .on_hover_localized("StereospecificNumber?number=123");
                     });
             }
             (1, experimental::DAG1223) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=1223"));
+                    .on_hover_localized("StereospecificNumber?number=1223");
                     });
             }
             (1, experimental::MAG2) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=2"));
+                    .on_hover_localized("StereospecificNumber?number=2");
                     });
             }
             (1, theoretical::TAG) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=123"));
+                    .on_hover_localized("StereospecificNumber?number=123");
                     });
             }
             (1, theoretical::DAG1223) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=1223"));
+                    .on_hover_localized("StereospecificNumber?number=1223");
                     });
             }
             (1, theoretical::MAG2) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=2"));
+                    .on_hover_localized("StereospecificNumber?number=2");
                     });
             }
             (1, theoretical::DAG13) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=13"));
+                    .on_hover_localized("StereospecificNumber?number=13");
                     });
             }
             (1, factors::EF) => {
                 ui.heading(ui.localize("EnrichmentFactor.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("EnrichmentFactor"));
+                    .on_hover_localized("EnrichmentFactor");
                     });
             }
             (1, factors::SF) => {
                 ui.heading(ui.localize("SelectivityFactor.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("SelectivityFactor"));
+                    .on_hover_localized("SelectivityFactor");
                     });
             }
             // Bottom
             (2, theoretical::dag13::DAG1223) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=1223"));
+                    .on_hover_localized("StereospecificNumber?number=1223");
                     });
             }
             (2, theoretical::dag13::MAG2) => {
                 // "Calculated from sn-2 {}",
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=2"));
+                    .on_hover_localized("StereospecificNumber?number=2");
                     });
             }
             _ => {}

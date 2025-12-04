@@ -11,7 +11,7 @@ use crate::r#const::markdown::{
 use egui::{Grid, InnerResponse, Response, TextWrapMode, Ui, Widget, WidgetText};
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
-use egui_l20n::UiExt;
+use egui_l20n::prelude::*;
 use polars::prelude::*;
 
 /// Sum widget
@@ -31,9 +31,8 @@ impl<'a> Sum<'a> {
     pub(crate) fn show(self, ui: &mut Ui) -> InnerResponse<PolarsResult<()>> {
         Grid::new(ui.auto_id_with("Sum")).show(ui, |ui| -> PolarsResult<()> {
             ui.heading(ui.localize("Symmetry"));
-            ui.heading(ui.localize("Value")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Value.hover"));
-            });
+            ui.heading(ui.localize("Value"))
+                .on_hover_localized("Value.hover");
             ui.end_row();
             for row in 0..self.data_frame.height() {
                 let group = self.data_frame["Group"].str()?.get(row);

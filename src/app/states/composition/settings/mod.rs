@@ -21,7 +21,7 @@ use egui::{
     emath::Float,
 };
 use egui_dnd::dnd;
-use egui_l20n::UiExt;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{BOOKMARK, CHART_BAR, DOTS_SIX_VERTICAL, ERASER, MINUS, PLUS, TABLE};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -139,9 +139,8 @@ impl Settings {
                 ui.separator();
                 ui.end_row();
 
-                ui.label(ui.localize("ShowFiltered")).on_hover_ui(|ui| {
-                    ui.label(ui.localize("ShowFiltered.hover"));
-                });
+                ui.label(ui.localize("ShowFiltered"))
+                    .on_hover_localized("ShowFiltered.hover");
                 ui.checkbox(&mut self.show_filtered, "");
                 ui.end_row();
 
@@ -182,36 +181,32 @@ impl Settings {
 
     /// Precision
     fn precision(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Precision.hover"));
-        });
+        ui.label(ui.localize("Precision"))
+            .on_hover_localized("Precision.hover");
         Slider::new(&mut self.precision, 1..=MAX_PRECISION).ui(ui);
         ui.end_row();
     }
 
     // Float precision
     fn significant(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Significant")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Significant.hover"));
-        });
+        ui.label(ui.localize("Significant"))
+            .on_hover_localized("Significant.hover");
         ui.checkbox(&mut self.significant, ());
         ui.end_row();
     }
 
     /// Percent
     fn percent(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Percent")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Percent.hover"));
-        });
+        ui.label(ui.localize("Percent"))
+            .on_hover_localized("Percent.hover");
         ui.checkbox(&mut self.percent, ());
         ui.end_row();
     }
 
     /// Sticky columns
     fn sticky_columns(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
-            ui.label(ui.localize("StickyColumns.hover"));
-        });
+        ui.label(ui.localize("StickyColumns"))
+            .on_hover_localized("StickyColumns.hover");
         Slider::new(&mut self.sticky_columns, 0..=self.selections.len() * 2 + 1).ui(ui);
         ui.end_row();
     }
@@ -219,9 +214,7 @@ impl Settings {
     /// Standard deviation
     fn display_standard_deviation(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("StandardDeviation"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("StandardDeviation.hover"));
-            });
+            .on_hover_localized("StandardDeviation.hover");
         ui.checkbox(&mut self.display_standard_deviation, ());
         ui.end_row();
     }
@@ -506,12 +499,8 @@ impl Settings {
     /// DDOF
     fn ddof(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("DeltaDegreesOfFreedom"));
-            })
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
-            });
+            .on_hover_localized("DeltaDegreesOfFreedom")
+            .on_hover_localized("DeltaDegreesOfFreedom.hover");
         Slider::new(&mut self.ddof, 0..=2)
             .update_while_editing(false)
             .ui(ui);

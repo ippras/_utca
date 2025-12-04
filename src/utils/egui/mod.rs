@@ -1,53 +1,45 @@
 use egui::{Context, Id, Response, RichText, Tooltip, Ui};
-use egui_l20n::UiExt as _;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{
     ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, GEAR, PENCIL, SIGMA, SLIDERS_HORIZONTAL,
 };
 
-/// Extension methods for [`Ui`]
-pub trait UiExt {
-    /// Edit
-    fn edit(&mut self, selected: &mut bool);
+// /// Extension methods for [`Ui`]
+// pub trait UiExt {
+//     /// Edit
+//     fn edit(&mut self, selected: &mut bool);
 
-    /// Reset
-    fn reset_button(&mut self, selected: &mut bool);
+//     /// Reset
+//     fn reset_button(&mut self, selected: &mut bool);
 
-    /// Resize
-    fn resize_button(&mut self, selected: &mut bool);
+//     /// Resize
+//     fn resize_button(&mut self, selected: &mut bool);
 
-    /// Settings
-    fn settings_button(&mut self, selected: &mut bool);
-}
+//     /// Settings
+//     fn settings_button(&mut self, selected: &mut bool);
+// }
 
-impl UiExt for Ui {
-    fn edit(&mut self, selected: &mut bool) {
-        self.toggle_value(selected, RichText::new(PENCIL).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Edit"));
-            });
-    }
+// impl UiExt for Ui {
+//     fn edit(&mut self, selected: &mut bool) {
+//         self.toggle_value(selected, RichText::new(PENCIL).heading())
+//             .on_hover_localized("Edit");
+//     }
 
-    fn reset_button(&mut self, selected: &mut bool) {
-        self.toggle_value(selected, RichText::new(ARROWS_CLOCKWISE).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("ResetTable"));
-            });
-    }
+//     fn reset_button(&mut self, selected: &mut bool) {
+//         self.toggle_value(selected, RichText::new(ARROWS_CLOCKWISE).heading())
+//             .on_hover_localized("ResetTable");
+//     }
 
-    fn resize_button(&mut self, selected: &mut bool) {
-        self.toggle_value(selected, RichText::new(ARROWS_HORIZONTAL).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("ResizeTable"));
-            });
-    }
+//     fn resize_button(&mut self, selected: &mut bool) {
+//         self.toggle_value(selected, RichText::new(ARROWS_HORIZONTAL).heading())
+//             .on_hover_localized("ResizeTable");
+//     }
 
-    fn settings_button(&mut self, selected: &mut bool) {
-        self.toggle_value(selected, RichText::new(SLIDERS_HORIZONTAL).heading())
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Settings"));
-            });
-    }
-}
+//     fn settings_button(&mut self, selected: &mut bool) {
+//         self.toggle_value(selected, RichText::new(SLIDERS_HORIZONTAL).heading())
+//             .on_hover_localized("Settings");
+//     }
+// }
 
 /// Extension methods for [`Response`]
 pub trait ResponseExt: Sized {

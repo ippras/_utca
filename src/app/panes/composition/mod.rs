@@ -10,21 +10,21 @@ use crate::{
             unique::{Computed as UniqueComputed, Key as UniqueKey},
         },
         states::composition::{Settings, State, View},
+        widgets::{ResetButton, ResizeButton, SettingsButton},
     },
     export::{ron, xlsx},
     text::Text,
     utils::{
         HashedDataFrame, HashedMetaDataFrame,
-        egui::UiExt as _,
         metadata::{authors, date, description, name},
     },
 };
 use anyhow::Result;
 use egui::{
     CentralPanel, CursorIcon, Frame, Id, MenuBar, Response, RichText, ScrollArea, TextStyle,
-    TopBottomPanel, Ui, Window, util::hash,
+    TopBottomPanel, Ui, Widget as _, Window, util::hash,
 };
-use egui_l20n::UiExt as _;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{FLOPPY_DISK, INTERSECT_THREE, LIST, SIGMA, SLIDERS_HORIZONTAL, X};
 use egui_tiles::{TileId, UiResponse};
 use metadata::{
@@ -136,9 +136,9 @@ impl Pane {
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
-        let mut response = ui.heading(INTERSECT_THREE).on_hover_ui(|ui| {
-            ui.label(ui.localize("Composition"));
-        });
+        let mut response = ui
+            .heading(INTERSECT_THREE)
+            .on_hover_localized("Composition");
         response |= ui.heading(self.title(state.settings.index));
         response = response
             .on_hover_text(format!("{}/{:x}", self.id(), self.target.hash))
@@ -147,13 +147,10 @@ impl Pane {
         // List
         self.list_button(ui, state);
         ui.separator();
-        // Reset
-        ui.reset_button(&mut state.reset_table_state);
-        // Resize
-        ui.resize_button(&mut state.settings.resizable);
+        ResetButton::new(&mut state.reset_table_state).ui(ui);
+        ResizeButton::new(&mut state.settings.resizable).ui(ui);
         ui.separator();
-        // Settings
-        ui.settings_button(&mut state.windows.open_settings);
+        SettingsButton::new(&mut state.windows.open_settings).ui(ui);
         ui.separator();
         // Sum
         self.sum_button(ui, state);
@@ -204,9 +201,7 @@ impl Pane {
             }
         })
         .response
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("List"));
-        });
+        .on_hover_localized("List");
     }
 
     /// Sum button
@@ -219,9 +214,7 @@ impl Pane {
                     RichText::new(ui.localize("Symmetry")).heading(),
                 ),
             )
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Symmetry.hover"));
-            });
+            .on_hover_localized("Symmetry.hover");
         });
     }
 
@@ -232,9 +225,7 @@ impl Pane {
             let name = meta.format(".");
             if ui
                 .button((FLOPPY_DISK, "RON"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("Save"));
-                })
+                .on_hover_localized("Save")
                 .on_hover_ui(|ui| {
                     ui.label(format!("{name}.tag.utca.ron"));
                 })
@@ -244,9 +235,7 @@ impl Pane {
             }
             if ui
                 .button((FLOPPY_DISK, "XLSX"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("Save"));
-                })
+                .on_hover_localized("Save")
                 .on_hover_ui(|ui| {
                     ui.label(format!("{name}.tag.utca.xlsx"));
                 })

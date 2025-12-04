@@ -17,7 +17,7 @@ use egui::{
 };
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
-use egui_l20n::UiExt;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use lipid::prelude::*;
@@ -91,9 +91,7 @@ impl TableView<'_> {
             // Top
             (0, top::ID) => {
                 ui.heading(ui.localize("Identifier.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("Identifier"));
-                    });
+                    .on_hover_localized("Identifier");
             }
             (0, top::SN) => {
                 ui.heading(ui.localize("StereospecificNumber?number=many"));
@@ -103,36 +101,26 @@ impl TableView<'_> {
             }
             // Bottom
             (1, bottom::INDEX) => {
-                ui.heading(HASH).on_hover_ui(|ui| {
-                    ui.label(ui.localize("Index"));
-                });
+                ui.heading(HASH).on_hover_localized("Index");
             }
             (1, bottom::LABEL) => {
                 ui.heading(ui.localize("Label"));
             }
             (1, bottom::FA) => {
                 ui.heading(ui.localize("FattyAcid.abbreviation"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("FattyAcid"));
-                    });
+                    .on_hover_localized("FattyAcid");
             }
             (1, bottom::SN123) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=123"));
-                    });
+                    .on_hover_localized("StereospecificNumber?number=123");
             }
             (1, bottom::SN2) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=2"));
-                    });
+                    .on_hover_localized("StereospecificNumber?number=2");
             }
             (1, bottom::SN13) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize("StereospecificNumber?number=13"));
-                    });
+                    .on_hover_localized("StereospecificNumber?number=13");
             }
             (1, bottom::EF) => {
                 #[allow(unused_variables)]

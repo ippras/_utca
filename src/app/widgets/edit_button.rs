@@ -1,15 +1,15 @@
 use egui::{Response, RichText, Ui, Widget};
 use egui_l20n::prelude::*;
-use egui_phosphor::regular::ARROWS_HORIZONTAL;
+use egui_phosphor::regular::PENCIL;
 
-/// Resize button widget
+/// Edit button widget
 #[derive(Debug)]
-pub struct ResizeButton<'a> {
+pub struct EditButton<'a> {
     selected: &'a mut bool,
     size: Option<f32>,
 }
 
-impl<'a> ResizeButton<'a> {
+impl<'a> EditButton<'a> {
     pub fn new(selected: &'a mut bool) -> Self {
         Self {
             selected,
@@ -26,15 +26,15 @@ impl<'a> ResizeButton<'a> {
     }
 }
 
-impl Widget for ResizeButton<'_> {
+impl Widget for EditButton<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let mut atoms = RichText::new(ARROWS_HORIZONTAL);
+        let mut atoms = RichText::new(PENCIL);
         atoms = if let Some(size) = self.size {
             atoms.size(size)
         } else {
             atoms.heading()
         };
         ui.toggle_value(self.selected, atoms)
-            .on_hover_localized("ResizeTableColumns")
+            .on_hover_localized("Edit")
     }
 }

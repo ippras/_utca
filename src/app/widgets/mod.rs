@@ -1,6 +1,7 @@
 pub(super) use self::{
     about::About,
     about_button::AboutButton,
+    edit_button::EditButton,
     fatty_acid::FattyAcidWidget,
     float::FloatWidget,
     github::Github,
@@ -16,6 +17,7 @@ pub(super) use self::{
 
 mod about;
 mod about_button;
+mod edit_button;
 mod fatty_acid;
 mod float;
 mod github;

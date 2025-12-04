@@ -295,8 +295,7 @@ impl Settings {
                 ui.labeled_separator(RichText::new(ui.localize("View")).heading());
                 ui.end_row();
 
-                ui.label(ui.localize("ShowFiltered")).on_hover_ui(|ui| {
-                    ui.label(ui.localize("ShowFiltered.hover"));
+                ui.label(ui.localize("ShowFiltered")).on_hover_localized("ShowFiltered.hover");
                 });
                 ui.checkbox(&mut self.special.show_filtered, "");
                 ui.end_row();
@@ -384,8 +383,7 @@ impl Settings {
 
                     // https://numpy.org/devdocs/reference/generated/numpy.std.html
                     ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("DeltaDegreesOfFreedom"));
+                        .on_hover_localized("DeltaDegreesOfFreedom");
                         });
                     ui.add(Slider::new(&mut self.special.ddof, 0..=2));
                     ui.end_row();

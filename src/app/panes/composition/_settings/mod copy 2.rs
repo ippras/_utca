@@ -268,8 +268,7 @@ impl Settings {
             ui.end_row();
 
             ui.label(ui.localize("settings-show_filtered"))
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize("settings-show_filtered.hover"));
+                .on_hover_localized("settings-show_filtered.hover");
                 });
             ui.checkbox(&mut self.unconfirmed.show_filtered, "");
             ui.end_row();

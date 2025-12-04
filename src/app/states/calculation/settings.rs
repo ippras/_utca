@@ -11,7 +11,7 @@ use egui::{
     emath::Float,
 };
 use egui_dnd::dnd;
-use egui_l20n::UiExt as _;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{ARROWS_CLOCKWISE, BOOKMARK, BROWSERS, DOTS_SIX_VERTICAL};
 use lipid::prelude::*;
 use polars::prelude::*;
@@ -120,9 +120,9 @@ impl Settings {
             self.standard(ui);
             ui.end_row();
 
-            ui.label(ui.localize("Normalization")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Normalization.hover"));
-            });
+            ui.label(ui.localize("Normalization"))
+                .on_hover_localized("Normalization.hover");
+
             ui.separator();
             ui.end_row();
             self.weighted(ui);
@@ -130,9 +130,8 @@ impl Settings {
             self.christie(ui);
             ui.end_row();
 
-            ui.label(ui.localize("Threshold")).on_hover_ui(|ui| {
-                ui.label(ui.localize("Threshold.hover"));
-            });
+            ui.label(ui.localize("Threshold"))
+                .on_hover_localized("Threshold.hover");
             ui.separator();
             ui.end_row();
             self.is_auto_threshold(ui);
@@ -181,27 +180,24 @@ impl Settings {
 
     // Precision
     fn precision(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Precision")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Precision.hover"));
-        });
+        ui.label(ui.localize("Precision"))
+            .on_hover_localized("Precision.hover");
         Slider::new(&mut self.precision, 1..=MAX_PRECISION).ui(ui);
         ui.end_row();
     }
 
     // Significant
     fn significant(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Significant")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Significant.hover"));
-        });
+        ui.label(ui.localize("Significant"))
+            .on_hover_localized("Significant.hover");
         ui.checkbox(&mut self.significant, ());
         ui.end_row();
     }
 
     /// Percent
     fn percent(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Percent")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Percent.hover"));
-        });
+        ui.label(ui.localize("Percent"))
+            .on_hover_localized("Percent.hover");
         ui.checkbox(&mut self.percent, ());
         ui.end_row();
     }
@@ -209,45 +205,39 @@ impl Settings {
     /// Standard deviation
     fn display_standard_deviation(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("StandardDeviation"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("StandardDeviation.hover"));
-            });
+            .on_hover_localized("StandardDeviation.hover");
         ui.checkbox(&mut self.display_standard_deviation, ());
         ui.end_row();
     }
 
     /// Normalize factors
     fn normalize_factors(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("NormalizeFactors")).on_hover_ui(|ui| {
-            ui.label(ui.localize("NormalizeFactors.hover"));
-        });
+        ui.label(ui.localize("NormalizeFactors"))
+            .on_hover_localized("NormalizeFactors.hover");
         ui.checkbox(&mut self.normalize_factors, ());
         ui.end_row();
     }
 
     /// Sticky columns
     fn sticky(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("StickyColumns")).on_hover_ui(|ui| {
-            ui.label(ui.localize("StickyColumns.hover"));
-        });
+        ui.label(ui.localize("StickyColumns"))
+            .on_hover_localized("StickyColumns.hover");
         Slider::new(&mut self.table.sticky_columns, 0..=8).ui(ui);
         ui.end_row();
     }
 
     /// Truncate headers
     fn truncate(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("TruncateHeaders")).on_hover_ui(|ui| {
-            ui.label(ui.localize("TruncateHeaders.hover"));
-        });
+        ui.label(ui.localize("TruncateHeaders"))
+            .on_hover_localized("TruncateHeaders.hover");
         ui.checkbox(&mut self.table.truncate_headers, ());
         ui.end_row();
     }
 
     /// Standard
     fn standard(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Standard")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Standard.hover"));
-        });
+        ui.label(ui.localize("Standard"))
+            .on_hover_localized("Standard.hover");
         ui.horizontal(|ui| {
             ComboBox::from_id_salt("Standard")
                 .selected_text(self.standard.text())
@@ -261,33 +251,29 @@ impl Settings {
                         .on_hover_text(fatty_acid);
                     }
                     ui.selectable_value(&mut self.standard, Standard(None), "-")
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("Standard?OptionCategory=none"));
-                        });
-                })
-                .response
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize(self.standard.hover_text()));
+                        .on_hover_localized("Standard?OptionCategory=none");
                 });
-            if ui.button((BOOKMARK, "17:0")).clicked() {
-                self.standard = Standard(Some("Margaric".to_owned()));
-            };
+        })
+        .response
+        .on_hover_ui(|ui| {
+            ui.label(ui.localize(self.standard.hover_text()));
         });
+        if ui.button((BOOKMARK, "17:0")).clicked() {
+            self.standard = Standard(Some("Margaric".to_owned()));
+        };
     }
 
     /// Is auto threshold
     fn is_auto_threshold(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("IsAutoThreshold")).on_hover_ui(|ui| {
-            ui.label(ui.localize("IsAutoThreshold.hover"));
-        });
+        ui.label(ui.localize("IsAutoThreshold"))
+            .on_hover_localized("IsAutoThreshold.hover");
         ui.checkbox(&mut self.threshold.is_auto, ());
     }
 
     /// Auto threshold
     fn auto_threshold(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("AutoThreshold")).on_hover_ui(|ui| {
-            ui.label(ui.localize("AutoThreshold.hover"));
-        });
+        ui.label(ui.localize("AutoThreshold"))
+            .on_hover_localized("AutoThreshold.hover");
         ui.horizontal(|ui| {
             if Slider::new(&mut self.threshold.auto, 0.0..=1.0)
                 .clamping(SliderClamping::Always)
@@ -320,9 +306,8 @@ impl Settings {
 
     /// Manual threshold
     fn manual_threshold(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("ManualThreshold")).on_hover_ui(|ui| {
-            ui.label(ui.localize("ManualThreshold.hover"));
-        });
+        ui.label(ui.localize("ManualThreshold"))
+            .on_hover_localized("ManualThreshold.hover");
         let selected_text = format_list_truncated!(
             zip(&self.threshold.manual, &self.fatty_acids)
                 .filter_map(|(keep, fatty_acid)| keep.then_some(fatty_acid)),
@@ -350,36 +335,30 @@ impl Settings {
 
     /// Filter thresholded
     fn filter_thresholded(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("FilterThreshold")).on_hover_ui(|ui| {
-            ui.label(ui.localize("FilterThreshold.hover"));
-        });
+        ui.label(ui.localize("FilterThreshold"))
+            .on_hover_localized("FilterThreshold.hover");
         ui.checkbox(&mut self.threshold.filter, ());
     }
 
     /// Sort thresholded
     fn sort_thresholded(&mut self, ui: &mut Ui) {
         // Sort by minor major
-        ui.label(ui.localize("SortByMinorMajor")).on_hover_ui(|ui| {
-            ui.label(ui.localize("SortByMinorMajor.hover"));
-        });
+        ui.label(ui.localize("SortByMinorMajor"))
+            .on_hover_localized("SortByMinorMajor.hover");
         ui.checkbox(&mut self.sort_by_minor_major, ());
     }
 
     /// Weighted
     fn weighted(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Normalize_Weighted"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Normalize_Weighted.hover"));
-            });
+            .on_hover_localized("Normalize_Weighted.hover");
         ui.checkbox(&mut self.weighted, ());
     }
 
     /// Christie factors
     fn christie(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("Normalize_Christie"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Normalize_Christie.hover"));
-            });
+            .on_hover_localized("Normalize_Christie.hover");
         ui.horizontal(|ui| {
             ui.checkbox(&mut self.christie, ());
             ui.add_enabled_ui(self.christie, |ui| {
@@ -422,12 +401,8 @@ impl Settings {
     /// DDOF
     fn ddof(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("DeltaDegreesOfFreedom"));
-            })
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("DeltaDegreesOfFreedom.hover"));
-            });
+            .on_hover_localized("DeltaDegreesOfFreedom")
+            .on_hover_localized("DeltaDegreesOfFreedom.hover");
         Slider::new(&mut self.ddof, 0..=2)
             .update_while_editing(false)
             .ui(ui);
@@ -436,9 +411,7 @@ impl Settings {
     /// Stereospecific numbers
     fn stereospecific_numbers(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("StereospecificNumber?number=many"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("StereospecificNumber.abbreviation?number=other"));
-            });
+            .on_hover_localized("StereospecificNumber.abbreviation?number=other");
         ComboBox::from_id_salt(ui.auto_id_with("StereospecificNumbers"))
             .selected_text(ui.localize(self.stereospecific_numbers.text()))
             .show_ui(ui, |ui| {
@@ -462,9 +435,7 @@ impl Settings {
     /// Auto size correlations table
     fn auto_size_correlations_table(&mut self, ui: &mut Ui) {
         ui.label(ui.localize("AutoSizeCorrelationsTable"))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("AutoSizeCorrelationsTable.hover"));
-            });
+            .on_hover_localized("AutoSizeCorrelationsTable.hover");
         ui.toggle_value(&mut self.auto_size_correlations_table, ARROWS_CLOCKWISE);
     }
 
@@ -495,17 +466,15 @@ impl Settings {
 
     /// Chaddock
     fn chaddock(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Chaddock")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Chaddock.hover"));
-        });
+        ui.label(ui.localize("Chaddock"))
+            .on_hover_localized("Chaddock.hover");
         ui.checkbox(&mut self.chaddock, ());
     }
 
     /// Indices
     fn indices(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Indices")).on_hover_ui(|ui| {
-            ui.label(ui.localize("Indices.hover"));
-        });
+        ui.label(ui.localize("Indices"))
+            .on_hover_localized("Indices.hover");
         let selected_text = format_list_truncated!(
             self.indices
                 .0
