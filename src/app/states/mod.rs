@@ -5,7 +5,9 @@ use egui::{ComboBox, Context, Grid, Id, RichText, Sense, Sides, Ui};
 use egui_dnd::dnd;
 use egui_l20n::UiExt as _;
 use egui_phosphor::regular::{DOTS_SIX_VERTICAL, EYE, EYE_SLASH};
+use egui_tiles::ContainerKind;
 use serde::{Deserialize, Serialize};
+use std::hash::{Hash, Hasher};
 
 /// State
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -41,15 +43,19 @@ impl State {
 /// Settings
 #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) struct Settings {
+    pub(crate) layout: Layout,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
+    pub(crate) reset_state: bool,
 }
 
 impl Settings {
     pub(crate) fn new() -> Self {
         Self {
+            layout: Layout::new(),
             percent: true,
             precision: 2,
+            reset_state: false,
         }
     }
 }
@@ -81,6 +87,28 @@ impl Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Layout
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub(crate) struct Layout {
+    pub(crate) container_kind: Option<ContainerKind>,
+}
+
+impl Layout {
+    fn new() -> Self {
+        Self {
+            container_kind: None,
+        }
+    }
+}
+
+impl Hash for Layout {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.container_kind
+            .map(|container_kind| container_kind as usize)
+            .hash(state);
     }
 }
 

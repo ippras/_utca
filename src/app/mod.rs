@@ -6,6 +6,10 @@ use self::{
     widgets::{About, Github, Presets},
 };
 use crate::{
+    app::widgets::{
+        AboutButton, GridButton, HorizontalButton, LeftPanelButton, ResetButton, SettingsButton,
+        TabsButton, VerticalButton,
+    },
     localization::ContextExt as _,
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
@@ -18,15 +22,12 @@ use egui::{
     TopBottomPanel, Ui, Visuals, Widget as _, Window, warn_if_debug_build,
 };
 use egui_ext::{DroppedFileExt as _, HoveredFileExt, LightDarkButton};
-use egui_l20n::{ResponseExt, UiExt as _};
+use egui_l20n::prelude::*;
 use egui_phosphor::{
     Variant, add_to_fonts,
-    regular::{
-        ARROWS_CLOCKWISE, GRID_FOUR, INFO, PLUS, SIDEBAR_SIMPLE, SLIDERS_HORIZONTAL,
-        SQUARE_SPLIT_HORIZONTAL, SQUARE_SPLIT_VERTICAL, TABS, TRASH,
-    },
+    regular::{INFO, PLUS, SLIDERS_HORIZONTAL},
 };
-use egui_tiles::{ContainerKind, Tile, Tree};
+use egui_tiles::{Tile, Tree};
 use egui_tiles_ext::{HORIZONTAL, TreeExt as _, VERTICAL};
 use lipid::prelude::*;
 use metadata::{DATE, Metadata, NAME, polars::MetaDataFrame};
@@ -36,11 +37,10 @@ use serde::{Deserialize, Serialize};
 use std::{borrow::BorrowMut, fmt::Write, str, sync::LazyLock};
 use tracing::{info, instrument, trace};
 
+const ICON_SIZE: f32 = 32.0;
 const ID_SOURCE: &str = "UTCA";
-
 /// IEEE 754-2008
 const MAX_PRECISION: usize = 16;
-const ICON_SIZE: f32 = 32.0;
 
 // const DESCRIPTION: &str = "Positional-species and positional-type composition of TAG from mature fruit arils of the Euonymus section species, mol % of total TAG";
 
@@ -150,37 +150,22 @@ impl App {
         TopBottomPanel::top("TopPanel").show(ctx, |ui| {
             MenuBar::new().ui(ui, |ui| {
                 ScrollArea::horizontal().show(ui, |ui| {
-                    // Left panel
-                    self.left_panel_button(ui);
+                    LeftPanelButton::new(&mut self.left_panel)
+                        .size(ICON_SIZE)
+                        .ui(ui);
                     ui.separator();
                     // Light/Dark
                     ui.light_dark_button(ICON_SIZE);
                     ui.separator();
-                    // Reset app
-                    self.reset_button(ui);
+                    ResetButton::new(&mut state.settings.reset_state)
+                        .size(ICON_SIZE)
+                        .ui(ui);
                     ui.separator();
-                    // Reset app
-                    if ui
-                        .button(RichText::new(ARROWS_CLOCKWISE).size(ICON_SIZE))
-                        .on_hover_ui(|ui| {
-                            ui.label(ui.localize("ResetGui"));
-                        })
-                        .clicked()
-                    {
-                        // Cache
-                        let caches = ui.memory_mut(|memory| memory.caches.clone());
-                        ui.memory_mut(|memory| {
-                            memory.caches = caches;
-                        });
-                        ui.ctx().set_localizations();
-                    }
+                    self.layouts(ui, state);
                     ui.separator();
-                    self.vertical_button(ui);
-                    self.horizontal_button(ui);
-                    self.grid_button(ui);
-                    self.tabs_button(ui);
-                    ui.separator();
-                    self.settings_button(ui, state);
+                    SettingsButton::new(&mut state.windows.open_settings)
+                        .size(ICON_SIZE)
+                        .ui(ui);
                     ui.separator();
                     // Create
                     if ui
@@ -201,155 +186,32 @@ impl App {
                         ));
                     }
                     // Presets
-                    ui.add(Presets);
+                    Presets.ui(ui);
                     ui.separator();
-                    ui.add(Github);
+                    Github.ui(ui);
                     ui.separator();
-                    // About
-                    self.about_button(ui, state);
+                    AboutButton::new(&mut state.windows.open_about)
+                        .size(ICON_SIZE)
+                        .ui(ui);
                     ui.separator();
                 });
             });
         });
     }
 
-    /// Left panel button
-    fn left_panel_button(&mut self, ui: &mut Ui) {
-        ui.toggle_value(
-            &mut self.left_panel,
-            RichText::new(SIDEBAR_SIMPLE).size(ICON_SIZE),
-        )
-        .on_hover_ui(|ui| {
-            ui.label(ui.localize("LeftPanel"));
-        });
-    }
-
-    /// Reset
-    fn reset_button(&mut self, ui: &mut Ui) {
-        if ui
-            .button(RichText::new(TRASH).size(ICON_SIZE))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("ResetApplication"));
-            })
-            .clicked()
-        {
-            // if let Some(id) = self.tree.root {
-            //     if let Some(tile) = self.tree.tiles.get(id) {
-            //         match tile {
-            //             Tile::Pane(pane) => {
-            //                 pane;
-            //             }
-            //             Tile::Container(container) => {
-            //                 // // Container removal
-            //                 // log::debug!("Closing container: {:?}", container.kind());
-            //                 // let children_ids = container.children();
-            //                 // for child_id in children_ids {
-            //                 //     if let Some(Tile::Pane(pane)) = tiles.get(*child_id) {
-            //                 //         let tab_title = self.tab_title_for_pane(pane);
-            //                 //         log::debug!(
-            //                 //             "Closing tab: {}, tile ID: {tile_id:?}",
-            //                 //             tab_title.text()
-            //                 //         );
-            //                 //     }
-            //                 // }
-            //             }
-            //         }
-            //     }
-            // }
-            *self = Default::default();
-        }
-    }
-
-    /// Vertical button
-    fn vertical_button(&mut self, ui: &mut Ui) {
-        if ui
-            .button(RichText::new(SQUARE_SPLIT_VERTICAL).size(ICON_SIZE))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Vertical"));
-            })
-            .clicked()
-        {
-            if let Some(id) = self.tree.root {
-                if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                    container.set_kind(ContainerKind::Vertical);
-                }
-            }
-        }
-    }
-
-    /// Horizontal button
-    fn horizontal_button(&mut self, ui: &mut Ui) {
-        if ui
-            .button(RichText::new(SQUARE_SPLIT_HORIZONTAL).size(ICON_SIZE))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Horizontal"));
-            })
-            .clicked()
-        {
-            if let Some(id) = self.tree.root {
-                if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                    container.set_kind(ContainerKind::Horizontal);
-                }
-            }
-        }
-    }
-
-    /// Grid button
-    fn grid_button(&mut self, ui: &mut Ui) {
-        if ui
-            .button(RichText::new(GRID_FOUR).size(ICON_SIZE))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Grid"));
-            })
-            .clicked()
-        {
-            if let Some(id) = self.tree.root {
-                if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                    container.set_kind(ContainerKind::Grid);
-                }
-            }
-        }
-    }
-
-    /// Tabs button
-    fn tabs_button(&mut self, ui: &mut Ui) {
-        if ui
-            .button(RichText::new(TABS).size(ICON_SIZE))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Tabs"));
-            })
-            .clicked()
-        {
-            if let Some(id) = self.tree.root {
-                if let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id) {
-                    container.set_kind(ContainerKind::Tabs);
-                }
-            }
-        }
-    }
-
-    /// Settings
-    fn settings_button(&mut self, ui: &mut Ui, state: &mut State) {
-        if ui
-            .button(RichText::new(SLIDERS_HORIZONTAL).size(ICON_SIZE))
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize("Settings"));
-            })
-            .clicked()
-        {
-            state.windows.open_settings ^= true;
-        }
-    }
-
-    /// About
-    fn about_button(&mut self, ui: &mut Ui, state: &mut State) {
-        if ui
-            .button(RichText::new(INFO).size(ICON_SIZE))
-            .on_hover_localized("About")
-            .clicked()
-        {
-            state.windows.open_about ^= true;
-        }
+    fn layouts(&mut self, ui: &mut Ui, state: &mut State) {
+        VerticalButton::new(&mut state.settings.layout.container_kind)
+            .size(ICON_SIZE)
+            .ui(ui);
+        HorizontalButton::new(&mut state.settings.layout.container_kind)
+            .size(ICON_SIZE)
+            .ui(ui);
+        GridButton::new(&mut state.settings.layout.container_kind)
+            .size(ICON_SIZE)
+            .ui(ui);
+        TabsButton::new(&mut state.settings.layout.container_kind)
+            .size(ICON_SIZE)
+            .ui(ui);
     }
 }
 
@@ -642,6 +504,28 @@ impl App {
     // fn import(&mut self) -> Result<(), impl Debug> {
     //     self.file_dialog.load()
     // }
+
+    fn state(&mut self, ctx: &Context, state: &mut State) {
+        if state.settings.reset_state {
+            *self = Default::default();
+            // Cache
+            let caches = ctx.memory_mut(|memory| memory.caches.clone());
+            ctx.memory_mut(|memory| {
+                memory.caches = caches;
+            });
+            ctx.set_localizations();
+            state.settings.reset_state = false;
+        }
+        if let Some(container_kind) = state.settings.layout.container_kind.take()
+            && let Some(id) = self.tree.root
+            && let Some(Tile::Container(container)) = self.tree.tiles.get_mut(id)
+        {
+            container.set_kind(container_kind);
+        }
+        // if state.settings.reactive {
+        //     ctx.request_repaint();
+        // }
+    }
 }
 
 impl eframe::App for App {
@@ -663,7 +547,7 @@ impl eframe::App for App {
         self.windows(ctx, &mut state);
         // Post update
         self.drag_and_drop(ctx);
-        // self.paste(ctx);
+        self.state(ctx, &mut state);
         state.store(ctx, Id::new(ID_SOURCE));
     }
 }
