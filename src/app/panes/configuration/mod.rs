@@ -205,7 +205,7 @@ impl Pane {
                 })
                 .clicked()
             {
-                let _ = self.save_ron(&name, state);
+                _ = self.save_ron(&name, state);
             }
         });
     }

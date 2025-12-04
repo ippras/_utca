@@ -214,7 +214,7 @@ impl TableView<'_> {
                     // };
                     // response.on_hover_ui(|ui| {
                     //     let species = self.data_frame["Species"].as_materialized_series();
-                    //     let _ = self.species(species, row, ui);
+                    //     _ = self.species(species, row, ui);
                     // });
                 } else {
                     let value = data_frame[name].struct_()?.field_by_name("Value")?;
@@ -314,11 +314,11 @@ impl TableView<'_> {
             .show(ui)
             .response
             .on_hover_ui(|ui| {
-                let _ = self.standard_deviation(series, row, index, ui);
+                _ = self.standard_deviation(series, row, index, ui);
             });
         if let Some(row) = row {
             response.on_hover_ui(|ui| {
-                let _ = self.array(series, row, index, ui);
+                _ = self.array(series, row, index, ui);
             });
         }
         Ok(())
@@ -352,11 +352,11 @@ impl TableView<'_> {
         //             .show(ui)
         //             .response
         //             .on_hover_ui(|ui| {
-        //                 let _ = self.standard_deviation(series, row, index, ui);
+        //                 _ = self.standard_deviation(series, row, index, ui);
         //             });
         //         if let Some(row) = row {
         //             response.on_hover_ui(|ui| {
-        //                 let _ = self.array(series, row, index, ui);
+        //                 _ = self.array(series, row, index, ui);
         //             });
         //         }
         //     }
@@ -500,7 +500,7 @@ impl TableDelegate for TableView<'_> {
         Frame::new()
             .inner_margin(Margin::from(MARGIN))
             .show(ui, |ui| {
-                let _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
+                _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
             });
     }
 

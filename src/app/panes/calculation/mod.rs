@@ -129,7 +129,7 @@ impl Pane {
         CentralPanel::default()
             .frame(Frame::central_panel(&ui.style()))
             .show_inside(ui, |ui| {
-                let _ = self.central(ui, &mut state);
+                _ = self.central(ui, &mut state);
                 self.windows(ui, &mut state);
             });
         if behavior.close == Some(tile_id) {
@@ -231,7 +231,7 @@ impl Pane {
             .on_hover_localized("Composition")
             .clicked()
         {
-            let _ = self.composition_content(ui, state);
+            _ = self.composition_content(ui, state);
         }
     }
 
@@ -289,7 +289,7 @@ impl Pane {
                 })
                 .clicked()
             {
-                let _ = self.save_ron(&name, &meta);
+                _ = self.save_ron(&name, &meta);
             }
             if ui
                 .button((FLOPPY_DISK, "PARQUET"))
@@ -299,7 +299,7 @@ impl Pane {
                 })
                 .clicked()
             {
-                // let _ = self.save_parquet(&title);
+                // _ = self.save_parquet(&title);
             }
         });
     }
@@ -364,7 +364,7 @@ impl Pane {
     //         }
     //     };
     //     let mut frame = MetaDataFrame::new(meta, data);
-    //     let _ = parquet::save(&mut frame, &format!("{title}.fa.utca.parquet"));
+    //     _ = parquet::save(&mut frame, &format!("{title}.fa.utca.parquet"));
     //     Ok(())
     // }
 

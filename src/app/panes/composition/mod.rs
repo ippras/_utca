@@ -231,7 +231,7 @@ impl Pane {
                 })
                 .clicked()
             {
-                let _ = self.save_ron(ui, &name, state);
+                _ = self.save_ron(ui, &name, state);
             }
             if ui
                 .button((FLOPPY_DISK, "XLSX"))
@@ -241,7 +241,7 @@ impl Pane {
                 })
                 .clicked()
             {
-                let _ = self.save_xlsx(ui, &name, state);
+                _ = self.save_xlsx(ui, &name, state);
             }
         });
     }
@@ -264,7 +264,7 @@ impl Pane {
             })
         });
         let data_frame = data_frame.data_frame.unnest(["Keys"], None)?;
-        let _ = xlsx::save(&data_frame, &format!("{name}.utca.xlsx"));
+        _ = xlsx::save(&data_frame, &format!("{name}.utca.xlsx"));
         Ok(())
     }
 

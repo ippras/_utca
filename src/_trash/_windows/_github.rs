@@ -193,7 +193,7 @@ fn load_tree(url: impl ToString, github_token: impl ToString) -> Promise<Option<
 fn load_blob(ctx: &Context, url: impl ToString) {
     let ctx = ctx.clone();
     let url = url.to_string();
-    let _ = spawn(async move {
+    _ = spawn(async move {
         match try_load_blob(url).await {
             Ok(blob) => ctx.data_mut(|data| {
                 if let Some(sender) = data.get_temp::<Sender<Vec<u8>>>(Id::new(DATA)) {

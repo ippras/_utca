@@ -520,7 +520,7 @@ impl TableDelegate for TableView<'_> {
         Frame::new()
             .inner_margin(Margin::from(MARGIN))
             .show(ui, |ui| {
-                let _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
+                _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
             });
     }
 }

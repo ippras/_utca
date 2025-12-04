@@ -368,7 +368,7 @@ impl Settings {
                     )
                     .ui(ui, |ui| {
                         ScrollArea::vertical().show(ui, |ui| {
-                            let _ = self.christie_content(ui);
+                            _ = self.christie_content(ui);
                         });
                     });
             });

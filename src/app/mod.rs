@@ -309,7 +309,7 @@ impl App {
         }) {
             info!(?dropped_files);
             for dropped_file in dropped_files {
-                let _ = self.parse(ctx, dropped_file);
+                _ = self.parse(ctx, dropped_file);
             }
         }
     }
@@ -401,7 +401,7 @@ impl App {
         // let frame = MetaDataFrame { meta, data };
         // let name = format!("{}.utca.ron", frame.meta.format("."));
         // println!("name: {name}");
-        // let _ = export::ron::save(&frame, &name);
+        // _ = export::ron::save(&frame, &name);
         // return Ok(());
 
         let frame = ron::de::from_bytes::<MetaDataFrame>(&bytes)?;

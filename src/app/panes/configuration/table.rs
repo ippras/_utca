@@ -65,7 +65,7 @@ impl TableView<'_> {
             .num_sticky_cols(self.state.settings.sticky_columns)
             .headers([HeaderRow::new(height)])
             .show(ui, self);
-        let _ = self.change();
+        _ = self.change();
     }
 
     #[instrument(skip(self), err)]
@@ -115,7 +115,7 @@ impl TableView<'_> {
                     ui.ctx().input(|input| {
                         for event in &input.raw.events {
                             if let Event::Paste(text) = event {
-                                let _ = self.paste_labels("Label", text);
+                                _ = self.paste_labels("Label", text);
                             }
                         }
                     });
@@ -135,7 +135,7 @@ impl TableView<'_> {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
                                 if let Event::Paste(text) = event {
-                                    let _ = self.paste_floats(STEREOSPECIFIC_NUMBERS2, text);
+                                    _ = self.paste_floats(STEREOSPECIFIC_NUMBERS2, text);
                                 }
                             }
                         });
@@ -148,7 +148,7 @@ impl TableView<'_> {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
                                 if let Event::Paste(text) = event {
-                                    let _ = self.paste_floats(STEREOSPECIFIC_NUMBERS12_23, text);
+                                    _ = self.paste_floats(STEREOSPECIFIC_NUMBERS12_23, text);
                                 }
                             }
                         });
@@ -163,7 +163,7 @@ impl TableView<'_> {
                     ui.ctx().input(|input| {
                         for event in &input.raw.events {
                             if let Event::Paste(text) = event {
-                                let _ = self.paste_floats(STEREOSPECIFIC_NUMBERS123, text);
+                                _ = self.paste_floats(STEREOSPECIFIC_NUMBERS123, text);
                             }
                         }
                     });
@@ -364,7 +364,7 @@ impl TableDelegate for TableView<'_> {
         Frame::new()
             .inner_margin(Margin::from(MARGIN))
             .show(ui, |ui| {
-                let _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
+                _ = self.cell_content_ui(ui, cell.row_nr as _, cell.col_nr..cell.col_nr + 1);
             });
     }
 
