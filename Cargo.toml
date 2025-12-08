@@ -1,6 +1,6 @@
 [package]
 name = "utca"
-version = "0.53.0"
+version = "0.53.1"
 authors = ["Giorgi Vladimirovich Kazakov", "Roman Alexandrovich Sidorov"]
 edition = "2024"
 
@@ -22,9 +22,9 @@ egui-phosphor = "0.11.0"
 egui_dnd = "0.14.0"
 egui_extras = { version = "0.33.2", features = ["datepicker", "serde", "svg"] }
 egui_plot = "0.34.0"
-egui_table = "0.5.0"
+egui_table = "0.6.0"
 egui_tiles = "0.14.0"
-ehttp = { version = "0.5.0", features = ["json", "native-async"] }
+ehttp = { version = "0.6.0", features = ["json", "native-async"] }
 indexmap = "2.12.0"
 itertools = "0.14.0"
 log = "0.4.28"
