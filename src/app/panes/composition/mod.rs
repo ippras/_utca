@@ -27,6 +27,7 @@ use egui::{
 use egui_l20n::prelude::*;
 use egui_phosphor::regular::{FLOPPY_DISK, INTERSECT_THREE, LIST, SIGMA, SLIDERS_HORIZONTAL, X};
 use egui_tiles::{TileId, UiResponse};
+use lipid::prelude::*;
 use metadata::{
     AUTHORS, DATE, DEFAULT_VERSION, DESCRIPTION, Metadata, NAME, VERSION, polars::MetaDataFrame,
 };
@@ -46,6 +47,8 @@ pub(crate) struct Pane {
     // Слишком большой размер вызывает задержку при десериализации, при открытие
     // программы.
     #[serde(skip)]
+    species: HashedDataFrame,
+    #[serde(skip)]
     target: HashedDataFrame,
 }
 
@@ -54,6 +57,7 @@ impl Pane {
         Self {
             id: None,
             frames,
+            species: HashedDataFrame::EMPTY,
             target: HashedDataFrame {
                 data_frame: DataFrame::empty(),
                 hash: 0,
@@ -96,6 +100,7 @@ impl Pane {
     ) -> UiResponse {
         let id = *self.id.get_or_insert_with(|| ui.next_auto_id());
         let mut state = State::load(ui.ctx(), id);
+        _ = self.init(ui, &mut state);
         let response = TopBottomPanel::top(ui.auto_id_with("Pane"))
             .show_inside(ui, |ui| {
                 MenuBar::new()
@@ -133,6 +138,16 @@ impl Pane {
         } else {
             UiResponse::None
         }
+    }
+
+    fn init(&mut self, ui: &mut Ui, state: &mut State) {
+        // Species
+        self.species = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<SpeciesComputed>()
+                .get(SpeciesKey::new(&self.frames, &state.settings))
+        });
     }
 
     fn top(&mut self, ui: &mut Ui, state: &mut State) -> Response {
@@ -249,11 +264,21 @@ impl Pane {
     #[instrument(skip_all, err)]
     fn save_ron(&self, ui: &mut Ui, name: impl Debug + Display, state: &State) -> Result<()> {
         let meta = self.meta(state);
-        let data = self.data(ui, state)?;
+        let data = &self
+            .species
+            .data_frame
+            .select([LABEL, TRIACYLGLYCEROL, "Value"])?;
+        // let data = self.data(ui, state)?;
+        println!("data: {data}");
         let frame = MetaDataFrame::new(meta, data);
         ron::save(&frame, &format!("{name}.tag.utca.ron"))?;
         Ok(())
     }
+    // ┌─────────────────────┬─────────────────────┬──────────┬──────────┬──────────┬─────────────────────┐
+    // │ Label               ┆ Triacylglycerol     ┆ Value[0] ┆ Value[1] ┆ Value[2] ┆ Value               │
+    // │ ---                 ┆ ---                 ┆ ---      ┆ ---      ┆ ---      ┆ ---                 │
+    // │ struct[3]           ┆ struct[3]           ┆ f64      ┆ f64      ┆ f64      ┆ struct[3]           │
+    // ╞═════════════════════╪═════════════════════╪══════════╪══════════╪══════════╪═════════════════════╡
 
     #[instrument(skip_all, err)]
     fn save_xlsx(&self, ui: &mut Ui, name: impl Debug + Display, state: &State) -> Result<()> {
@@ -303,16 +328,9 @@ impl Pane {
     }
 
     fn central(&mut self, ui: &mut Ui, state: &mut State) {
-        // Species
-        let data_frame = ui.memory_mut(|memory| {
-            memory
-                .caches
-                .cache::<SpeciesComputed>()
-                .get(SpeciesKey::new(&self.frames, &state.settings))
-        });
         // Composition
         self.target = ui.memory_mut(|memory| {
-            let key = CompositionKey::new(&data_frame, &state.settings);
+            let key = CompositionKey::new(&self.species, &state.settings);
             HashedDataFrame {
                 data_frame: memory.caches.cache::<CompositionComputed>().get(key),
                 hash: hash(key),
@@ -366,18 +384,11 @@ impl Pane {
 
     #[instrument(skip_all, err)]
     fn sum_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
-        // Species
-        let frame = ui.memory_mut(|memory| {
-            memory
-                .caches
-                .cache::<SpeciesComputed>()
-                .get(SpeciesKey::new(&self.frames, settings))
-        });
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
                 .cache::<SumSymmetryComputed>()
-                .get(SumSymmetryKey::new(&frame, settings))
+                .get(SumSymmetryKey::new(&self.species, settings))
         });
         Sum::new(&data_frame, settings).show(ui).inner
     }
