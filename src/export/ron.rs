@@ -18,12 +18,14 @@ const CONFIG: LazyLock<PrettyConfig> =
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native {
+    use crate::utils::HashedDataFrame;
+
     use super::*;
     use std::{fs::File, io::Write};
 
     #[instrument(skip(frame), err)]
     pub fn save(
-        frame: &MetaDataFrame<impl Borrow<Metadata>, impl Borrow<DataFrame>>,
+        frame: &MetaDataFrame<impl Borrow<Metadata>, impl Borrow<HashedDataFrame>>,
         name: &str,
     ) -> Result<()> {
         let mut file = File::create(name)?;

@@ -8,7 +8,6 @@ pub(super) use self::{
     label::{Inner, LabelWidget},
     layout_buttons::{GridButton, HorizontalButton, TabsButton, VerticalButton},
     left_panel_button::LeftPanelButton,
-    presets::Presets,
     reactive_button::ReactiveButton,
     reset_button::ResetButton,
     resize_button::ResizeButton,
@@ -24,7 +23,6 @@ mod github;
 mod label;
 mod layout_buttons;
 mod left_panel_button;
-mod presets;
 mod reactive_button;
 mod reset_button;
 mod resize_button;

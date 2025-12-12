@@ -319,7 +319,7 @@ impl Pane {
                 col(STEREOSPECIFIC_NUMBERS2),
             ])
             .collect()?;
-        let frame = MetaDataFrame::new(meta, data);
+        let frame = MetaDataFrame::new(meta, HashedDataFrame::new(data)?);
         ron::save(&frame, &format!("{name}.fa.utca.ron"))?;
         Ok(())
     }

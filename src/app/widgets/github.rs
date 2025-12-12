@@ -1,6 +1,6 @@
 use crate::{
     app::{ICON_SIZE, identifiers::DATA},
-    utils::{HashedDataFrame, HashedMetaDataFrame, spawn},
+    utils::{HashedMetaDataFrame, spawn},
 };
 use anyhow::{Context as _, Error, Result};
 use egui::{
@@ -9,10 +9,9 @@ use egui::{
     containers::menu::{MenuButton, MenuConfig},
     scroll_area::ScrollAreaOutput,
 };
-use egui_ext::Doi as _;
+use egui_ext::{Doi as _, LabeledSeparator};
 use egui_phosphor::regular::CLOUD_ARROW_DOWN;
 use ehttp::{Request, fetch_async};
-use metadata::polars::MetaDataFrame;
 use std::borrow::Cow;
 use tracing::{instrument, trace};
 use url::Url;
@@ -47,11 +46,9 @@ impl Github {
             _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ukurunduense[2].2025-07-08.utca.ron");
             _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Acer/Acer ukurunduense[3].2025-07-08.utca.ron");
         });
-        ui.menu_button_with_scroll("Cedrus", |ui| {
-            ui.heading("Cedrus");
-            // preset(ui, &CEDRUS_2023_05_19);
-            // preset(ui, &CEDRUS_2023_05_19_1);
-            // preset(ui, &CEDRUS_2023_05_19_2);
+        ui.menu_button_with_scroll("Catalpa", |ui| {
+            ui.heading("Catalpa ovata");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Catalpa/Catalpa ovata{TL}.2025-11-26.utca.ron");
         });
         ui.menu_button_with_scroll("Helianthus annuus", |ui| {
             ui.heading("Helianthus annuus");
@@ -88,26 +85,52 @@ impl Github {
             _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/HelianthusAnnuus/К-3714[3].2025-10-31.utca.ron");
         });
         ui.menu_button_with_scroll("Microalgae", |ui| {
+            ui.labeled_separator("2025");
             ui.heading("Chromochloris zofingiensis");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-108[-N;1].2025-04-23.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-108[-N;2].2025-04-23.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-108[-N;3].2025-04-23.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-108{-N}[1].2025-04-23.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-108{-N}[2].2025-04-23.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-108{-N}[3].2025-04-23.utca.ron");
             ui.heading("Neochlorella semenenkoi");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1210[-N;1].2025-04-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1210[-N;2].2025-04-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1210[-N;3].2025-04-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1210{-N}[1].2025-04-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1210{-N}[2].2025-04-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1210{-N}[3].2025-04-24.utca.ron");
             ui.heading("Lobosphaera sp.");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1540[-N;1].2025-04-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1540[-N;2].2025-04-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1540[-N;3].2025-04-24.utca.ron");
-            ui.heading("Vischeria punctata");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-242[Control;1].2023-10-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-242[Control;2].2023-10-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1540{-N}[1].2025-04-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1540{-N}[2].2025-04-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-1540{-N}[3].2025-04-24.utca.ron");
             ui.heading("Coelastrella affinis");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626[-N].2025-04-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{-N}.2025-04-24.utca.ron");
             ui.heading("Porphyridium purpureum");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/P-519[-N;1].2025-04-23.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/P-519[-N;2].2025-04-23.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/P-519{-N}[1].2025-04-23.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/P-519{-N}[2].2025-04-23.utca.ron");
+
+            ui.labeled_separator("2023");
+            ui.heading("Vischeria sp.");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-70{Control;SN-1,2(2,3)}.2023-10-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-70{Control;SN-2}.2023-10-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-70{H_2O_2;SN-1,2(2,3)}.2023-10-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-70{H_2O_2;SN-2}.2023-10-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-70{NaCl;SN-1,2(2,3)}.2023-10-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/C-70{NaCl;SN-2}.2023-10-24.utca.ron");
+            ui.heading("Vischeria punctata");
+            // _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-242{Control;SN-1,2(2,3)}.2023-10-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-242{Control;SN-2}.2023-10-24.utca.ron");
+            ui.heading("Coelastrella affinis");
+            // _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;0day;SN-1,2(2,3)}.2023-10-22.utca.ron");
+            // _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;3day;SN-1,2(2,3)}.2023-10-22.utca.ron");
+            // _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;9day;SN-1,2(2,3)}.2023-10-22.utca.ron");
+            // _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{-N;3day;SN-1,2(2,3)}.2023-10-22.utca.ron");
+            // _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{-N;9day;SN-1,2(2,3)}.2023-10-22.utca.ron");
+            // _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;-Mg;3day;SN-1,2(2,3)}.2023-10-22.utca.ron");
+            // _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;-Mg;9day;SN-1,2(2,3)}.2023-10-22.utca.ron");
+
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{-N;3day;SN-2}.2023-10-22.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{-N;9day;SN-2}.2023-10-22.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;-Mg;3day;SN-2}.2023-10-22.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;-Mg;9day;SN-2}.2023-10-22.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;0day;SN-2}.2023-10-22.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;3day;SN-2}.2023-10-22.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Microalgae/H-626{Control;9day;SN-2}.2023-10-22.utca.ron");
         });
         ui.menu_button_with_scroll("Lunaria rediviva", |ui| {
             ui.heading("Lunaria rediviva");
@@ -124,6 +147,21 @@ impl Github {
             _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 1mm[1].2024-05-29.utca.ron");
             _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 1mm[2].2024-05-29.utca.ron");
             _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/LunariaRediviva/Lunaria rediviva, seed, 1mm[3].2024-05-29.utca.ron");
+        });
+        ui.menu_button_with_scroll("Pinus cedrus", |ui| {
+            ui.heading("Pinus cedrus");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/PinusCedrus/Pinus cedrus{SN-1,2(2,3)}.2023-05-19.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/PinusCedrus/Pinus cedrus{SN-2}.2023-05-19.utca.ron");
+        });
+        ui.menu_button_with_scroll("Polyscias", |ui| {
+            ui.heading("Polyscias");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Polyscias/Polyscias{SN-1,2(2,3)}[1].2024-11-12.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Polyscias/Polyscias{SN-1,2(2,3)}[2].2024-11-12.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Polyscias/Polyscias{SN-1,2(2,3)}[3].2024-11-12.utca.ron");
+
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Polyscias/Polyscias{SN-2}[1].2024-11-12.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Polyscias/Polyscias{SN-2}[2].2024-11-12.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Polyscias/Polyscias{SN-2}[3].2024-11-12.utca.ron");
         });
         ui.menu_button_with_scroll("Sidorov (2014)", |ui| {
             ui.doi("10.1007/s11746-014-2553-8");
@@ -149,25 +187,23 @@ impl Github {
         ui.menu_button_with_scroll("Sidorov (2025)", |ui| {
             ui.doi("10.3390/plants14040612");
             ui.heading("Lunaria Rediviva");
-            ui.heading("TMSH");
-            ui.heading("SN-1,2(2,3)");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-1,2(2,3);1.1].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-1,2(2,3);1.2].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-1,2(2,3);1.3].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-1,2(2,3);2.1].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-1,2(2,3);2.2].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-1,2(2,3);3.1].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-1,2(2,3);3.2].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-1,2(2,3);3.3].2024-01-24.utca.ron");
-            ui.heading("SN-2");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-2;1.1].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-2;1.2].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-2;1.3].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-2;2.1].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-2;2.2].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-2;3.1].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-2;3.2].2024-01-24.utca.ron");
-            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva[TMSH;SN-2;3.3].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-1,2(2,3)}[1.1].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-1,2(2,3)}[1.2].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-1,2(2,3)}[1.3].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-1,2(2,3)}[2.1].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-1,2(2,3)}[2.2].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-1,2(2,3)}[3.1].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-1,2(2,3)}[3.2].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-1,2(2,3)}[3.3].2024-01-24.utca.ron");
+
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-2}[1.1].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-2}[1.2].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-2}[1.3].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-2}[2.1].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-2}[2.2].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-2}[3.1].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-2}[3.2].2024-01-24.utca.ron");
+            _ = preset(ui, "https://raw.githubusercontent.com/ippras/utca/presets/Sidorov2025/Lunaria rediviva{TMSH;SN-2}[3.3].2024-01-24.utca.ron");
         });
         ui.separator();
         // Third party
@@ -277,9 +313,5 @@ async fn try_load(url: &Url) -> Result<HashedMetaDataFrame> {
     let response = fetch_async(request).await.map_err(Error::msg)?;
     let text = response.text().context("Try load get response text")?;
     trace!(?text);
-    let frame = ron::de::from_str::<MetaDataFrame>(text)?;
-    Ok(MetaDataFrame {
-        meta: frame.meta,
-        data: HashedDataFrame::new(frame.data)?,
-    })
+    Ok(ron::de::from_str(text)?)
 }

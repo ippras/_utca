@@ -264,13 +264,13 @@ impl Pane {
     #[instrument(skip_all, err)]
     fn save_ron(&self, ui: &mut Ui, name: impl Debug + Display, state: &State) -> Result<()> {
         let meta = self.meta(state);
-        let data = &self
+        let data = self
             .species
             .data_frame
             .select([LABEL, TRIACYLGLYCEROL, "Value"])?;
         // let data = self.data(ui, state)?;
         println!("data: {data}");
-        let frame = MetaDataFrame::new(meta, data);
+        let frame = MetaDataFrame::new(meta, HashedDataFrame::new(data)?);
         ron::save(&frame, &format!("{name}.tag.utca.ron"))?;
         Ok(())
     }

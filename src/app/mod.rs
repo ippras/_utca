@@ -3,7 +3,7 @@ use self::{
     identifiers::{CALCULATE, COMPOSE, CONFIGURE, DATA},
     panes::{Behavior, Pane},
     states::State,
-    widgets::{About, Github, Presets},
+    widgets::{About, Github},
 };
 use crate::{
     app::widgets::{
@@ -35,7 +35,7 @@ use panes::configuration::SCHEMA;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{borrow::BorrowMut, fmt::Write, str, sync::LazyLock};
-use tracing::{info, instrument, trace};
+use tracing::{info, instrument, trace, warn};
 
 const ICON_SIZE: f32 = 32.0;
 const ID_SOURCE: &str = "UTCA";
@@ -185,8 +185,6 @@ impl App {
                             },
                         ));
                     }
-                    // Presets
-                    Presets.ui(ui);
                     ui.separator();
                     Github.ui(ui);
                     ui.separator();
@@ -404,24 +402,29 @@ impl App {
         // _ = export::ron::save(&frame, &name);
         // return Ok(());
 
-        let frame = ron::de::from_bytes::<MetaDataFrame>(&bytes)?;
-        let hashed_frame = MetaDataFrame {
-            meta: frame.meta,
-            data: HashedDataFrame::new(frame.data)?,
-        };
-        let schema = hashed_frame.data.schema();
+        let frame =
+            ron::de::from_bytes::<HashedMetaDataFrame>(&bytes).or_else(|_| -> Result<_> {
+                let MetaDataFrame { meta, data } = ron::de::from_bytes::<MetaDataFrame>(&bytes)?;
+                warn!("MetaDataFrame NOT HashedMetaDataFrame!");
+                Ok(MetaDataFrame {
+                    meta,
+                    data: HashedDataFrame::new(data)?,
+                })
+            })?;
+        // let frame = ron::de::from_bytes::<HashedMetaDataFrame>(&bytes)?;
+        let schema = frame.data.schema();
         if CONFIGURATION.matches_schema(schema).is_ok_and(|cast| !cast) {
             info!("CONFIGURATION");
-            self.data.add(hashed_frame);
+            self.data.add(frame);
         } else if COMPOSITION.matches_schema(schema).is_ok_and(|cast| !cast) {
             info!("COMPOSITION");
-            ctx.data_mut(|data| data.insert_temp(Id::new(COMPOSE), hashed_frame));
+            ctx.data_mut(|data| data.insert_temp(Id::new(COMPOSE), frame));
         } else if MAG.ensure_is_exact_match(schema).is_ok() {
             info!(STEREOSPECIFIC_NUMBERS2);
-            self.data.add(hashed_frame);
+            self.data.add(frame);
         } else if DAG.ensure_is_exact_match(schema).is_ok() {
             info!(STEREOSPECIFIC_NUMBERS2);
-            self.data.add(hashed_frame);
+            self.data.add(frame);
         } else {
             return Err(
                 polars_err!(SchemaMismatch: r#"Invalid dropped file schema: expected [`CONFIGURATION`, `COMPOSITION`], got = `{schema:?}`"#),

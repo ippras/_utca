@@ -16,7 +16,7 @@ use egui::{
 };
 use egui_l20n::prelude::*;
 use egui_phosphor::regular::{
-    CALCULATOR, ERASER, FLOPPY_DISK, LIST, NOTE_PENCIL, SLIDERS_HORIZONTAL, TAG, TRASH, X,
+    CALCULATOR, ERASER, FLOPPY_DISK, LIST, NOTE_PENCIL, SLIDERS_HORIZONTAL, TAG, TEXT_AA, TRASH, X,
 };
 use egui_tiles::{TileId, UiResponse};
 use lipid::prelude::*;
@@ -158,6 +158,7 @@ impl Pane {
         ResetButton::new(&mut state.reset_table).ui(ui);
         ResizeButton::new(&mut state.settings.resize_table).ui(ui);
         EditButton::new(&mut state.settings.edit_table).ui(ui);
+        self.rename_button(ui, state);
         // Clear
         ui.add_enabled_ui(
             state.settings.edit_table && self.frames[state.settings.index].data.height() > 0,
@@ -193,6 +194,44 @@ impl Pane {
         response
     }
 
+    /// Rename
+    fn rename_button(&mut self, ui: &mut Ui, state: &State) {
+        ui.add_enabled_ui(
+            state.settings.edit_table && self.frames[state.settings.index].data.height() > 0,
+            |ui| {
+                if ui
+                    .button(RichText::new(TEXT_AA).heading())
+                    .on_hover_localized("Rename")
+                    .clicked()
+                {
+                    _ = self.rename(ui);
+                }
+            },
+        );
+    }
+
+    #[instrument(skip_all, err)]
+    fn rename(&mut self, ui: &mut Ui) -> PolarsResult<()> {
+        for frame in &mut self.frames {
+            let fatty_acid = frame.data[FATTY_ACID].fatty_acid().id()?;
+            let expr = lit(Series::from_iter(fatty_acid.iter().map(|id| {
+                let id = id?;
+                ui.try_localize(&format!("{id}.common"))
+                    .or_else(|| ui.try_localize(&format!("{id}.systematic")))
+            }))
+            .with_name(PlSmallStr::from_static(LABEL)));
+            let data_frame = frame
+                .data
+                .data_frame
+                .clone()
+                .lazy()
+                .with_column(ternary_expr(expr.clone().is_not_null(), expr, col(LABEL)))
+                .collect()?;
+            frame.data = HashedDataFrame::new(data_frame)?;
+        }
+        Ok(())
+    }
+
     // Save button
     fn save_button(&self, ui: &mut Ui, state: &State) {
         ui.menu_button(RichText::new(FLOPPY_DISK).heading(), |ui| {
@@ -206,6 +245,19 @@ impl Pane {
                 .clicked()
             {
                 _ = self.save_ron(&name, state);
+            }
+            if ui
+                .button((FLOPPY_DISK, "ALL RON"))
+                .on_hover_localized("Save")
+                .on_hover_ui(|ui| {
+                    ui.label(format!("{name}.fa.utca.ron"));
+                })
+                .clicked()
+            {
+                for frame in &self.frames {
+                    export::ron::save(frame, &format!("{}.utca.ron", frame.meta.format(".")))
+                        .unwrap()
+                }
             }
         });
     }

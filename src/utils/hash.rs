@@ -13,6 +13,7 @@ pub type HashedMetaDataFrame = MetaDataFrame<Metadata, HashedDataFrame>;
 /// Hashed data frame
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct HashedDataFrame {
+    #[serde(rename = "bytes")]
     pub data_frame: DataFrame,
     pub hash: u64,
 }
@@ -82,6 +83,6 @@ pub fn hash_data_frame(data_frame: &mut DataFrame) -> PolarsResult<u64> {
         .unwrap_or_default())
 }
 
-pub fn hash_expr(expr: Expr) -> Expr {
-    expr.hash(1, 2, 3, 4).alias("Hash")
-}
+// pub fn hash_expr(expr: Expr) -> Expr {
+//     expr.hash(1, 2, 3, 4).alias("Hash")
+// }

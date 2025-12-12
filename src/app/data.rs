@@ -107,6 +107,7 @@ impl Data {
                     .on_hover_ui(|ui| {
                         MetadataWidget::new(&frame.meta).show(ui);
                     })
+                    .on_hover_text(frame.data.hash.to_string())
                     .clicked();
                 if changed {
                     if self.selected.contains(frame) {
