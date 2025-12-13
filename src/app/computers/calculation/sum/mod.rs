@@ -1,5 +1,5 @@
 use crate::{
-    app::states::calculation::{Indices, Settings},
+    app::states::calculation::settings::{Indices, Settings},
     utils::{
         HashedDataFrame,
         polars::{format_sample, format_standard_deviation},

@@ -1,4 +1,4 @@
-use crate::app::states::calculation::Settings;
+use crate::app::states::calculation::settings::Settings;
 #[cfg(feature = "markdown")]
 use crate::r#const::markdown::{
     CETANE_NUMBER, COLD_FILTER_PLUGGING_POINT, DEGREE_OF_UNSATURATION,

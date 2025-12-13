@@ -155,7 +155,7 @@ impl Pane {
         .response
         .on_hover_localized("List");
         ui.separator();
-        ResetButton::new(&mut state.reset_table).ui(ui);
+        ResetButton::new(&mut state.event.reset_table_state).ui(ui);
         ResizeButton::new(&mut state.settings.resize_table).ui(ui);
         EditButton::new(&mut state.settings.edit_table).ui(ui);
         self.rename_button(ui, state);

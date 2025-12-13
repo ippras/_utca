@@ -1,5 +1,5 @@
 use crate::{
-    app::states::calculation::{Correlation, Settings, StereospecificNumbers},
+    app::states::calculation::settings::{Correlation, Settings, StereospecificNumbers},
     utils::HashedDataFrame,
 };
 use egui::util::cache::{ComputerMut, FrameCache};

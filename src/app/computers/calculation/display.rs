@@ -1,4 +1,4 @@
-use crate::{app::states::calculation::Settings, utils::HashedDataFrame};
+use crate::{app::states::calculation::settings::Settings, utils::HashedDataFrame};
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;

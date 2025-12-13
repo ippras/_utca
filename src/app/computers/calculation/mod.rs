@@ -1,5 +1,5 @@
 use crate::{
-    app::states::calculation::{Normalize, Settings, Threshold},
+    app::states::calculation::settings::{Normalize, Settings, Threshold},
     assets::CHRISTIE,
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
@@ -123,8 +123,8 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     // Стандарт - null, все остальные - автоматически или вручную.
     lazy_frame = if key.threshold.is_auto {
         lazy_frame.with_column(col("Filter").and(
-            any_horizontal([sn123.clone().gt_eq(key.threshold.auto)])?.or(any_horizontal([
-                sn2.clone().fill_nan(lit(0)).gt_eq(key.threshold.auto),
+            any_horizontal([sn123.clone().gt_eq(key.threshold.auto.0)])?.or(any_horizontal([
+                sn2.clone().fill_nan(lit(0)).gt_eq(key.threshold.auto.0),
             ])?),
         ))
     } else {

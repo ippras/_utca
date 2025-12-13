@@ -10,24 +10,25 @@ anyhow = "1.0.100"
 base64 = "0.22.1"
 chrono = "0.4.42"
 const_format = "0.2.35"
-eframe = { version = "0.33.0", features = [
+eframe = { version = "0.33.3", features = [
     "accesskit",
     "default_fonts",
     "glow",
     "persistence",
     "wayland",
 ] }
-egui = "0.33.2"
+egui = "0.33.3"
 egui-phosphor = "0.11.0"
 egui_dnd = "0.14.0"
-egui_extras = { version = "0.33.2", features = ["datepicker", "serde", "svg"] }
+egui_extras = { version = "0.33.3", features = ["datepicker", "serde", "svg"] }
 egui_plot = "0.34.0"
 egui_table = "0.6.0"
 egui_tiles = "0.14.0"
 ehttp = { version = "0.6.0", features = ["json", "native-async"] }
-indexmap = "2.12.0"
+indexmap = "2.12.1"
 itertools = "0.14.0"
-log = "0.4.28"
+log = "0.4.29"
+ordered-float = { version = "5.1.0", features = ["serde"] }
 # polars = { version = "0.52.0", default-features = false, features = [
 # fea5335e5befc493af208a34c6b4162a1cbd2798 2025-11-12
 polars = { git = "https://github.com/pola-rs/polars", rev = "fea5335", default-features = false, features = [
@@ -72,11 +73,11 @@ polars = { git = "https://github.com/pola-rs/polars", rev = "fea5335", default-f
 ] }
 polars-utils = { version = "0.52.0", features = ["nightly"] }
 ron = "0.12.0"
-rust_xlsxwriter = { version = "0.92.0", features = ["chrono", "wasm"] }
+rust_xlsxwriter = { version = "0.92.2", features = ["chrono", "wasm"] }
 serde = { version = "1.0.228", features = ["derive", "std"] }
 thiserror = "2.0.17"
 toml = "0.9.8"
-tracing = "0.1.41"
+tracing = "0.1.43"
 unic-langid = { version = "0.9.6", features = ["macros"] }
 uom = "0.37.0"
 url = { version = "2.5.7", features = ["serde"] }
@@ -114,7 +115,7 @@ polars_ext = { git = "https://github.com/kgv/polars_ext", branch = "fea5335", fe
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 poll-promise = { version = "0.3.0", features = ["tokio"] }
 tokio = { version = "1.48.0", features = ["full"] }
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 
 # web
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -124,8 +125,8 @@ getrandom = { version = "0.3.4", default-features = false, features = [
 ] }
 poll-promise = { version = "0.3.0", features = ["web"] }
 tracing-wasm = "0.2.1"
-wasm-bindgen-futures = "0.4.55"
-web-sys = "0.3.82"
+wasm-bindgen-futures = "0.4.56"
+web-sys = "0.3.83"
 
 [features]
 default = []

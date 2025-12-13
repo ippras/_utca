@@ -1,11 +1,8 @@
-use super::ID_SOURCE;
-use crate::app::{MAX_PRECISION, states::ColumnFilter};
-use egui::{
-    Grid, PopupCloseBehavior, Slider, Ui, Widget as _,
-    containers::menu::{MenuButton, MenuConfig},
-};
+use crate::app::MAX_PRECISION;
+use egui::{Slider, Ui, Widget as _};
+use egui_ext::LabeledSeparator;
 use egui_l20n::prelude::*;
-use egui_phosphor::regular::{BOOKMARK, FUNNEL};
+use egui_phosphor::regular::BOOKMARK;
 use serde::{Deserialize, Serialize};
 
 /// Configuration settings
@@ -13,12 +10,11 @@ use serde::{Deserialize, Serialize};
 pub(crate) struct Settings {
     pub(crate) index: usize,
 
-    pub(crate) column_filter: ColumnFilter,
     pub(crate) edit_table: bool,
-    pub(crate) float_precision: usize,
+    pub(crate) precision: usize,
     pub(crate) resize_table: bool,
     pub(crate) sticky_columns: usize,
-    pub(crate) truncate_headers: bool,
+    pub(crate) truncate: bool,
     // Hover
     pub(crate) hover_names: bool,
     pub(crate) hover_properties: bool,
@@ -32,11 +28,9 @@ impl Settings {
             edit_table: false,
             resize_table: false,
 
-            float_precision: 0,
+            precision: 0,
             sticky_columns: 0,
-            truncate_headers: false,
-            // Filter
-            column_filter: ColumnFilter::new(),
+            truncate: false,
             // Hover
             hover_names: true,
             hover_properties: true,
@@ -46,80 +40,66 @@ impl Settings {
 
 impl Settings {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
-        Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
-            ui.visuals_mut().button_frame = true;
+        // ui.visuals_mut().button_frame = true;
+        self.precision(ui);
+        self.sticky_columns(ui);
+        self.truncate_headers(ui);
 
-            self.float_precision(ui);
-            ui.end_row();
-            self.sticky_columns(ui);
-            ui.end_row();
-            self.truncate_headers(ui);
-            ui.end_row();
+        // Hover
+        ui.labeled_separator("Hover");
 
-            // Filter
-            self.column_filter(ui);
-            ui.end_row();
-
-            ui.heading("Hover");
-            ui.separator();
-            ui.end_row();
-
-            self.hover_names(ui);
-            ui.end_row();
-            self.hover_properties(ui);
-            ui.end_row();
-        });
+        self.hover_names(ui);
+        self.hover_properties(ui);
     }
 
-    // Float precision
-    fn float_precision(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Precision"))
-            .on_hover_localized("Precision.hover");
+    // Precision
+    fn precision(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
-            Slider::new(&mut self.float_precision, 0..=MAX_PRECISION).ui(ui);
-            if ui.button((BOOKMARK, "3")).clicked() {
-                self.float_precision = 3;
-            }
+            ui.label(ui.localize("Precision"))
+                .on_hover_localized("Precision.hover");
+            ui.horizontal(|ui| {
+                Slider::new(&mut self.precision, 0..=MAX_PRECISION).ui(ui);
+                if ui.button((BOOKMARK, "3")).clicked() {
+                    self.precision = 3;
+                }
+            });
         });
     }
 
     /// Sticky columns
     fn sticky_columns(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("StickyColumns"))
-            .on_hover_localized("StickyColumns.hover");
-        Slider::new(&mut self.sticky_columns, 0..=8).ui(ui);
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("StickyColumns"))
+                .on_hover_localized("StickyColumns.hover");
+            Slider::new(&mut self.sticky_columns, 0..=5).ui(ui);
+        });
     }
 
     /// Truncate headers
     fn truncate_headers(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("TruncateHeaders"))
-            .on_hover_localized("TruncateHeaders.hover");
-        ui.checkbox(&mut self.truncate_headers, ());
-    }
-
-    /// Filter
-    fn column_filter(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("FilterTableColumns"))
-            .on_hover_localized("FilterTableColumns.hover");
-        MenuButton::new(FUNNEL)
-            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-            .ui(ui, |ui| {
-                self.column_filter.show(ui);
-            });
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("TruncateHeaders"))
+                .on_hover_localized("TruncateHeaders.hover");
+            ui.checkbox(&mut self.truncate, ());
+        });
     }
 
     /// Names
     fn hover_names(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Names"))
-            .on_hover_localized("Names.hover");
-        ui.checkbox(&mut self.hover_names, "");
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Names"))
+                .on_hover_localized("Names.hover");
+            ui.checkbox(&mut self.hover_names, "");
+        });
     }
 
     /// Properties
     fn hover_properties(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Properties"))
-            .on_hover_localized("Properties.hover");
-        ui.checkbox(&mut self.hover_properties, "");
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Properties"))
+                .on_hover_localized("Properties.hover");
+            ui.checkbox(&mut self.hover_properties, "");
+        });
     }
 }
 

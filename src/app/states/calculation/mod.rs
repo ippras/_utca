@@ -1,8 +1,4 @@
-pub(crate) use self::{
-    settings::{Correlation, Indices, Normalize, Settings, StereospecificNumbers, Threshold},
-    windows::Windows,
-};
-
+use self::{settings::Settings, windows::Windows};
 use egui::{Context, Id};
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +7,7 @@ pub(crate) const ID_SOURCE: &str = "Calculation";
 /// State
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub(crate) struct State {
-    pub(crate) reset_table_state: bool,
+    pub(crate) event: Event,
     pub(crate) settings: Settings,
     pub(crate) windows: Windows,
 }
@@ -19,7 +15,7 @@ pub(crate) struct State {
 impl State {
     pub(crate) fn new() -> Self {
         Self {
-            reset_table_state: false,
+            event: Event::new(),
             settings: Settings::new(),
             windows: Windows::new(),
         }
@@ -47,5 +43,20 @@ impl State {
     }
 }
 
-mod settings;
+/// Event
+#[derive(Clone, Copy, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) struct Event {
+    pub(crate) reset_table_state: bool,
+}
+
+impl Event {
+    pub(crate) fn new() -> Self {
+        Self {
+            reset_table_state: false,
+        }
+    }
+}
+
+pub(crate) mod settings;
+
 mod windows;

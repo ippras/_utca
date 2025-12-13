@@ -8,10 +8,8 @@ pub(crate) const ID_SOURCE: &str = "Configuration";
 /// Configuration state
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub(crate) struct State {
-    pub(crate) add_row: bool,
-    pub(crate) delete_row: Option<usize>,
-    pub(crate) reset_table: bool,
-    pub(crate) row_up: Option<usize>,
+    #[serde(skip)]
+    pub(crate) event: Event,
     pub(crate) settings: Settings,
     pub(crate) windows: Windows,
 }
@@ -19,10 +17,7 @@ pub(crate) struct State {
 impl State {
     pub(crate) fn new() -> Self {
         Self {
-            add_row: false,
-            delete_row: None,
-            reset_table: false,
-            row_up: None,
+            event: Event::new(),
             settings: Settings::new(),
             windows: Windows::new(),
         }
@@ -47,6 +42,26 @@ impl State {
         ctx.data_mut(|data| {
             data.insert_persisted(id, self);
         });
+    }
+}
+
+/// Event
+#[derive(Clone, Copy, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) struct Event {
+    pub(crate) add_table_row: bool,
+    pub(crate) delete_table_row: Option<usize>,
+    pub(crate) reset_table_state: bool,
+    pub(crate) up_table_row: Option<usize>,
+}
+
+impl Event {
+    pub(crate) fn new() -> Self {
+        Self {
+            add_table_row: false,
+            delete_table_row: None,
+            reset_table_state: false,
+            up_table_row: None,
+        }
     }
 }
 

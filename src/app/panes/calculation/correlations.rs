@@ -1,4 +1,4 @@
-use crate::{app::states::calculation::Settings, utils::chaddock::Sign};
+use crate::{app::states::calculation::settings::Settings, utils::chaddock::Sign};
 use egui::{Label, Response, RichText, TextStyle, TextWrapMode, Ui, Widget};
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;

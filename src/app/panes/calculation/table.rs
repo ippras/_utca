@@ -55,10 +55,10 @@ impl<'a> TableView<'a> {
 impl TableView<'_> {
     pub(crate) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        if self.state.settings.table.reset_state {
+        if self.state.event.reset_table_state {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            self.state.settings.table.reset_state = false;
+            self.state.event.reset_table_state = false;
         }
         let data_frame = self.data_frame(ui);
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;

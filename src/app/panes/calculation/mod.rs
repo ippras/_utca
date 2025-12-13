@@ -17,7 +17,7 @@ use crate::{
             },
         },
         identifiers::COMPOSE,
-        states::calculation::{Settings, State},
+        states::calculation::{State, settings::Settings},
         widgets::{ResetButton, ResizeButton, SettingsButton},
     },
     export::ron,
@@ -154,7 +154,7 @@ impl Pane {
         // List
         self.list_button(ui, state);
         ui.separator();
-        ResetButton::new(&mut state.settings.table.reset_state).ui(ui);
+        ResetButton::new(&mut state.event.reset_table_state).ui(ui);
         ResizeButton::new(&mut state.settings.table.resizable).ui(ui);
         ui.separator();
         SettingsButton::new(&mut state.windows.open_settings).ui(ui);
@@ -487,20 +487,13 @@ impl Pane {
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
-        if let Some(inner_response) =
-            Window::new(format!("{SLIDERS_HORIZONTAL} Calculation settings"))
-                .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
-                .default_pos(ui.next_widget_position())
-                .open(&mut state.windows.open_settings)
-                .show(ui.ctx(), |ui| {
-                    state.settings.show(ui);
-                })
-        {
-            inner_response
-                .response
-                .on_hover_text(self.title(state.settings.index).to_string())
-                .on_hover_text(self.id().to_string());
-        }
+        Window::new(format!("{SLIDERS_HORIZONTAL} Calculation settings"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Settings"))
+            .default_pos(ui.next_widget_position())
+            .open(&mut state.windows.open_settings)
+            .show(ui.ctx(), |ui| {
+                state.settings.show(ui);
+            });
     }
 }
 

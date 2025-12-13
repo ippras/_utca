@@ -46,10 +46,10 @@ impl<'a> TableView<'a> {
 impl TableView<'_> {
     pub(super) fn show(&mut self, ui: &mut Ui) {
         let id_salt = Id::new(ID_SOURCE).with("Table");
-        if self.state.reset_table {
+        if self.state.event.reset_table_state {
             let id = TableState::id(ui, Id::new(id_salt));
             TableState::reset(ui.ctx(), id);
-            self.state.reset_table = false;
+            self.state.event.reset_table_state = false;
         }
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
         let num_rows = self.data.height() as u64 + 1;
@@ -70,17 +70,17 @@ impl TableView<'_> {
 
     #[instrument(skip(self), err)]
     fn change(&mut self) -> PolarsResult<()> {
-        if self.state.add_row {
+        if self.state.event.add_table_row {
             self.data.add_row()?;
             self.data.rehash()?;
-            self.state.add_row = false;
+            self.state.event.add_table_row = false;
         }
-        if let Some(index) = self.state.delete_row {
+        if let Some(index) = self.state.event.delete_table_row {
             self.data.delete_row(index)?;
             self.data.rehash()?;
-            self.state.delete_row = None;
+            self.state.event.delete_table_row = None;
         }
-        if let Some(index) = self.state.row_up {
+        if let Some(index) = self.state.event.up_table_row {
             let indices = (0..index - 1)
                 .chain(Some(index))
                 .chain(Some(index - 1))
@@ -96,13 +96,13 @@ impl TableView<'_> {
                 .drop(cols(["Index"]))
                 .collect()?;
             self.data.rehash()?;
-            self.state.row_up = None;
+            self.state.event.up_table_row = None;
         }
         Ok(())
     }
 
     fn header_cell_content_ui(&mut self, ui: &mut Ui, row: usize, column: Range<usize>) {
-        if self.state.settings.truncate_headers {
+        if self.state.settings.truncate {
             ui.style_mut().wrap_mode = Some(TextWrapMode::Truncate);
         }
         match (row, column) {
@@ -224,10 +224,10 @@ impl TableView<'_> {
             (row, INDEX) => {
                 if self.state.settings.edit_table {
                     if ui.button(MINUS).clicked() {
-                        self.state.delete_row = Some(row);
+                        self.state.event.delete_table_row = Some(row);
                     }
                     if ui.button(ARROW_FAT_UP).clicked() {
-                        self.state.row_up = Some(row);
+                        self.state.event.up_table_row = Some(row);
                     }
                 }
                 ui.label(row.to_string());
@@ -275,7 +275,7 @@ impl TableView<'_> {
                 let value = data_frame[STEREOSPECIFIC_NUMBERS123].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
                     .editable(self.state.settings.edit_table)
-                    .precision(Some(self.state.settings.float_precision))
+                    .precision(Some(self.state.settings.precision))
                     .hover(true)
                     .show(ui);
                 if let Some(value) = inner_response.inner {
@@ -295,7 +295,7 @@ impl TableView<'_> {
                 let value = data_frame[name].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
                     .editable(self.state.settings.edit_table)
-                    .precision(Some(self.state.settings.float_precision))
+                    .precision(Some(self.state.settings.precision))
                     .hover(true)
                     .show(ui);
                 if let Some(value) = inner_response.inner {
@@ -313,7 +313,7 @@ impl TableView<'_> {
             INDEX => {
                 if self.state.settings.edit_table {
                     if ui.button(PLUS).clicked() {
-                        self.state.add_row = true;
+                        self.state.event.add_table_row = true;
                     }
                 }
             }
