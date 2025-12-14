@@ -3,9 +3,7 @@ use super::ID_SOURCE;
 use crate::r#const::markdown::{ENRICHMENT_FACTOR, SELECTIVITY_FACTOR};
 use crate::{
     app::{
-        computers::calculation::display::{
-            Computed as CalculationDisplayComputed, Key as CalculationDisplayKey,
-        },
+        computers::calculation::table::{Computed as TableComputed, Key as TableKey},
         panes::MARGIN,
         states::calculation::State,
     },
@@ -43,11 +41,8 @@ impl<'a> TableView<'a> {
         ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CalculationDisplayComputed>()
-                .get(CalculationDisplayKey::new(
-                    self.data_frame,
-                    &self.state.settings,
-                ))
+                .cache::<TableComputed>()
+                .get(TableKey::new(self.data_frame, &self.state.settings))
         })
     }
 }

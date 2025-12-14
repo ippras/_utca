@@ -12,10 +12,10 @@ use polars::prelude::*;
 use polars_ext::expr::{ExprExt, ExprIfExt as _};
 use std::iter::once;
 
-/// Display composition computed
+/// Table composition computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
 
-/// Display composition computer
+/// Table composition computer
 #[derive(Default)]
 pub(crate) struct Computer;
 
@@ -40,7 +40,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
     }
 }
 
-/// Display composition key
+/// Table composition key
 #[derive(Clone, Hash, Copy, Debug)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
@@ -62,7 +62,7 @@ impl<'a> Key<'a> {
     }
 }
 
-/// Display composition value
+/// Table composition value
 type Value = DataFrame;
 
 fn format(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {

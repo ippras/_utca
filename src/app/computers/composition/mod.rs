@@ -309,7 +309,7 @@ fn sort(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
 //     Ok(lazy_frame)
 // }
 
-pub(crate) mod display;
+pub(crate) mod table;
 pub(crate) mod filtered;
 pub(crate) mod species;
 pub(crate) mod sum;

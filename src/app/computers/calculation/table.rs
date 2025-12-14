@@ -89,10 +89,10 @@ const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
     ]))
 });
 
-/// Display calculation computed
+/// Table calculation computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
 
-/// Display calculation computer
+/// Table calculation computer
 #[derive(Default)]
 pub(crate) struct Computer;
 
@@ -112,7 +112,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
     }
 }
 
-/// Display calculation key
+/// Table calculation key
 #[derive(Clone, Copy, Debug, Hash)]
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
@@ -136,7 +136,7 @@ impl<'a> Key<'a> {
     }
 }
 
-/// Display calculation value
+/// Table calculation value
 type Value = DataFrame;
 
 fn schema(data_frame: &DataFrame) -> PolarsResult<()> {

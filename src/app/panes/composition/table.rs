@@ -1,7 +1,7 @@
 use super::ID_SOURCE;
 use crate::{
     app::{
-        computers::composition::display::{Computed as DisplayComputed, Key as DisplayKey},
+        computers::composition::table::{Computed as TableComputed, Key as TableKey},
         panes::MARGIN,
         states::composition::State,
         widgets::FloatWidget,
@@ -134,8 +134,8 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayComputed>()
-                        .get(DisplayKey::new(self.data_frame, &self.state.settings))
+                        .cache::<TableComputed>()
+                        .get(TableKey::new(self.data_frame, &self.state.settings))
                 });
                 ui.horizontal(|ui| -> PolarsResult<()> {
                     ui.menu_button(LIST, |ui| self.list_button_content(ui, &data_frame, row))
@@ -150,8 +150,8 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| {
                     memory
                         .caches
-                        .cache::<DisplayComputed>()
-                        .get(DisplayKey::new(self.data_frame, &self.state.settings))
+                        .cache::<TableComputed>()
+                        .get(TableKey::new(self.data_frame, &self.state.settings))
                 });
                 let index = (column.start + 1) / 2 - 1;
                 let name = &*index.to_string();

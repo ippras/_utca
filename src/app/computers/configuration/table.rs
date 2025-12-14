@@ -3,10 +3,10 @@ use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
 
-/// Display computed
+/// Table computed
 pub type Computed = FrameCache<Value, Computer>;
 
-/// Display computer
+/// Table computer
 #[derive(Default)]
 pub struct Computer;
 
@@ -30,7 +30,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
     }
 }
 
-/// Display key
+/// Table key
 #[derive(Clone, Copy, Debug, Hash)]
 pub struct Key<'a> {
     pub frame: &'a HashedDataFrame,
@@ -38,5 +38,5 @@ pub struct Key<'a> {
     // pub percent: bool,
 }
 
-/// Display value
+/// Table value
 type Value = DataFrame;

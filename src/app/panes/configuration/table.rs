@@ -1,9 +1,7 @@
 use super::ID_SOURCE;
 use crate::{
     app::{
-        computers::configuration::display::{
-            Computed as ConfigurationDisplayComputed, Key as ConfigurationDisplayKey,
-        },
+        computers::configuration::table::{Computed as TableComputed, Key as TableKey},
         panes::MARGIN,
         states::configuration::State,
         widgets::{FattyAcidWidget, FloatWidget, Inner, LabelWidget},
@@ -269,8 +267,8 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| -> PolarsResult<_> {
                     Ok(memory
                         .caches
-                        .cache::<ConfigurationDisplayComputed>()
-                        .get(ConfigurationDisplayKey { frame: &self.data }))
+                        .cache::<TableComputed>()
+                        .get(TableKey { frame: &self.data }))
                 })?;
                 let value = data_frame[STEREOSPECIFIC_NUMBERS123].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
@@ -288,8 +286,8 @@ impl TableView<'_> {
                 let data_frame = ui.memory_mut(|memory| -> PolarsResult<_> {
                     Ok(memory
                         .caches
-                        .cache::<ConfigurationDisplayComputed>()
-                        .get(ConfigurationDisplayKey { frame: &self.data }))
+                        .cache::<TableComputed>()
+                        .get(TableKey { frame: &self.data }))
                 })?;
                 let name = data_frame.get_columns()[3].name().as_str();
                 let value = data_frame[name].f64()?.get(row);
