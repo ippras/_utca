@@ -6,9 +6,9 @@ use self::{
     widgets::{About, Github},
 };
 use crate::{
-    app::widgets::{
-        AboutButton, GridButton, HorizontalButton, LeftPanelButton, ResetButton, SettingsButton,
-        TabsButton, VerticalButton,
+    app::widgets::butons::{
+        AboutButton, GridButton, HorizontalButton, LeftPanelButton, ReactiveButton, ResetButton,
+        SettingsButton, TabsButton, VerticalButton,
     },
     localization::ContextExt as _,
     utils::{HashedDataFrame, HashedMetaDataFrame},
@@ -58,8 +58,9 @@ fn custom_visuals<T: BorrowMut<Visuals>>(mut visuals: T) -> T {
 #[derive(Deserialize, Serialize)]
 #[serde(default)]
 pub struct App {
-    // Panels
+    // Settings
     left_panel: bool,
+    reactive: bool,
     // Data
     data: Data,
     // Panes
@@ -70,6 +71,7 @@ impl Default for App {
     fn default() -> Self {
         Self {
             left_panel: true,
+            reactive: true,
             tree: Tree::empty("CentralTree"),
             data: Default::default(),
         }
@@ -151,6 +153,10 @@ impl App {
             MenuBar::new().ui(ui, |ui| {
                 ScrollArea::horizontal().show(ui, |ui| {
                     LeftPanelButton::new(&mut self.left_panel)
+                        .size(ICON_SIZE)
+                        .ui(ui);
+                    ui.separator();
+                    ReactiveButton::new(&mut self.reactive)
                         .size(ICON_SIZE)
                         .ui(ui);
                     ui.separator();
@@ -525,9 +531,9 @@ impl App {
         {
             container.set_kind(container_kind);
         }
-        // if state.settings.reactive {
-        //     ctx.request_repaint();
-        // }
+        if self.reactive {
+            ctx.request_repaint();
+        }
     }
 }
 

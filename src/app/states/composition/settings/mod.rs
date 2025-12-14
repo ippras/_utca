@@ -21,6 +21,7 @@ use egui::{
     emath::Float,
 };
 use egui_dnd::dnd;
+use egui_ext::LabeledSeparator;
 use egui_l20n::prelude::*;
 use egui_phosphor::regular::{BOOKMARK, CHART_BAR, DOTS_SIX_VERTICAL, ERASER, MINUS, PLUS, TABLE};
 use indexmap::IndexMap;
@@ -32,7 +33,7 @@ use std::hash::{Hash, Hasher};
 pub(crate) struct Settings {
     pub(crate) index: Option<usize>,
 
-    pub(crate) display_standard_deviation: bool,
+    pub(crate) standard_deviation: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
     pub(crate) resizable: bool,
@@ -61,7 +62,7 @@ impl Settings {
         Self {
             index: None,
             // Display
-            display_standard_deviation: true,
+            standard_deviation: true,
             percent: true,
             precision: 1,
             resizable: false,
@@ -86,333 +87,326 @@ impl Settings {
 
     pub(crate) fn show(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
         ScrollArea::vertical().show(ui, |ui| {
-            Grid::new(ui.auto_id_with(ID_SOURCE)).show(ui, |ui| {
-                self.precision(ui);
-                self.significant(ui);
-                self.percent(ui);
-                self.display_standard_deviation(ui);
-                self.sticky_columns(ui);
+            self.precision(ui);
+            self.significant(ui);
+            self.percent(ui);
+            self.standard_deviation(ui);
+            self.sticky_columns(ui);
 
-                ui.separator();
-                ui.separator();
-                ui.end_row();
+            // // Filter
+            // ui.label(ui.localize("Filter?case=title"));
+            // for (index, selection) in &mut self.unconfirmed.selections.iter_mut().enumerate() {
+            //     let series = &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
+            //     FilterWidget::new(selection, series).percent(self.percent).ui(ui);
+            // }
+            //
 
-                // // Filter
-                // ui.label(ui.localize("Filter?case=title"));
-                // for (index, selection) in &mut self.unconfirmed.selections.iter_mut().enumerate() {
-                //     let series = &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
-                //     FilterWidget::new(selection, series).percent(self.percent).ui(ui);
-                // }
-                // ui.end_row();
+            // if enabled {
+            //     let series =
+            //         &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
+            //     ui.add_enabled(
+            //         enabled,
+            //         FilterWidget::new(selection, series).percent(self.percent),
+            //     );
+            // } else {
+            //     ui.add_enabled(
+            //         enabled,
+            //         FilterWidget::new(
+            //             selection,
+            //             &Series::new_empty(PlSmallStr::EMPTY, &DataType::Null),
+            //         ),
+            //     );
+            // }
 
-                // if enabled {
-                //     let series =
-                //         &data_frame["Keys"].struct_().unwrap().fields_as_series()[index];
-                //     ui.add_enabled(
-                //         enabled,
-                //         FilterWidget::new(selection, series).percent(self.percent),
-                //     );
-                // } else {
-                //     ui.add_enabled(
-                //         enabled,
-                //         FilterWidget::new(
-                //             selection,
-                //             &Series::new_empty(PlSmallStr::EMPTY, &DataType::Null),
-                //         ),
-                //     );
-                // }
+            self.method(ui);
+            if self.method == Method::Gunstone {
+                ui.labeled_separator(ui.localize("Gunstone"));
+                self.discriminants(ui);
+            }
+            self.compose(ui, target);
 
-                self.method(ui);
-                if self.method == Method::Gunstone {
-                    ui.label(ui.localize("Gunstone"));
-                    ui.separator();
-                    ui.end_row();
-                    self.discriminants(ui);
-                }
-                self.compose(ui, target);
+            self.adduct(ui);
+            self.round_mass(ui);
 
-                self.adduct(ui);
-                self.round_mass(ui);
+            // View
+            ui.labeled_separator(ui.localize("View"));
 
-                // View
-                ui.heading(ui.localize("View"));
-                ui.separator();
-                ui.end_row();
+            self.show_filtered(ui);
 
-                ui.label(ui.localize("ShowFiltered"))
-                    .on_hover_localized("ShowFiltered.hover");
-                ui.checkbox(&mut self.show_filtered, "");
-                ui.end_row();
+            // // Join
+            // ui.label(ui.localize("Join"));
+            // ComboBox::from_id_salt("join")
+            //     .selected_text(self.join.text())
+            //     .show_ui(ui, |ui| {
+            //         ui.selectable_value(&mut self.join, Join::Left, Join::Left.text())
+            //             .on_hover_ui(|ui| {Join::Left.hover_text();});
+            //         ui.selectable_value(&mut self.join, Join::And, Join::And.text())
+            //             .on_hover_ui(|ui| {Join::And.hover_text();});
+            //         ui.selectable_value(&mut self.join, Join::Or, Join::Or.text())
+            //             .on_hover_ui(|ui| {Join::Or.hover_text();});
+            //     })
+            //     .response
+            //     .on_hover_ui(|ui| {self.join.hover_text();});
+            //
 
-                // // Join
-                // ui.label(ui.localize("Join"));
-                // ComboBox::from_id_salt("join")
-                //     .selected_text(self.join.text())
-                //     .show_ui(ui, |ui| {
-                //         ui.selectable_value(&mut self.join, Join::Left, Join::Left.text())
-                //             .on_hover_ui(|ui| {Join::Left.hover_text();});
-                //         ui.selectable_value(&mut self.join, Join::And, Join::And.text())
-                //             .on_hover_ui(|ui| {Join::And.hover_text();});
-                //         ui.selectable_value(&mut self.join, Join::Or, Join::Or.text())
-                //             .on_hover_ui(|ui| {Join::Or.hover_text();});
-                //     })
-                //     .response
-                //     .on_hover_ui(|ui| {self.join.hover_text();});
-                // ui.end_row();
+            // Sort
+            ui.labeled_separator(ui.localize("Sort"));
+            self.sort(ui);
+            self.order(ui);
 
-                ui.heading(ui.localize("Sort"));
-                ui.separator();
-                ui.end_row();
-
-                self.sort(ui);
-                self.order(ui);
-
-                if self.index.is_none() {
-                    // Statistic
-                    ui.label(ui.localize("Statistic"));
-                    ui.separator();
-                    ui.end_row();
-
-                    self.ddof(ui);
-                }
-            });
+            if self.index.is_none() {
+                // Statistic
+                ui.labeled_separator(ui.localize("Statistics"));
+                self.ddof(ui);
+            }
         });
     }
 
     /// Precision
     fn precision(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Precision"))
-            .on_hover_localized("Precision.hover");
-        Slider::new(&mut self.precision, 1..=MAX_PRECISION).ui(ui);
-        ui.end_row();
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Precision"))
+                .on_hover_localized("Precision.hover");
+            Slider::new(&mut self.precision, 1..=MAX_PRECISION).ui(ui);
+        });
     }
 
     // Significant
     fn significant(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Significant"))
-            .on_hover_localized("Significant.hover");
-        ui.checkbox(&mut self.significant, ());
-        ui.end_row();
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Significant"))
+                .on_hover_localized("Significant.hover");
+            ui.checkbox(&mut self.significant, ());
+        });
     }
 
     /// Percent
     fn percent(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Percent"))
-            .on_hover_localized("Percent.hover");
-        ui.checkbox(&mut self.percent, ());
-        ui.end_row();
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Percent"))
+                .on_hover_localized("Percent.hover");
+            ui.checkbox(&mut self.percent, ());
+        });
     }
 
     /// Sticky columns
     fn sticky_columns(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("StickyColumns"))
-            .on_hover_localized("StickyColumns.hover");
-        Slider::new(&mut self.sticky_columns, 0..=self.selections.len() * 2 + 1).ui(ui);
-        ui.end_row();
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("StickyColumns"))
+                .on_hover_localized("StickyColumns.hover");
+            Slider::new(&mut self.sticky_columns, 0..=self.selections.len() * 2 + 1).ui(ui);
+        });
     }
 
     /// Standard deviation
-    fn display_standard_deviation(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("StandardDeviation"))
-            .on_hover_localized("StandardDeviation.hover");
-        ui.checkbox(&mut self.display_standard_deviation, ());
-        ui.end_row();
+    fn standard_deviation(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("StandardDeviation"))
+                .on_hover_localized("StandardDeviation.hover");
+            ui.checkbox(&mut self.standard_deviation, ());
+        });
     }
 
     /// Method
     fn method(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Method"));
-        if ui.input_mut(|input| {
-            input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::G))
-        }) {
-            self.method = Method::Gunstone;
-        }
-        if ui.input_mut(|input| {
-            input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::W))
-        }) {
-            self.method = Method::VanderWal;
-        }
-        ComboBox::from_id_salt("Method")
-            .selected_text(ui.localize(self.method.text()))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(
-                    &mut self.method,
-                    Method::Gunstone,
-                    ui.localize(Method::Gunstone.text()),
-                )
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Method"));
+            if ui.input_mut(|input| {
+                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::G))
+            }) {
+                self.method = Method::Gunstone;
+            }
+            if ui.input_mut(|input| {
+                input.consume_shortcut(&KeyboardShortcut::new(Modifiers::CTRL, Key::W))
+            }) {
+                self.method = Method::VanderWal;
+            }
+            ComboBox::from_id_salt("Method")
+                .selected_text(ui.localize(self.method.text()))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(
+                        &mut self.method,
+                        Method::Gunstone,
+                        ui.localize(Method::Gunstone.text()),
+                    )
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(Method::Gunstone.hover_text()));
+                    });
+                    ui.selectable_value(
+                        &mut self.method,
+                        Method::MartinezForce,
+                        ui.localize(Method::MartinezForce.text()),
+                    )
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(Method::MartinezForce.hover_text()));
+                    });
+                    ui.selectable_value(
+                        &mut self.method,
+                        Method::VanderWal,
+                        ui.localize(Method::VanderWal.text()),
+                    )
+                    .on_hover_ui(|ui| {
+                        ui.label(ui.localize(Method::VanderWal.hover_text()));
+                    });
+                })
+                .response
                 .on_hover_ui(|ui| {
-                    ui.label(ui.localize(Method::Gunstone.hover_text()));
+                    ui.label(ui.localize(self.method.hover_text()));
                 });
-                ui.selectable_value(
-                    &mut self.method,
-                    Method::MartinezForce,
-                    ui.localize(Method::MartinezForce.text()),
-                )
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize(Method::MartinezForce.hover_text()));
-                });
-                ui.selectable_value(
-                    &mut self.method,
-                    Method::VanderWal,
-                    ui.localize(Method::VanderWal.text()),
-                )
-                .on_hover_ui(|ui| {
-                    ui.label(ui.localize(Method::VanderWal.hover_text()));
-                });
-            })
-            .response
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize(self.method.hover_text()));
-            });
-        ui.end_row();
+        });
     }
 
     /// Discriminants
     fn discriminants(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Discriminants"));
-        self.discriminants.show(ui);
-        ui.end_row();
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Discriminants"));
+            self.discriminants.show(ui);
+        });
     }
 
     /// Compose
     fn compose(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
-        // Compose
-        ui.label(ui.localize("Compose"));
-        // Plus, bookmarks
-        ui.horizontal(|ui| {
-            MenuButton::new(PLUS)
-                .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-                .ui(ui, |ui| {
-                    let max_height = ui.spacing().combo_height;
-                    ScrollArea::vertical()
-                        .max_height(max_height)
-                        .show(ui, |ui| {
-                            let id = ui.auto_id_with(Id::new("Composition"));
-                            let mut current_value = ui.data_mut(|data| {
-                                data.get_temp::<Option<Composition>>(id).flatten()
-                            });
-                            for selected_value in COMPOSITIONS {
-                                let response = ui
-                                    .selectable_value(
-                                        &mut current_value,
-                                        Some(selected_value),
-                                        ui.localize(selected_value.text()),
-                                    )
-                                    .on_hover_ui(|ui| {
-                                        ui.label(ui.localize(selected_value.hover_text()));
-                                    });
-                                if response.clicked() {
-                                    self.selections.push(Selection {
-                                        composition: selected_value,
-                                        filter: Default::default(),
-                                    });
-                                    current_value = None;
-                                }
-                            }
-                            ui.data_mut(|data| data.insert_temp(id, current_value));
-                        });
-                });
-            if ui
-                .button((
-                    BOOKMARK,
-                    ui.localize(SPECIES_POSITIONAL.abbreviation_text()),
-                ))
-                .clicked()
-            {
-                self.selections = vec![Selection {
-                    composition: SPECIES_POSITIONAL,
-                    filter: Filter::new(),
-                }];
-            };
-            if ui
-                .button((BOOKMARK, ui.localize(SPECIES_MONO.abbreviation_text())))
-                .clicked()
-            {
-                self.selections = vec![Selection {
-                    composition: SPECIES_MONO,
-                    filter: Filter::new(),
-                }];
-            };
-            if ui
-                .button((BOOKMARK, ui.localize(TYPE_POSITIONAL.abbreviation_text())))
-                .clicked()
-            {
-                self.selections = vec![Selection {
-                    composition: TYPE_POSITIONAL,
-                    filter: Filter::new(),
-                }];
-            };
-        });
-        ui.end_row();
-        // Minus, selections
-        let mut delete = None;
-        ui.label("");
-        ui.vertical(|ui| {
-            let response = dnd(ui, ui.next_auto_id()).show_vec(
-                &mut self.selections,
-                |ui, selection, handle, state| {
-                    ui.horizontal(|ui| {
-                        handle.ui(ui, |ui| {
-                            ui.label(DOTS_SIX_VERTICAL);
-                        });
-                        // Delete
-                        delete = delete.or(ui.button(MINUS).clicked().then_some(state.index));
-                        ComboBox::from_id_salt(ui.next_auto_id())
-                            .selected_text(ui.localize(selection.composition.text()))
-                            .show_ui(ui, |ui| {
-                                for composition in COMPOSITIONS {
-                                    if ui
+        Grid::new(ui.next_auto_id()).show(ui, |ui| {
+            // Compose
+            ui.label(ui.localize("Compose"));
+            // Plus, bookmarks
+            ui.horizontal(|ui| {
+                MenuButton::new(PLUS)
+                    .config(
+                        MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside),
+                    )
+                    .ui(ui, |ui| {
+                        let max_height = ui.spacing().combo_height;
+                        ScrollArea::vertical()
+                            .max_height(max_height)
+                            .show(ui, |ui| {
+                                let id = ui.auto_id_with(Id::new("Composition"));
+                                let mut current_value = ui.data_mut(|data| {
+                                    data.get_temp::<Option<Composition>>(id).flatten()
+                                });
+                                for selected_value in COMPOSITIONS {
+                                    let response = ui
                                         .selectable_value(
-                                            &mut selection.composition,
-                                            composition,
-                                            ui.localize(composition.text()),
+                                            &mut current_value,
+                                            Some(selected_value),
+                                            ui.localize(selected_value.text()),
                                         )
                                         .on_hover_ui(|ui| {
-                                            ui.label(ui.localize(composition.hover_text()));
-                                        })
-                                        .changed()
-                                    {
-                                        selection.filter = Default::default();
+                                            ui.label(ui.localize(selected_value.hover_text()));
+                                        });
+                                    if response.clicked() {
+                                        self.selections.push(Selection {
+                                            composition: selected_value,
+                                            filter: Default::default(),
+                                        });
+                                        current_value = None;
                                     }
                                 }
-                            })
-                            .response
-                            .on_hover_ui(|ui| {
-                                ui.label(ui.localize(selection.composition.hover_text()));
+                                ui.data_mut(|data| data.insert_temp(id, current_value));
                             });
-                        if let Some(series) = target["Keys"]
-                            .struct_()
-                            .unwrap()
-                            .fields_as_series()
-                            .get(state.index)
-                        {
-                            let series = series.unique().unwrap().sort(Default::default()).unwrap();
-                            FilterWidget::new(selection, &series)
-                                .percent(self.percent)
-                                .ui(ui);
-                        }
                     });
-                    // ui.end_row();
-                },
-            );
-            if let Some(index) = delete {
-                self.selections.remove(index);
-            }
-            if response.is_drag_finished() {
-                response.update_vec(&mut self.selections);
-            }
-            // Если пуст, то вставляет значение по умолчанию (не может быть пустым).
-            if self.selections.is_empty() {
-                self.selections.push(Selection::new());
-            }
+                if ui
+                    .button((
+                        BOOKMARK,
+                        ui.localize(SPECIES_POSITIONAL.abbreviation_text()),
+                    ))
+                    .clicked()
+                {
+                    self.selections = vec![Selection {
+                        composition: SPECIES_POSITIONAL,
+                        filter: Filter::new(),
+                    }];
+                };
+                if ui
+                    .button((BOOKMARK, ui.localize(SPECIES_MONO.abbreviation_text())))
+                    .clicked()
+                {
+                    self.selections = vec![Selection {
+                        composition: SPECIES_MONO,
+                        filter: Filter::new(),
+                    }];
+                };
+                if ui
+                    .button((BOOKMARK, ui.localize(TYPE_POSITIONAL.abbreviation_text())))
+                    .clicked()
+                {
+                    self.selections = vec![Selection {
+                        composition: TYPE_POSITIONAL,
+                        filter: Filter::new(),
+                    }];
+                };
+            });
+            ui.end_row();
+            // Minus, selections
+            let mut delete = None;
+            ui.label("");
+            ui.vertical(|ui| {
+                let response = dnd(ui, ui.next_auto_id()).show_vec(
+                    &mut self.selections,
+                    |ui, selection, handle, state| {
+                        ui.horizontal(|ui| {
+                            handle.ui(ui, |ui| {
+                                ui.label(DOTS_SIX_VERTICAL);
+                            });
+                            // Delete
+                            delete = delete.or(ui.button(MINUS).clicked().then_some(state.index));
+                            ComboBox::from_id_salt(ui.next_auto_id())
+                                .selected_text(ui.localize(selection.composition.text()))
+                                .show_ui(ui, |ui| {
+                                    for composition in COMPOSITIONS {
+                                        if ui
+                                            .selectable_value(
+                                                &mut selection.composition,
+                                                composition,
+                                                ui.localize(composition.text()),
+                                            )
+                                            .on_hover_ui(|ui| {
+                                                ui.label(ui.localize(composition.hover_text()));
+                                            })
+                                            .changed()
+                                        {
+                                            selection.filter = Default::default();
+                                        }
+                                    }
+                                })
+                                .response
+                                .on_hover_ui(|ui| {
+                                    ui.label(ui.localize(selection.composition.hover_text()));
+                                });
+                            if let Some(series) = target["Keys"]
+                                .struct_()
+                                .unwrap()
+                                .fields_as_series()
+                                .get(state.index)
+                            {
+                                let series =
+                                    series.unique().unwrap().sort(Default::default()).unwrap();
+                                FilterWidget::new(selection, &series)
+                                    .percent(self.percent)
+                                    .ui(ui);
+                            }
+                        });
+                        //
+                    },
+                );
+                if let Some(index) = delete {
+                    self.selections.remove(index);
+                }
+                if response.is_drag_finished() {
+                    response.update_vec(&mut self.selections);
+                }
+                // Если пуст, то вставляет значение по умолчанию (не может быть пустым).
+                if self.selections.is_empty() {
+                    self.selections.push(Selection::new());
+                }
+            });
         });
-        ui.end_row();
     }
 
     /// Adduct
     fn adduct(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Adduct"));
         ui.horizontal(|ui| {
+            ui.label(ui.localize("Adduct"));
             let adduct = &mut self.adduct;
             DragValue::new(adduct)
                 .range(0.0..=f64::MAX)
@@ -437,74 +431,90 @@ impl Settings {
                     ui.selectable_value(adduct, LI, "Li");
                 });
         });
-        ui.end_row();
     }
 
     /// Round mass
     fn round_mass(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("RoundMass"));
-        Slider::new(&mut self.round_mass, 1..=MAX_PRECISION as _).ui(ui);
-        ui.end_row();
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("RoundMass"));
+            Slider::new(&mut self.round_mass, 1..=MAX_PRECISION as _).ui(ui);
+        });
+    }
+
+    /// Show filtered
+    fn show_filtered(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("ShowFiltered"))
+                .on_hover_localized("ShowFiltered.hover");
+            ui.checkbox(&mut self.show_filtered, "");
+        });
     }
 
     /// Sort
     fn sort(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Sort"));
-        ComboBox::from_id_salt("Sort")
-            .selected_text(ui.localize(self.sort.text()))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut self.sort, Sort::Key, ui.localize(Sort::Key.text()))
-                    .on_hover_ui(|ui| {
-                        ui.label(ui.localize(Sort::Key.hover_text()));
-                    });
-                ui.selectable_value(&mut self.sort, Sort::Value, ui.localize(Sort::Value.text()))
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Sort"));
+            ComboBox::from_id_salt("Sort")
+                .selected_text(ui.localize(self.sort.text()))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.sort, Sort::Key, ui.localize(Sort::Key.text()))
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize(Sort::Key.hover_text()));
+                        });
+                    ui.selectable_value(
+                        &mut self.sort,
+                        Sort::Value,
+                        ui.localize(Sort::Value.text()),
+                    )
                     .on_hover_ui(|ui| {
                         ui.label(ui.localize(Sort::Value.hover_text()));
                     });
-            })
-            .response
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize(self.sort.hover_text()));
-            });
-        ui.end_row();
+                })
+                .response
+                .on_hover_ui(|ui| {
+                    ui.label(ui.localize(self.sort.hover_text()));
+                });
+        });
     }
 
     /// Order
     fn order(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("Order"));
-        ComboBox::from_id_salt("Order")
-            .selected_text(ui.localize(self.order.text()))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut self.order, Order::Ascending, Order::Ascending.text())
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Order"));
+            ComboBox::from_id_salt("Order")
+                .selected_text(ui.localize(self.order.text()))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.order, Order::Ascending, Order::Ascending.text())
+                        .on_hover_ui(|ui| {
+                            ui.label(ui.localize(Order::Ascending.hover_text()));
+                        });
+                    ui.selectable_value(
+                        &mut self.order,
+                        Order::Descending,
+                        ui.localize(Order::Descending.text()),
+                    )
                     .on_hover_ui(|ui| {
-                        ui.label(ui.localize(Order::Ascending.hover_text()));
+                        ui.label(ui.localize(Order::Descending.hover_text()));
                     });
-                ui.selectable_value(
-                    &mut self.order,
-                    Order::Descending,
-                    ui.localize(Order::Descending.text()),
-                )
+                })
+                .response
                 .on_hover_ui(|ui| {
-                    ui.label(ui.localize(Order::Descending.hover_text()));
+                    ui.label(ui.localize(self.order.hover_text()));
                 });
-            })
-            .response
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize(self.order.hover_text()));
-            });
-        ui.end_row();
+        });
     }
 
     // https://numpy.org/devdocs/reference/generated/numpy.std.html
     /// DDOF
     fn ddof(&mut self, ui: &mut Ui) {
-        ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
-            .on_hover_localized("DeltaDegreesOfFreedom")
-            .on_hover_localized("DeltaDegreesOfFreedom.hover");
-        Slider::new(&mut self.ddof, 0..=2)
-            .update_while_editing(false)
-            .ui(ui);
-        ui.end_row();
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("DeltaDegreesOfFreedom.abbreviation"))
+                .on_hover_localized("DeltaDegreesOfFreedom")
+                .on_hover_localized("DeltaDegreesOfFreedom.hover");
+            Slider::new(&mut self.ddof, 0..=2)
+                .update_while_editing(false)
+                .ui(ui);
+        });
     }
 }
 
@@ -513,49 +523,6 @@ impl Default for Settings {
         Self::new()
     }
 }
-
-// /// Composition parameters
-// #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-// pub(crate) struct Parameters {}
-
-// impl Parameters {
-//     pub(crate) fn new() -> Self {
-//         let mut selections = VecDeque::new();
-//         selections.push_back(Selection::new());
-//         Self {
-//             adduct: 0.0,
-//             ddof: 1,
-//             selections,
-//             method: Method::VanderWal,
-//             order: Order::Descending,
-//             round_mass: 2,
-//             show_filtered: false,
-//             sort: Sort::Value,
-
-//             discriminants: Discriminants::new(),
-//         }
-//     }
-// }
-
-// impl Default for Parameters {
-//     fn default() -> Self {
-//         Self::new()
-//     }
-// }
-
-// impl Hash for Parameters {
-//     fn hash<H: Hasher>(&self, state: &mut H) {
-//         self.adduct.ord().hash(state);
-//         self.ddof.hash(state);
-//         self.selections.hash(state);
-//         self.method.hash(state);
-//         self.order.hash(state);
-//         self.round_mass.hash(state);
-//         self.show_filtered.hash(state);
-//         self.sort.hash(state);
-//         self.discriminants.hash(state);
-//     }
-// }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub(crate) struct Discriminants(pub(crate) IndexMap<String, [f64; 3]>);
@@ -590,7 +557,6 @@ impl Discriminants {
                                 .range(0.0..=f64::MAX)
                                 .speed(0.1)
                                 .ui(ui);
-                            ui.end_row();
                         }
                     });
                 })

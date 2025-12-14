@@ -10,7 +10,7 @@ use crate::{
             unique::{Computed as UniqueComputed, Key as UniqueKey},
         },
         states::composition::{Settings, State, View},
-        widgets::{ResetButton, ResizeButton, SettingsButton},
+        widgets::butons::{ResetButton, ResizeButton, SettingsButton},
     },
     export::{ron, xlsx},
     text::Text,

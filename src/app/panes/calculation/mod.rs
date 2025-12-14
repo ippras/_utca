@@ -18,7 +18,7 @@ use crate::{
         },
         identifiers::COMPOSE,
         states::calculation::{State, settings::Settings},
-        widgets::{ResetButton, ResizeButton, SettingsButton},
+        widgets::butons::{ResetButton, ResizeButton, SettingsButton},
     },
     export::ron,
     utils::{
