@@ -1,4 +1,5 @@
-use crate::{app::states::calculation::settings::Settings, utils::HashedDataFrame};
+use crate::{app::states::calculation::settings::Settings, r#const::*, utils::HashedDataFrame};
+use const_format::formatcp;
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
@@ -53,7 +54,7 @@ const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
             ]),
         ),
         Field::new(
-            PlSmallStr::from_static("Factors"),
+            PlSmallStr::from_static(FACTORS),
             DataType::Struct(vec![
                 Field::new(
                     PlSmallStr::from_static("Enrichment"),
@@ -85,7 +86,7 @@ const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
                 ),
             ]),
         ),
-        Field::new(PlSmallStr::from_static("Filter"), DataType::Boolean),
+        Field::new(PlSmallStr::from_static(FILTER), DataType::Boolean),
     ]))
 });
 
@@ -142,11 +143,6 @@ type Value = DataFrame;
 fn schema(data_frame: &DataFrame) -> PolarsResult<()> {
     let schema = data_frame.schema();
     let _cast = schema.matches_schema(&SCHEMA)?;
-    // let length = schema
-    //     .array_lengths_recursive()?
-    //     .into_iter()
-    //     .all_equal_value()
-    //     .map_err(|lengths| polars_err!(SchemaMismatch: "Invalid array lengths: expected all equal, got = {lengths:?}"))?;
     Ok(())
 }
 
@@ -160,33 +156,40 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
                 STEREOSPECIFIC_NUMBERS123,
                 STEREOSPECIFIC_NUMBERS2,
                 STEREOSPECIFIC_NUMBERS13,
-                "Factors",
+                FACTORS,
             ]),
             Some(PlSmallStr::from_static(".")),
         )
         .unnest(
-            cols(["Factors.Enrichment", "Factors.Selectivity"]),
+            cols([
+                formatcp!("{FACTORS}.{ENRICHMENT}"),
+                formatcp!("{FACTORS}.{SELECTIVITY}"),
+            ]),
             Some(PlSmallStr::from_static(".")),
         );
     // Format sum
     let sum = lazy_frame.clone().select([
         // Фильтрует и считает сумму.
         format_float(
-            col(r#"^StereospecificNumbers.*\.Mean$"#)
-                .filter(col("Filter"))
+            col(formatcp!(r#"^{STEREOSPECIFIC_NUMBERS}.*\.{MEAN}$"#))
+                .filter(col(FILTER))
                 .sum(),
             key,
         ),
         // Не фильтрует и считает стандартное отклонение суммы.
         ternary_expr(
-            col(r#"^StereospecificNumbers.*\.StandardDeviation$"#)
-                .is_not_null()
-                .any(true),
+            col(formatcp!(
+                r#"^{STEREOSPECIFIC_NUMBERS}.*\.{STANDARD_DEVIATION}$"#
+            ))
+            .is_not_null()
+            .any(true),
             format_standard_deviation(
-                col(r#"^StereospecificNumbers.*\.StandardDeviation$"#)
-                    .pow(2)
-                    .sum()
-                    .sqrt(),
+                col(formatcp!(
+                    r#"^{STEREOSPECIFIC_NUMBERS}.*\.{STANDARD_DEVIATION}$"#
+                ))
+                .pow(2)
+                .sum()
+                .sqrt(),
                 key,
             )?,
             lit(NULL),
@@ -195,41 +198,54 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
     // Filter minor
     if key.filter {
         // true or null (standard)
-        lazy_frame = lazy_frame.filter(col("Filter").or(col("Filter").is_null()));
+        lazy_frame = lazy_frame.filter(col(FILTER).or(col(FILTER).is_null()));
     } else if key.sort {
         lazy_frame = lazy_frame.sort_by_exprs(
-            [col("Filter")],
+            [col(FILTER)],
             SortMultipleOptions::default()
                 .with_maintain_order(true)
                 .with_order_reversed(),
         );
     }
     // Format
-    let predicate = col("StereospecificNumbers123.StandardDeviation")
-        .is_null()
-        .or(col("StereospecificNumbers2.StandardDeviation").is_null());
+    let predicate = col(formatcp!(
+        "{STEREOSPECIFIC_NUMBERS123}.{STANDARD_DEVIATION}"
+    ))
+    .is_null()
+    .or(col(formatcp!("{STEREOSPECIFIC_NUMBERS2}.{STANDARD_DEVIATION}")).is_null());
     lazy_frame = lazy_frame.with_columns([
         // Stereospecific numbers
-        format_float(col(r#"^StereospecificNumbers.*\.Mean$"#), key),
-        format_standard_deviation(col(r#"^StereospecificNumbers.*\.StandardDeviation$"#), key)?,
-        format_array(col(r#"^StereospecificNumbers.*\.Array$"#), key)?,
+        format_float(
+            col(formatcp!(r#"^{STEREOSPECIFIC_NUMBERS}.*\.{MEAN}$"#)),
+            key,
+        ),
+        format_standard_deviation(
+            col(formatcp!(
+                r#"^{STEREOSPECIFIC_NUMBERS}.*\.{STANDARD_DEVIATION}$"#
+            )),
+            key,
+        )?,
+        format_array(
+            col(formatcp!(r#"^{STEREOSPECIFIC_NUMBERS}.*\.Array$"#)),
+            key,
+        )?,
         // Factors
         format_float(
-            col(r#"^Factors.*\.Mean$"#),
+            col(formatcp!(r#"^{FACTORS}.*\.{MEAN}$"#)),
             Key {
                 percent: false,
                 ..key
             },
         ),
         format_standard_deviation(
-            col(r#"^Factors.*\.StandardDeviation$"#),
+            col(formatcp!(r#"^{FACTORS}.*\.{STANDARD_DEVIATION}$"#)),
             Key {
                 percent: false,
                 ..key
             },
         )?,
         format_array(
-            col(r#"^Factors.*\.Array$"#),
+            col(formatcp!(r#"^{FACTORS}.*\.Array$"#)),
             Key {
                 percent: false,
                 ..key
@@ -238,34 +254,34 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
         // Calculation
         format_sn13(
             predicate.clone(),
-            format_float(col("StereospecificNumbers123.Mean"), key),
-            format_float(col("StereospecificNumbers2.Mean"), key),
+            format_float(col(formatcp!("{STEREOSPECIFIC_NUMBERS123}.{MEAN}")), key),
+            format_float(col(formatcp!("{STEREOSPECIFIC_NUMBERS2}.{MEAN}")), key),
         )?
-        .alias("StereospecificNumbers13.Calculation"),
+        .alias(formatcp!("{STEREOSPECIFIC_NUMBERS13}.{CALCULATION}")),
         format_ef(
             predicate.clone(),
-            format_float(col("StereospecificNumbers123.Mean"), key),
-            format_float(col("StereospecificNumbers2.Mean"), key),
+            format_float(col(formatcp!("{STEREOSPECIFIC_NUMBERS123}.{MEAN}")), key),
+            format_float(col(formatcp!("{STEREOSPECIFIC_NUMBERS2}.{MEAN}")), key),
         )?
-        .alias("Factors.Enrichment.Calculation"),
+        .alias(formatcp!("{FACTORS}.{ENRICHMENT}.{CALCULATION}")),
         format_sf(
             predicate.clone(),
-            format_float(col("StereospecificNumbers123.Mean"), key),
-            format_float(col("StereospecificNumbers2.Mean"), key),
+            format_float(col(formatcp!("{STEREOSPECIFIC_NUMBERS123}.{MEAN}")), key),
+            format_float(col(formatcp!("{STEREOSPECIFIC_NUMBERS2}.{MEAN}")), key),
             format_float(
-                col("StereospecificNumbers123.Mean")
+                col(formatcp!("{STEREOSPECIFIC_NUMBERS123}.{MEAN}"))
                     .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
                     .sum(),
                 key,
             ),
             format_float(
-                col("StereospecificNumbers2.Mean")
+                col(formatcp!("{STEREOSPECIFIC_NUMBERS2}.{MEAN}"))
                     .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
                     .sum(),
                 key,
             ),
         )?
-        .alias("Factors.Selectivity.Calculation"),
+        .alias(formatcp!("{FACTORS}.{SELECTIVITY}.Calculation")),
     ]);
     // // Unique prefixes
     // if key.prefix {
@@ -286,7 +302,7 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
                 ..key
             },
         )
-        .alias("Properties.IodineValue"),
+        .alias(formatcp!("{PROPERTIES}.{IODINE_VALUE}")),
         format_float(
             col(FATTY_ACID).fatty_acid().relative_atomic_mass(None),
             Key {
@@ -294,7 +310,7 @@ fn format(key: Key) -> PolarsResult<LazyFrame> {
                 ..key
             },
         )
-        .alias("Properties.RelativeAtomicMass"),
+        .alias(formatcp!("{PROPERTIES}.{RELATIVE_ATOMIC_MASS}")),
     ]);
     // Concat
     lazy_frame = concat_lf_diagonal([lazy_frame, sum], Default::default())?;

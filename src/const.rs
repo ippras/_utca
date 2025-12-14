@@ -1,3 +1,15 @@
+pub(crate) const CALCULATION: &str = "Calculation";
+pub(crate) const ENRICHMENT: &str = "Enrichment";
+pub(crate) const FACTORS: &str = "Factors";
+pub(crate) const FILTER: &str = "Filter";
+pub(crate) const IODINE_VALUE: &str = "IodineValue";
+pub(crate) const MEAN: &str = "Mean";
+pub(crate) const PROPERTIES: &str = "Properties";
+pub(crate) const RELATIVE_ATOMIC_MASS: &str = "RelativeAtomicMass";
+pub(crate) const SELECTIVITY: &str = "Selectivity";
+pub(crate) const STANDARD_DEVIATION: &str = "StandardDeviation";
+pub(crate) const STEREOSPECIFIC_NUMBERS: &str = "StereospecificNumbers";
+
 #[cfg(feature = "markdown")]
 #[rustfmt::skip]
 pub(crate) mod markdown {
