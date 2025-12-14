@@ -363,12 +363,12 @@ fn format_body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         ]
         .map(|name| {
             as_struct(vec![
-                col(name).struct_().field_by_name(MEAN).format_mean(key),
-                col(name)
-                    .struct_()
-                    .field_by_name(STANDARD_DEVIATION)
-                    .format_standard_deviation(key),
-                col(name).struct_().field_by_name(SAMPLE).format_sample(key),
+                format_mean(col(name).struct_().field_by_name(MEAN), key),
+                format_standard_deviation(
+                    col(name).struct_().field_by_name(STANDARD_DEVIATION),
+                    key,
+                ),
+                format_sample(col(name).struct_().field_by_name(SAMPLE), key),
             ])
             .alias(name)
         })
@@ -380,12 +380,12 @@ fn format_body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             .map(|name| {
                 let expr = col(FACTORS).struct_().field_by_name(name);
                 as_struct(vec![
-                    expr.clone().struct_().field_by_name(MEAN).format_mean(key),
-                    expr.clone()
-                        .struct_()
-                        .field_by_name(STANDARD_DEVIATION)
-                        .format_standard_deviation(key),
-                    expr.struct_().field_by_name(SAMPLE).format_sample(key),
+                    format_mean(expr.clone().struct_().field_by_name(MEAN), key),
+                    format_standard_deviation(
+                        expr.clone().struct_().field_by_name(STANDARD_DEVIATION),
+                        key,
+                    ),
+                    format_sample(expr.struct_().field_by_name(SAMPLE), key),
                 ])
                 .alias(name)
             })
@@ -412,34 +412,15 @@ fn format_body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         .field_by_name(STANDARD_DEVIATION)
         .is_null();
     lazy_frame = lazy_frame.with_columns([
-        format_sn13(
-            predicate.clone(),
-            col(STEREOSPECIFIC_NUMBERS123).struct_().field_by_name(MEAN),
-            col(STEREOSPECIFIC_NUMBERS2).struct_().field_by_name(MEAN),
-        )?
-        .alias(formatcp!("{STEREOSPECIFIC_NUMBERS13}.{CALCULATION}")),
-        format_ef(
-            predicate.clone(),
-            col(STEREOSPECIFIC_NUMBERS123).struct_().field_by_name(MEAN),
-            col(STEREOSPECIFIC_NUMBERS2).struct_().field_by_name(MEAN),
-        )?
-        .alias(formatcp!("{FACTORS}.{ENRICHMENT}.{CALCULATION}")),
-        format_sf(
-            predicate.clone(),
-            col(STEREOSPECIFIC_NUMBERS123).struct_().field_by_name(MEAN),
-            col(STEREOSPECIFIC_NUMBERS2).struct_().field_by_name(MEAN),
-            col(STEREOSPECIFIC_NUMBERS123)
-                .struct_()
-                .field_by_name(MEAN)
-                .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
-                .sum(),
-            col(STEREOSPECIFIC_NUMBERS2)
-                .struct_()
-                .field_by_name(MEAN)
-                .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
-                .sum(),
-        )?
-        .alias(formatcp!("{FACTORS}.{SELECTIVITY}.{CALCULATION}")),
+        as_struct(vec![
+            format_sn13(
+                predicate.clone(),
+                col(STEREOSPECIFIC_NUMBERS123).struct_().field_by_name(MEAN),
+                col(STEREOSPECIFIC_NUMBERS2).struct_().field_by_name(MEAN),
+            )?
+            .alias(STEREOSPECIFIC_NUMBERS13),
+        ])
+        .alias(CALCULATION),
         // col(FACTORS)
         //     .struct_()
         //     .field_by_name(ENRICHMENT)
@@ -491,14 +472,12 @@ fn format_sum(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                 expr.filter(FILTER).sum()
             })?;
             Ok(as_struct(vec![
-                array.clone().arr().mean().alias(MEAN).format_mean(key),
-                array
-                    .clone()
-                    .arr()
-                    .std(key.ddof)
-                    .alias(STANDARD_DEVIATION)
-                    .format_standard_deviation(key),
-                array.alias(SAMPLE).format_sample(key),
+                format_mean(array.clone().arr().mean().alias(MEAN), key),
+                format_standard_deviation(
+                    array.clone().arr().std(key.ddof).alias(STANDARD_DEVIATION),
+                    key,
+                ),
+                format_sample(array.alias(SAMPLE), key),
             ])
             .alias(name))
         })?
@@ -506,54 +485,24 @@ fn format_sum(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     ))
 }
 
-/// Extension methods for [`Expr`]
-trait Format {
-    fn format_mean(self, key: Key) -> Expr;
-
-    fn format_standard_deviation(self, key: Key) -> Expr;
-
-    fn format_sample(self, key: Key) -> Expr;
+fn format_mean(expr: Expr, key: Key) -> Expr {
+    expr.percent(key.percent)
+        .precision(key.precision, key.significant)
 }
 
-impl Format for Expr {
-    fn format_mean(self, key: Key) -> Expr {
-        self.percent(key.percent)
-            .precision(key.precision, key.significant)
-    }
-
-    fn format_standard_deviation(self, key: Key) -> Expr {
-        self.percent(key.percent)
-            .precision(key.precision + 1, key.significant)
-    }
-
-    fn format_sample(self, key: Key) -> Expr {
-        self.arr().eval(
-            element()
-                .percent(key.percent)
-                .precision(key.precision, key.significant),
-            false,
-        )
-    }
+fn format_standard_deviation(expr: Expr, key: Key) -> Expr {
+    expr.percent(key.percent)
+        .precision(key.precision + 1, key.significant)
 }
 
-// fn format_mean(expr: Expr, key: Key) -> Expr {
-//     expr.percent(key.percent)
-//         .precision(key.precision, key.significant)
-// }
-
-// fn format_standard_deviation(expr: Expr, key: Key) -> Expr {
-//     expr.percent(key.percent)
-//         .precision(key.precision + 1, key.significant)
-// }
-
-// fn format_sample(expr: Expr, key: Key) -> Expr {
-//     expr.arr().eval(
-//         element()
-//             .percent(key.percent)
-//             .precision(key.precision, key.significant),
-//         false,
-//     )
-// }
+fn format_sample(expr: Expr, key: Key) -> Expr {
+    expr.arr().eval(
+        element()
+            .percent(key.percent)
+            .precision(key.precision, key.significant),
+        false,
+    )
+}
 
 fn format_sn13(predicate: Expr, sn123: Expr, sn2: Expr) -> PolarsResult<Expr> {
     Ok(ternary_expr(

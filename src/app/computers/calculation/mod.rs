@@ -1,13 +1,14 @@
 use crate::{
     app::states::calculation::settings::{Normalize, Settings, Threshold},
     assets::CHRISTIE,
+    r#const::{MEAN, SAMPLE, STANDARD_DEVIATION},
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use const_format::formatcp;
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::{ExprExt as _, ExprIfExt as _};
+use polars_ext::prelude::*;
 
 /// Calculation computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -238,11 +239,11 @@ fn selectivity_factor(sn2: Expr, sn123: Expr, key: Key) -> Expr {
 }
 
 fn mean_and_standard_deviation(expr: Expr, ddof: u8) -> PolarsResult<Expr> {
-    let array = concat_arr(vec![expr])?;
+    let sample = concat_arr(vec![expr])?;
     Ok(as_struct(vec![
-        array.clone().arr().mean().alias("Mean"),
-        array.clone().arr().std(ddof).alias("StandardDeviation"),
-        array.alias("Array"),
+        sample.clone().arr().mean().alias(MEAN),
+        sample.clone().arr().std(ddof).alias(STANDARD_DEVIATION),
+        sample.alias(SAMPLE),
     ]))
 }
 

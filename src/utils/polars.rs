@@ -49,3 +49,31 @@ pub(crate) fn format_sample(expr: Expr) -> PolarsResult<Expr> {
         lit(NULL),
     ))
 }
+
+// /// Format
+// pub trait Format {
+//     fn percent(&self) -> bool;
+
+//     fn precision(&self) -> usize;
+
+//     fn significant(&self) -> bool;
+// }
+
+// impl Format for Key<'_> {
+//     fn percent(&self) -> bool {
+//         self.percent
+//     }
+
+//     fn precision(&self) -> usize {
+//         self.precision
+//     }
+
+//     fn significant(&self) -> bool {
+//         self.significant
+//     }
+// }
+
+// fn temp_float(expr: Expr, format: impl Format) -> Expr {
+//     expr.percent(format.percent())
+//         .precision(format.precision(), format.significant())
+// }

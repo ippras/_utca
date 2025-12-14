@@ -1,5 +1,6 @@
 use crate::{
     app::states::composition::Settings,
+    r#const::{MEAN, SAMPLE, STANDARD_DEVIATION},
     utils::{
         HashedDataFrame,
         polars::{format_sample, format_standard_deviation},
@@ -8,7 +9,7 @@ use crate::{
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::{ExprExt, ExprIfExt};
+use polars_ext::prelude::*;
 use tracing::instrument;
 
 /// Composition symmetry sum computed
@@ -95,29 +96,29 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                     .clone()
                     .arr()
                     .mean()
-                    .percent_if(key.percent)
+                    .percent(key.percent)
                     .precision(key.precision, key.significant)
                     .cast(DataType::String)
-                    .alias("Mean"),
+                    .alias(MEAN),
                 format_standard_deviation(
                     sample
                         .clone()
                         .arr()
                         .std(key.ddof)
-                        .percent_if(key.percent)
+                        .percent(key.percent)
                         .precision(key.precision, key.significant)
-                        .alias("StandardDeviation"),
+                        .alias(STANDARD_DEVIATION),
                 )?,
                 format_sample(
                     sample.arr().eval(
                         element()
-                            .percent_if(key.percent)
+                            .percent(key.percent)
                             .precision(key.precision, key.significant)
                             .cast(DataType::String),
                         false,
                     ),
                 )?
-                .alias("Sample"),
+                .alias(SAMPLE),
             ])
             .alias("Value"),
         ])

@@ -1,3 +1,4 @@
+#![feature(array_try_map)]
 #![feature(box_patterns)]
 #![feature(debug_closure_helpers)]
 #![feature(decl_macro)]

@@ -1,5 +1,6 @@
 use crate::{
     app::states::calculation::settings::Settings,
+    r#const::{MEAN, STANDARD_DEVIATION},
     utils::{
         HashedDataFrame,
         polars::{format_sample, format_standard_deviation},
@@ -8,7 +9,7 @@ use crate::{
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::ExprExt;
+use polars_ext::prelude::*;
 use std::sync::LazyLock;
 use tracing::instrument;
 
@@ -70,9 +71,9 @@ fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
     fn stereospecific_numbers(data_type: &DataType) -> Option<usize> {
         if let DataType::Struct(fields) = data_type
             && let [mean, standard_deviation, sample] = &**fields
-            && mean.name == "Mean"
+            && mean.name == MEAN
             && mean.dtype == DataType::Float64
-            && standard_deviation.name == "StandardDeviation"
+            && standard_deviation.name == STANDARD_DEVIATION
             && standard_deviation.dtype == DataType::Float64
             && sample.name == "Array"
             && let DataType::Array(box DataType::Float64, length) = sample.dtype
@@ -90,9 +91,9 @@ fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
             Field::new(
                 PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS123),
                 DataType::Struct(vec![
-                    Field::new(PlSmallStr::from_static("Mean"), DataType::Float64),
+                    Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
                     Field::new(
-                        PlSmallStr::from_static("StandardDeviation"),
+                        PlSmallStr::from_static(STANDARD_DEVIATION),
                         DataType::Float64,
                     ),
                     Field::new(
@@ -144,11 +145,11 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     };
     let stereospecific_numbers = |name: &str, f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
         Ok(as_struct(vec![
-            sample(name, f)?.arr().mean().alias("Mean"),
+            sample(name, f)?.arr().mean().alias(MEAN),
             sample(name, f)?
                 .arr()
                 .std(key.ddof)
-                .alias("StandardDeviation"),
+                .alias(STANDARD_DEVIATION),
             sample(name, f)?.alias("Sample"),
         ])
         .alias(name))
@@ -175,21 +176,21 @@ fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         Ok(expr.clone().struct_().with_fields(vec![
             expr.clone()
                 .struct_()
-                .field_by_name("Mean")
-                .percent()
+                .field_by_name(MEAN)
+                .percent(true)
                 .precision(key.precision, key.significant)
                 .cast(DataType::String),
             format_standard_deviation(
                 expr.clone()
                     .struct_()
-                    .field_by_name("StandardDeviation")
-                    .percent()
+                    .field_by_name(STANDARD_DEVIATION)
+                    .percent(true)
                     .precision(key.precision, key.significant),
             )?,
             format_sample(
                 expr.struct_().field_by_name("Sample").arr().eval(
                     element()
-                        .percent()
+                        .percent(true)
                         .precision(key.precision, key.significant)
                         .cast(DataType::String),
                     false,

@@ -1,7 +1,7 @@
 use crate::utils::Hashed;
 use egui::util::cache::{ComputerMut, FrameCache};
 use polars::prelude::*;
-use polars_ext::expr::ExprIfExt as _;
+use polars_ext::prelude::*;ExprIfExt as _;
 use std::hash::{Hash, Hasher};
 
 /// Display computed
@@ -17,9 +17,9 @@ impl Computer {
         lazy_frame = lazy_frame
             .with_column(key.expr.clone().struct_().field_by_names(["*"]))
             .select([
-                col("Mean").percent_if(key.percent),
-                col("StandardDeviation").percent_if(key.percent),
-                col("Array").percent_if(key.percent),
+                col("Mean").percent(key.percent),
+                col("StandardDeviation").percent(key.percent),
+                col("Array").percent(key.percent),
             ]);
         let data_frame = lazy_frame.collect()?;
         Ok(data_frame)

@@ -59,7 +59,7 @@ impl<'a> Sum<'a> {
             let standard_deviation = standard_deviation_series.str()?.first();
             let text = match mean_series.str()?.first() {
                 Some(mean)
-                    if self.settings.display_standard_deviation
+                    if self.settings.standard_deviation
                         && let Some(standard_deviation) = standard_deviation =>
                 {
                     WidgetText::from(format!("{mean} {standard_deviation}"))

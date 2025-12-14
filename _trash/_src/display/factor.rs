@@ -2,7 +2,7 @@ use crate::utils::Hashed;
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::ExprIfExt as _;
+use polars_ext::prelude::*;ExprIfExt as _;
 use std::hash::{Hash, Hasher};
 
 /// Display factor computed
@@ -87,13 +87,13 @@ fn calculation(key: Key) -> PolarsResult<Expr> {
                     .field_by_name("Experimental")
                     .struct_()
                     .field_by_name("Mean")
-                    .percent_if(key.percent),
+                    .percent(key.percent),
                 col(STEREOSPECIFIC_NUMBERS123)
                     .struct_()
                     .field_by_name("Experimental")
                     .struct_()
                     .field_by_name("Mean")
-                    .percent_if(key.percent),
+                    .percent(key.percent),
             ],
         ),
         Factor::Selectivity => format_str(
@@ -104,13 +104,13 @@ fn calculation(key: Key) -> PolarsResult<Expr> {
                     .field_by_name("Experimental")
                     .struct_()
                     .field_by_name("Mean")
-                    .percent_if(key.percent),
+                    .percent(key.percent),
                 col(STEREOSPECIFIC_NUMBERS123)
                     .struct_()
                     .field_by_name("Experimental")
                     .struct_()
                     .field_by_name("Mean")
-                    .percent_if(key.percent),
+                    .percent(key.percent),
                 col(STEREOSPECIFIC_NUMBERS2)
                     .struct_()
                     .field_by_name("Experimental")
@@ -118,7 +118,7 @@ fn calculation(key: Key) -> PolarsResult<Expr> {
                     .field_by_name("Mean")
                     .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
                     .sum()
-                    .percent_if(key.percent),
+                    .percent(key.percent),
                 col(STEREOSPECIFIC_NUMBERS123)
                     .struct_()
                     .field_by_name("Experimental")
@@ -126,7 +126,7 @@ fn calculation(key: Key) -> PolarsResult<Expr> {
                     .field_by_name("Mean")
                     .filter(col(FATTY_ACID).fatty_acid().is_unsaturated(None))
                     .sum()
-                    .percent_if(key.percent),
+                    .percent(key.percent),
             ],
         ),
     }

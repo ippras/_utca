@@ -5,7 +5,7 @@ use crate::{
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::ExprExt;
+use polars_ext::prelude::*;
 use tracing::instrument;
 
 /// Calculation correlation computed

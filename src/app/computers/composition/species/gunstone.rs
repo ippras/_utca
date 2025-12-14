@@ -1,8 +1,7 @@
 use super::Discriminants;
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::ExprExt as _;
-
+use polars_ext::prelude::*;
 // 0.0 + 0.048672 + 0.000623 + 0.950705 = 1.0
 // let u = 1.0 - s;
 // if s <= 2.0 / 3.0 {
@@ -104,7 +103,7 @@ pub(super) fn compute(
         .select([
             col(LABEL),
             col(TRIACYLGLYCEROL),
-            (col("Value") * col("Factor")).normalize(),
+            (col("Value") * col("Factor")).normalize(true),
         ]);
     println!("lazy_frame g4: {}", lazy_frame.clone().collect().unwrap());
     Ok(lazy_frame)

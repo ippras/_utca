@@ -108,6 +108,7 @@ metadata = { git = "https://github.com/ippras/metadata", branch = "fea5335", fea
     "polars",
 ] }
 polars_ext = { git = "https://github.com/kgv/polars_ext", branch = "fea5335", features = [
+    "array",
     "temporal_conversions",
 ] }
 

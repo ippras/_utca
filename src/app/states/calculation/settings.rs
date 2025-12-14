@@ -24,11 +24,10 @@ use std::{
 };
 use tracing::instrument;
 
-pub(crate) const STEREOSPECIFIC_NUMBERS: [StereospecificNumbers; 4] = [
-    StereospecificNumbers::One,
-    StereospecificNumbers::Two,
-    StereospecificNumbers::Three,
+pub(crate) const STEREOSPECIFIC_NUMBERS: [StereospecificNumbers; 3] = [
     StereospecificNumbers::OneAndTwoAndTree,
+    StereospecificNumbers::OneAndThree,
+    StereospecificNumbers::Two,
 ];
 
 /// Calculation settings
@@ -37,7 +36,7 @@ pub(crate) struct Settings {
     pub(crate) index: Option<usize>,
 
     // Display
-    pub(crate) display_standard_deviation: bool,
+    pub(crate) standard_deviation: bool,
     pub(crate) normalize_factors: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
@@ -70,7 +69,7 @@ impl Settings {
         Self {
             index: None,
             // Display
-            display_standard_deviation: true,
+            standard_deviation: true,
             normalize_factors: true,
             percent: true,
             precision: 1,
@@ -135,15 +134,17 @@ impl Settings {
         }
 
         // Correlations
-        ui.labeled_separator(ui.localize("Correlation"));
-        self.auto_size_correlations_table(ui);
-        self.stereospecific_numbers(ui);
-        self.correlation(ui);
-        self.chaddock(ui);
+        ui.collapsing(ui.localize("Correlation"), |ui| {
+            self.auto_size_correlations_table(ui);
+            self.stereospecific_numbers(ui);
+            self.correlation(ui);
+            self.chaddock(ui);
+        });
 
         // Indices
-        ui.labeled_separator(ui.localize("Index?PluralCategory=other"));
-        self.indices(ui);
+        ui.collapsing(ui.localize("Index?PluralCategory=other"), |ui| {
+            self.indices(ui);
+        });
     }
 
     // Precision
@@ -178,7 +179,7 @@ impl Settings {
         ui.horizontal(|ui| {
             ui.label(ui.localize("StandardDeviation"))
                 .on_hover_localized("StandardDeviation.hover");
-            ui.checkbox(&mut self.display_standard_deviation, ());
+            ui.checkbox(&mut self.standard_deviation, ());
         });
     }
 
@@ -394,6 +395,7 @@ impl Settings {
                             .get(index)
                             .map_or_default(|factor| factor.to_string()),
                     );
+                    ui.end_row();
                 }
                 Ok(())
             });
@@ -713,28 +715,33 @@ impl Text for Standard {
 /// Stereospecific numbers
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
 pub(crate) enum StereospecificNumbers {
-    One,
-    Two,
-    Three,
     OneAndTwoAndTree,
+    OneAndThree,
+    Two,
 }
 
 impl StereospecificNumbers {
+    pub(crate) fn id(&self) -> &'static str {
+        match self {
+            Self::OneAndTwoAndTree => STEREOSPECIFIC_NUMBERS123,
+            Self::OneAndThree => STEREOSPECIFIC_NUMBERS13,
+            Self::Two => STEREOSPECIFIC_NUMBERS2,
+        }
+    }
+
     pub(crate) fn text(&self) -> &'static str {
         match self {
-            Self::One => "StereospecificNumber.abbreviation?number=1",
-            Self::Two => "StereospecificNumber.abbreviation?number=2",
-            Self::Three => "StereospecificNumber.abbreviation?number=3",
             Self::OneAndTwoAndTree => "StereospecificNumber.abbreviation?number=123",
+            Self::OneAndThree => "StereospecificNumber.abbreviation?number=1",
+            Self::Two => "StereospecificNumber.abbreviation?number=2",
         }
     }
 
     pub(crate) fn hover_text(&self) -> &'static str {
         match self {
-            Self::One => "StereospecificNumber?number=1",
-            Self::Two => "StereospecificNumber?number=2",
-            Self::Three => "StereospecificNumber?number=3",
             Self::OneAndTwoAndTree => "StereospecificNumber?number=123",
+            Self::OneAndThree => "StereospecificNumber?number=1",
+            Self::Two => "StereospecificNumber?number=2",
         }
     }
 }
@@ -742,10 +749,9 @@ impl StereospecificNumbers {
 impl Display for StereospecificNumbers {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::One => f.write_str(STEREOSPECIFIC_NUMBERS13),
-            Self::Two => f.write_str(STEREOSPECIFIC_NUMBERS2),
-            Self::Three => f.write_str(STEREOSPECIFIC_NUMBERS13),
             Self::OneAndTwoAndTree => f.write_str(STEREOSPECIFIC_NUMBERS123),
+            Self::OneAndThree => f.write_str(STEREOSPECIFIC_NUMBERS13),
+            Self::Two => f.write_str(STEREOSPECIFIC_NUMBERS2),
         }
     }
 }

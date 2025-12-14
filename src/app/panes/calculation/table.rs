@@ -6,9 +6,12 @@ use crate::{
         computers::calculation::table::{Computed as TableComputed, Key as TableKey},
         panes::MARGIN,
         states::calculation::State,
+        widgets::MeanAndStandardDeviation,
     },
+    r#const::*,
     utils::{HashedDataFrame, egui::ResponseExt},
 };
+use const_format::formatcp;
 use egui::{
     Frame, Grid, Id, Label, Margin, Response, RichText, TextStyle, TextWrapMode, Ui, Widget,
     WidgetText,
@@ -145,6 +148,13 @@ impl TableView<'_> {
         column: Range<usize>,
     ) -> PolarsResult<()> {
         let data_frame = self.data_frame(ui);
+        if let Some(threshold) = data_frame["Filter"].bool()?.get(row)
+            && !threshold
+        {
+            ui.multiply_opacity(ui.visuals().disabled_alpha());
+        } else {
+            ui.multiply_opacity(ui.visuals().strong_text_color().intensity());
+        }
         match (row, column) {
             (row, bottom::INDEX) if row + 1 < data_frame.height() => {
                 ui.label(row.to_string());
@@ -153,18 +163,25 @@ impl TableView<'_> {
                 if let Some(text) = data_frame[LABEL].str()?.get(row) {
                     Label::new(text).truncate().ui(ui).try_on_hover_ui(
                         |ui| -> PolarsResult<()> {
-                            ui.heading(ui.localize("Properties"));
+                            ui.heading(ui.localize(PROPERTIES));
+                            let properties = &data_frame[PROPERTIES];
                             Grid::new(ui.next_auto_id())
                                 .show(ui, |ui| {
-                                    ui.label(ui.localize("IodineValue"));
+                                    ui.label(ui.localize(IODINE_VALUE));
                                     ui.label(
-                                        data_frame["Properties.IodineValue"].get(row)?.str_value(),
+                                        properties
+                                            .struct_()?
+                                            .field_by_name(IODINE_VALUE)?
+                                            .get(row)?
+                                            .str_value(),
                                     );
                                     ui.end_row();
 
-                                    ui.label(ui.localize("RelativeAtomicMass"));
+                                    ui.label(ui.localize(RELATIVE_ATOMIC_MASS));
                                     ui.label(
-                                        data_frame["Properties.RelativeAtomicMass"]
+                                        properties
+                                            .struct_()?
+                                            .field_by_name(RELATIVE_ATOMIC_MASS)?
                                             .get(row)?
                                             .str_value(),
                                     );
@@ -178,110 +195,131 @@ impl TableView<'_> {
             }
             (row, bottom::FA) => {
                 if let Some(fatty_acid) = data_frame.try_fatty_acid()?.delta()?.get(row) {
-                    let mut text = RichText::new(fatty_acid);
+                    // let mut text = RichText::new(fatty_acid);
                     // Strong standard and weak filtered
-                    text = match data_frame["Filter"].bool()?.get(row) {
-                        None => text.strong(),
-                        Some(false) => text.weak(),
-                        Some(true) => text,
-                    };
-                    Label::new(text).truncate().ui(ui);
+                    // text = match data_frame["Filter"].bool()?.get(row) {
+                    //     None => text.strong(),
+                    //     Some(false) => text.weak(),
+                    //     Some(true) => text,
+                    // };
+                    Label::new(fatty_acid).truncate().ui(ui);
                 }
             }
             (row, bottom::SN123) => {
-                self.with_array(ui, STEREOSPECIFIC_NUMBERS123, row)?;
+                MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS123], row)
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .show(ui)?;
             }
             (row, bottom::SN2) => {
-                self.with_array(ui, STEREOSPECIFIC_NUMBERS2, row)?;
+                MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS2], row)
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .show(ui)?;
             }
             (row, bottom::SN13) => {
-                self.with_calculation(ui, STEREOSPECIFIC_NUMBERS13, row)?;
+                MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS13], row)
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .with_calculation(true)
+                    .show(ui)?;
+                // self.with_calculation(ui, STEREOSPECIFIC_NUMBERS13, row)?;
             }
-            (row, bottom::EF) => {
-                self.with_calculation(ui, "Factors.Enrichment", row)?;
+            (row, bottom::EF) if row != data_frame.height() => {
+                MeanAndStandardDeviation::new(&data_frame, [FACTORS, ENRICHMENT], row)
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .with_calculation(true)
+                    .show(ui)?;
             }
-            (row, bottom::SF) => {
-                self.with_calculation(ui, "Factors.Selectivity", row)?;
+            (row, bottom::SF) if row != data_frame.height() => {
+                MeanAndStandardDeviation::new(&data_frame, [FACTORS, SELECTIVITY], row)
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .with_calculation(true)
+                    .show(ui)?;
             }
             _ => {}
         }
         Ok(())
     }
 
-    fn mean_and_standard_deviation(
-        &self,
-        ui: &mut Ui,
-        column: &'static str,
-        row: usize,
-    ) -> PolarsResult<Response> {
-        let data_frame = self.data_frame(ui);
-        let mean = data_frame[&*format!("{column}.Mean")].str()?.get(row);
-        let standard_deviation = data_frame[&*format!("{column}.StandardDeviation")]
-            .str()?
-            .get(row);
-        let text = match mean {
-            Some(mean)
-                if self.state.settings.display_standard_deviation
-                    && let Some(standard_deviation) = standard_deviation =>
-            {
-                WidgetText::from(format!("{mean} {standard_deviation}"))
-            }
-            Some(mean) => WidgetText::from(mean.to_string()),
-            None => WidgetText::from(""),
-        };
-        let mut response = ui.label(text);
-        if response.hovered() {
-            // Standard deviation
-            if let Some(text) = standard_deviation {
-                response = response.on_hover_ui(|ui| {
-                    ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                    ui.heading(ui.localize("StandardDeviation"));
-                    ui.label(text);
-                });
-            }
-        }
-        Ok(response)
-    }
+    // fn mean_and_standard_deviation(
+    //     &self,
+    //     ui: &mut Ui,
+    //     column: &'static str,
+    //     row: usize,
+    // ) -> PolarsResult<Response> {
+    //     let data_frame = self.data_frame(ui);
+    //     // MeanAndStandardDeviation::new(&data_frame, &format!("{column}.Mean"), row).show(ui)?;
+    //     // let data_frame = self.data_frame(ui);
+    //     // let mean = data_frame[&*format!("{column}.Mean")].f64()?.get(row);
+    //     // let standard_deviation = data_frame[&*format!("{column}.StandardDeviation")]
+    //     //     .f64()?
+    //     //     .get(row);
+    //     // let text = match mean {
+    //     //     Some(mean)
+    //     //         if self.state.settings.display_standard_deviation
+    //     //             && let Some(standard_deviation) = standard_deviation =>
+    //     //     {
+    //     //         WidgetText::from(format!("{mean} {standard_deviation}"))
+    //     //     }
+    //     //     Some(mean) => WidgetText::from(mean.to_string()),
+    //     //     None => WidgetText::from(""),
+    //     // };
+    //     // let mut response = ui.label(text);
+    //     // if response.hovered() {
+    //     //     // Standard deviation
+    //     //     if let Some(text) = standard_deviation {
+    //     //         response = response.on_hover_ui(|ui| {
+    //     //             ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+    //     //             ui.heading(ui.localize("StandardDeviation"));
+    //     //             ui.label(text);
+    //     //         });
+    //     //     }
+    //     // }
+    //     Ok(response)
+    // }
 
-    fn with_array(&self, ui: &mut Ui, column: &'static str, row: usize) -> PolarsResult<Response> {
-        let mut response = self.mean_and_standard_deviation(ui, column, row)?;
-        if response.hovered() {
-            let data_frame = self.data_frame(ui);
-            // Array
-            if let Some(text) = data_frame[&*format!("{column}.Array")].str()?.get(row) {
-                response = response.on_hover_ui(|ui| {
-                    ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                    ui.heading(ui.localize("Array"));
-                    ui.label(text);
-                });
-            }
-        }
-        Ok(response)
-    }
+    // fn with_array(&self, ui: &mut Ui, column: &'static str, row: usize) -> PolarsResult<Response> {
+    //     let mut response = self.mean_and_standard_deviation(ui, column, row)?;
+    //     if response.hovered() {
+    //         let data_frame = self.data_frame(ui);
+    //         // Array
+    //         if let Some(text) = data_frame[&*format!("{column}.Array")].str()?.get(row) {
+    //             response = response.on_hover_ui(|ui| {
+    //                 ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+    //                 ui.heading(ui.localize("Array"));
+    //                 ui.label(text);
+    //             });
+    //         }
+    //     }
+    //     Ok(response)
+    // }
 
-    fn with_calculation(
-        &self,
-        ui: &mut Ui,
-        column: &'static str,
-        row: usize,
-    ) -> PolarsResult<Response> {
-        let mut response = self.with_array(ui, column, row)?;
-        if response.hovered() {
-            let data_frame = self.data_frame(ui);
-            // Calculation
-            if let Some(text) = data_frame[&*format!("{column}.Calculation")]
-                .str()?
-                .get(row)
-            {
-                response = response.on_hover_ui(|ui| {
-                    ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
-                    ui.heading(ui.localize("Calculation"));
-                    ui.label(text);
-                });
-            }
-        }
-        Ok(response)
-    }
+    // fn with_calculation(
+    //     &self,
+    //     ui: &mut Ui,
+    //     column: &'static str,
+    //     row: usize,
+    // ) -> PolarsResult<Response> {
+    //     let mut response = self.with_array(ui, column, row)?;
+    //     if response.hovered() {
+    //         let data_frame = self.data_frame(ui);
+    //         // Calculation
+    //         if let Some(text) = data_frame[&*format!("{column}.Calculation")]
+    //             .str()?
+    //             .get(row)
+    //         {
+    //             response = response.on_hover_ui(|ui| {
+    //                 ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+    //                 ui.heading(ui.localize("Calculation"));
+    //                 ui.label(text);
+    //             });
+    //         }
+    //     }
+    //     Ok(response)
+    // }
 }
 
 impl TableDelegate for TableView<'_> {

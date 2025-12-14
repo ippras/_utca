@@ -9,7 +9,7 @@ use crate::{
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_ext::expr::{ExprExt, ExprIfExt as _};
+use polars_ext::prelude::*;
 use std::iter::once;
 
 /// Table composition computed
@@ -132,7 +132,7 @@ fn format(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             .field_by_name("Value")
             .struct_()
             .field_by_name("Mean")
-            .percent_if(key.percent)
+            .percent(key.percent)
             .precision(key.precision, key.significant)
             .alias("Value"),
     ]));
@@ -151,14 +151,14 @@ fn format(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             };
             let value = as_struct(vec![
                 field("Mean")
-                    .percent_if(key.percent)
+                    .percent(key.percent)
                     .precision(key.precision, key.significant),
                 field("StandardDeviation")
-                    .percent_if(key.percent)
+                    .percent(key.percent)
                     .precision(key.precision, key.significant),
                 field("Array").arr().eval(
                     element()
-                        .percent_if(key.percent)
+                        .percent(key.percent)
                         .precision(key.precision, key.significant),
                     false,
                 ),
