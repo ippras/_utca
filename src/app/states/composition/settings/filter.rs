@@ -5,8 +5,11 @@ use super::{
 use crate::text::Text;
 use ahash::RandomState;
 use egui::{
-    CentralPanel, DragValue, Grid, Response, ScrollArea, Sense, Slider, SliderClamping, TextStyle,
-    TopBottomPanel, Ui, Widget, emath::Float as _, style::Widgets,
+    CentralPanel, DragValue, Grid, PopupCloseBehavior, Response, ScrollArea, Sense, Slider,
+    SliderClamping, TextStyle, TopBottomPanel, Ui, Widget,
+    containers::menu::{MenuButton, MenuConfig, SubMenuButton},
+    emath::Float as _,
+    style::Widgets,
 };
 use egui_ext::LabeledSeparator as _;
 use egui_l20n::UiExt as _;
@@ -103,8 +106,9 @@ impl Widget for FilterWidget<'_> {
             ui.visuals_mut().widgets.inactive = ui.visuals().widgets.active;
             FUNNEL
         };
-        let response = ui
-            .menu_button(title, |ui| -> PolarsResult<()> {
+        let response = SubMenuButton::new(title)
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::IgnoreClicks))
+            .ui(ui, |ui| -> PolarsResult<()> {
                 ui.heading(format!(
                     "{} {}",
                     ui.localize(&format!(
@@ -182,7 +186,7 @@ impl Widget for FilterWidget<'_> {
                                 AnyValue::Float64(value).to_string()
                             })
                             .custom_parser(|value| {
-                                let mut parsed = value.parse::<f64>().ok()?;
+                                let mut parsed = value.parse().ok()?;
                                 if self.percent {
                                     parsed /= 100.0;
                                 }
@@ -192,7 +196,98 @@ impl Widget for FilterWidget<'_> {
                 });
                 Ok(())
             })
-            .response;
+            .0;
+        // let response = ui
+        //     .menu_button(title, |ui| -> PolarsResult<()> {
+        //         ui.heading(format!(
+        //             "{} {}",
+        //             ui.localize(&format!(
+        //                 "{}.abbreviation",
+        //                 self.selection.composition.text(),
+        //             )),
+        //             ui.localize("Filter?case=lower"),
+        //         ));
+        //         // Key
+        //         ui.labeled_separator("Key");
+        //         match self.selection.composition {
+        //             MASS_MONO | ECN_MONO | TYPE_MONO | UNSATURATION_MONO => {
+        //                 let series = self.series.unique()?.sort(Default::default())?;
+        //                 ui.add(ColumnWidget {
+        //                     indices: vec![0, 1, 2],
+        //                     selection: self.selection,
+        //                     series,
+        //                 });
+        //             }
+        //             SPECIES_MONO => {
+        //                 let fields = self.series.struct_()?.fields_as_series();
+        //                 let series = fields[0].unique()?.sort(Default::default())?;
+        //                 ui.add(ColumnWidget {
+        //                     indices: vec![0, 1, 2],
+        //                     selection: self.selection,
+        //                     series,
+        //                 });
+        //             }
+        //             SPECIES_POSITIONAL | TYPE_POSITIONAL => {
+        //                 let fields = self.series.struct_()?.fields_as_series();
+        //                 ui.columns_const(|ui: &mut [Ui; 2]| -> PolarsResult<()> {
+        //                     let series = fields[0].unique()?.sort(Default::default())?;
+        //                     ui[0].add(ColumnWidget {
+        //                         indices: vec![0, 2],
+        //                         selection: self.selection,
+        //                         series,
+        //                     });
+        //                     let series = fields[1].unique()?.sort(Default::default())?;
+        //                     ui[1].add(ColumnWidget {
+        //                         indices: vec![1],
+        //                         selection: self.selection,
+        //                         series,
+        //                     });
+        //                     Ok(())
+        //                 })?;
+        //             }
+        //             MASS_STEREO | ECN_STEREO | SPECIES_STEREO | TYPE_STEREO
+        //             | UNSATURATION_STEREO => {
+        //                 let fields = self.series.struct_()?.fields_as_series();
+        //                 ui.columns_const(|ui: &mut [Ui; 3]| -> PolarsResult<()> {
+        //                     for index in 0..3 {
+        //                         let series = fields[index].unique()?.sort(Default::default())?;
+        //                         ui[index].add(ColumnWidget {
+        //                             indices: vec![index],
+        //                             selection: self.selection,
+        //                             series,
+        //                         });
+        //                     }
+        //                     Ok(())
+        //                 })?;
+        //             }
+        //         }
+        //         // Value
+        //         ui.separator();
+        //         ui.horizontal(|ui| {
+        //             ui.label("Value");
+        //             ui.add(
+        //                 Slider::new(&mut self.selection.filter.value, 0.0..=1.0)
+        //                     .clamping(SliderClamping::Always)
+        //                     .logarithmic(true)
+        //                     .custom_formatter(|mut value, _| {
+        //                         if self.percent {
+        //                             value *= 100.0;
+        //                         }
+        //                         AnyValue::Float64(value).to_string()
+        //                     })
+        //                     .custom_parser(|value| {
+        //                         let mut parsed = value.parse().ok()?;
+        //                         if self.percent {
+        //                             parsed /= 100.0;
+        //                         }
+        //                         Some(parsed)
+        //                     }),
+        //             );
+        //         });
+        //         Ok(())
+        //     })
+        //     .response;
+
         // ui.menu_button(title, |ui| -> PolarsResult<()> {
         //     ui.heading(format!(
         //         "{} {}",

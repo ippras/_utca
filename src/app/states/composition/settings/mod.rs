@@ -350,7 +350,7 @@ impl Settings {
                             });
                             // Delete
                             delete = delete.or(ui.button(MINUS).clicked().then_some(state.index));
-                            ComboBox::from_id_salt(ui.next_auto_id())
+                            ComboBox::from_id_salt(ui.auto_id_with(state.index))
                                 .selected_text(ui.localize(selection.composition.text()))
                                 .show_ui(ui, |ui| {
                                     for composition in COMPOSITIONS {
@@ -386,7 +386,6 @@ impl Settings {
                                     .ui(ui);
                             }
                         });
-                        //
                     },
                 );
                 if let Some(index) = delete {
