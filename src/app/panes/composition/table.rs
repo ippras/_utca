@@ -116,11 +116,10 @@ impl TableView<'_> {
         column: Range<usize>,
     ) -> PolarsResult<()> {
         if row != self.data_frame.height() {
-            self.body_cell_content_ui(ui, row, column)?;
+            self.body_cell_content_ui(ui, row, column)
         } else {
-            self.footer_cell_content_ui(ui, column)?;
+            self.footer_cell_content_ui(ui, column)
         }
-        Ok(())
     }
 
     fn body_cell_content_ui(

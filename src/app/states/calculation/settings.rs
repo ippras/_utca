@@ -18,6 +18,7 @@ use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 use std::{
+    borrow::Cow,
     fmt::{Display, Formatter},
     iter::zip,
     ops::{Deref, DerefMut},
@@ -47,8 +48,7 @@ pub(crate) struct Settings {
     // Special parameters
     pub(crate) christie: bool,
     pub(crate) normalize: Normalize,
-    pub(crate) sort_by_minor_major: bool,
-    pub(crate) standard: Standard,
+    pub(crate) standard: Option<String>,
     pub(crate) threshold: Threshold,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
@@ -80,8 +80,7 @@ impl Settings {
             // Special parameters
             christie: false,
             normalize: Normalize::new(),
-            sort_by_minor_major: false,
-            standard: Standard(None),
+            standard: None,
             threshold: Threshold::new(),
             unsigned: true,
             weighted: false,
@@ -153,6 +152,9 @@ impl Settings {
             ui.label(ui.localize("Precision"))
                 .on_hover_localized("Precision.hover");
             Slider::new(&mut self.precision, 1..=MAX_PRECISION).ui(ui);
+            if ui.button((BOOKMARK, "3")).clicked() {
+                self.precision = 3;
+            };
         });
     }
 
@@ -215,29 +217,43 @@ impl Settings {
         ui.horizontal(|ui| {
             ui.label(ui.localize("Standard"))
                 .on_hover_localized("Standard.hover");
-            ui.horizontal(|ui| {
+            let mut checked = self.standard.is_some();
+            if ui
+                .checkbox(&mut checked, ())
+                .on_hover_localized("Standard?OptionCategory=none")
+                .changed()
+            {
+                self.standard = if checked {
+                    self.fatty_acids.first().cloned()
+                } else {
+                    None
+                };
+            }
+            ui.add_enabled_ui(checked, |ui| {
+                let text = match &self.standard {
+                    Some(standard) => Cow::Owned(standard.clone()),
+                    None => Cow::from(""),
+                };
                 ComboBox::from_id_salt("Standard")
-                    .selected_text(self.standard.text())
+                    .selected_text(text.as_str())
                     .show_ui(ui, |ui| {
                         for fatty_acid in &self.fatty_acids {
                             ui.selectable_value(
                                 &mut self.standard,
-                                Standard(Some(fatty_acid.clone())),
+                                Some(fatty_acid.clone()),
                                 fatty_acid,
                             )
                             .on_hover_text(fatty_acid);
                         }
-                        ui.selectable_value(&mut self.standard, Standard(None), "-")
-                            .on_hover_localized("Standard?OptionCategory=none");
-                    });
-            })
-            .response
-            .on_hover_ui(|ui| {
-                ui.label(ui.localize(self.standard.hover_text()));
+                    })
+                    .response
+                    .on_hover_text(text);
             });
-            if ui.button((BOOKMARK, "17:0")).clicked() {
-                self.standard = Standard(Some("Margaric".to_owned()));
-            };
+            ui.add_enabled_ui(self.fatty_acids.contains(&"Margaric".to_owned()), |ui| {
+                if ui.button((BOOKMARK, "17:0")).clicked() {
+                    self.standard = Some("Margaric".to_owned());
+                };
+            });
         });
     }
 
@@ -348,7 +364,7 @@ impl Settings {
             // Sort by minor major
             ui.label(ui.localize("SortByMinorMajor"))
                 .on_hover_localized("SortByMinorMajor.hover");
-            ui.checkbox(&mut self.sort_by_minor_major, ());
+            ui.checkbox(&mut self.threshold.sort, ());
         });
     }
 
@@ -562,7 +578,6 @@ pub(crate) struct Indices(Vec<Index>);
 impl Indices {
     pub(crate) fn new() -> Self {
         Self(vec![
-            Index::new("Conjugated"),
             Index::new("Saturated"),
             Index::new("Monounsaturated"),
             Index::new("Polyunsaturated"),
@@ -571,6 +586,7 @@ impl Indices {
             Index::new("Unsaturated-6"),
             Index::new("Unsaturated-3"),
             Index::new("Unsaturated9"),
+            Index::new("Conjugated"),
             Index::new("Trans"),
             Index::new("EicosapentaenoicAndDocosahexaenoic"),
             Index::new("FishLipidQuality"),
@@ -686,31 +702,31 @@ impl Default for Normalize {
     }
 }
 
-/// Standard
-#[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
-pub(crate) struct Standard(Option<String>);
+// /// Standard
+// #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
+// pub(crate) struct Standard(Option<String>);
 
-impl Standard {
-    pub(crate) fn as_deref(&self) -> Option<&str> {
-        self.0.as_deref()
-    }
-}
+// impl Standard {
+//     pub(crate) fn as_deref(&self) -> Option<&str> {
+//         self.0.as_deref()
+//     }
+// }
 
-impl Text for Standard {
-    fn text(&self) -> &str {
-        match &self.0 {
-            Some(standard) => standard,
-            None => "-",
-        }
-    }
+// impl Text for Standard {
+//     fn text(&self) -> &str {
+//         match &self.0 {
+//             Some(standard) => standard,
+//             None => "-",
+//         }
+//     }
 
-    fn hover_text(&self) -> &str {
-        match &self.0 {
-            Some(standard) => standard,
-            None => "Standard?OptionCategory=none",
-        }
-    }
-}
+//     fn hover_text(&self) -> &str {
+//         match &self.0 {
+//             Some(standard) => standard,
+//             None => "Standard?OptionCategory=none",
+//         }
+//     }
+// }
 
 /// Stereospecific numbers
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
@@ -721,14 +737,6 @@ pub(crate) enum StereospecificNumbers {
 }
 
 impl StereospecificNumbers {
-    pub(crate) fn id(&self) -> &'static str {
-        match self {
-            Self::OneAndTwoAndTree => STEREOSPECIFIC_NUMBERS123,
-            Self::OneAndThree => STEREOSPECIFIC_NUMBERS13,
-            Self::Two => STEREOSPECIFIC_NUMBERS2,
-        }
-    }
-
     pub(crate) fn text(&self) -> &'static str {
         match self {
             Self::OneAndTwoAndTree => "StereospecificNumber.abbreviation?number=123",
@@ -763,6 +771,7 @@ pub(crate) struct Threshold {
     pub(crate) filter: bool,
     pub(crate) is_auto: bool,
     pub(crate) manual: Vec<bool>,
+    pub(crate) sort: bool,
 }
 
 impl Threshold {
@@ -772,6 +781,7 @@ impl Threshold {
             filter: false,
             is_auto: true,
             manual: Vec::new(),
+            sort: true,
         }
     }
 }

@@ -5,6 +5,7 @@
 #![feature(extend_one)]
 #![feature(if_let_guard)]
 #![feature(result_option_map_or_default)]
+#![feature(str_as_str)]
 
 pub use app::App;
 

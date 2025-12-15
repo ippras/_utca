@@ -259,14 +259,14 @@ fn sort(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
                     .arr()
                     .to_list()
                     .list()
-                    .eval(col("").struct_().field_by_name("Mean"));
+                    .eval(element().struct_().field_by_name("Mean"));
             }
             lazy_frame.sort_by_exprs([expr], sort_options)
         }
     };
     // Sort species by value
-    lazy_frame = lazy_frame.with_columns([col("Species").list().eval(col("").sort_by(
-        [col("").struct_().field_by_name("Value")],
+    lazy_frame = lazy_frame.with_columns([col("Species").list().eval(element().sort_by(
+        [element().struct_().field_by_name("Value")],
         SortMultipleOptions {
             descending: vec![true],
             nulls_last: vec![true],
@@ -309,8 +309,8 @@ fn sort(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
 //     Ok(lazy_frame)
 // }
 
-pub(crate) mod table;
 pub(crate) mod filtered;
 pub(crate) mod species;
 pub(crate) mod sum;
+pub(crate) mod table;
 pub(crate) mod unique;

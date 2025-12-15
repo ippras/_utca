@@ -9,7 +9,7 @@ use crate::{
             sum::symmetry::{Computed as SumSymmetryComputed, Key as SumSymmetryKey},
             unique::{Computed as UniqueComputed, Key as UniqueKey},
         },
-        states::composition::{Settings, State, View},
+        states::composition::{ID_SOURCE, Settings, State, View},
         widgets::butons::{ResetButton, ResizeButton, SettingsButton},
     },
     export::{ron, xlsx},
@@ -36,8 +36,6 @@ use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, from_fn};
 use tracing::instrument;
-
-const ID_SOURCE: &str = "Composition";
 
 /// Composition pane
 #[derive(Default, Deserialize, Serialize)]

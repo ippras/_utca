@@ -14,8 +14,8 @@ impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
         lazy_frame = lazy_frame.select([
-            col("Label"),
-            col("FattyAcid"),
+            col(LABEL),
+            col(FATTY_ACID),
             col(STEREOSPECIFIC_NUMBERS123),
             nth(3).as_expr(),
         ]);

@@ -1,21 +1,17 @@
-use super::ID_SOURCE;
+// use super::ID_SOURCE;
 #[cfg(feature = "markdown")]
 use crate::r#const::markdown::{ENRICHMENT_FACTOR, SELECTIVITY_FACTOR};
 use crate::{
     app::{
         computers::calculation::table::{Computed as TableComputed, Key as TableKey},
         panes::MARGIN,
-        states::calculation::State,
+        states::calculation::{ID_SOURCE, State},
         widgets::MeanAndStandardDeviation,
     },
     r#const::*,
     utils::{HashedDataFrame, egui::ResponseExt},
 };
-use const_format::formatcp;
-use egui::{
-    Frame, Grid, Id, Label, Margin, Response, RichText, TextStyle, TextWrapMode, Ui, Widget,
-    WidgetText,
-};
+use egui::{Frame, Grid, Id, Label, Margin, TextStyle, TextWrapMode, Ui, Widget};
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
 use egui_l20n::prelude::*;
@@ -147,16 +143,27 @@ impl TableView<'_> {
         row: usize,
         column: Range<usize>,
     ) -> PolarsResult<()> {
+        if row != self.data_frame.height() {
+            self.body_cell_content_ui(ui, row, column)
+        } else {
+            self.footer_cell_content_ui(ui, row, column)
+        }
+    }
+
+    fn body_cell_content_ui(
+        &mut self,
+        ui: &mut Ui,
+        row: usize,
+        column: Range<usize>,
+    ) -> PolarsResult<()> {
         let data_frame = self.data_frame(ui);
-        if let Some(threshold) = data_frame["Filter"].bool()?.get(row)
+        if let Some(threshold) = data_frame[THRESHOLD].bool()?.get(row)
             && !threshold
         {
             ui.multiply_opacity(ui.visuals().disabled_alpha());
-        } else {
-            ui.multiply_opacity(ui.visuals().strong_text_color().intensity());
         }
         match (row, column) {
-            (row, bottom::INDEX) if row + 1 < data_frame.height() => {
+            (row, bottom::INDEX) => {
                 ui.label(row.to_string());
             }
             (row, bottom::LABEL) => {
@@ -165,6 +172,7 @@ impl TableView<'_> {
                         |ui| -> PolarsResult<()> {
                             ui.heading(ui.localize(PROPERTIES));
                             let properties = &data_frame[PROPERTIES];
+                            let standard = &data_frame[STANDARD];
                             Grid::new(ui.next_auto_id())
                                 .show(ui, |ui| {
                                     ui.label(ui.localize(IODINE_VALUE));
@@ -186,6 +194,10 @@ impl TableView<'_> {
                                             .str_value(),
                                     );
                                     ui.end_row();
+
+                                    ui.label(ui.localize(STANDARD));
+                                    ui.label(standard.get(row)?.str_value());
+                                    ui.end_row();
                                     Ok(())
                                 })
                                 .inner
@@ -197,7 +209,7 @@ impl TableView<'_> {
                 if let Some(fatty_acid) = data_frame.try_fatty_acid()?.delta()?.get(row) {
                     // let mut text = RichText::new(fatty_acid);
                     // Strong standard and weak filtered
-                    // text = match data_frame["Filter"].bool()?.get(row) {
+                    // text = match data_frame[THRESHOLD].bool()?.get(row) {
                     //     None => text.strong(),
                     //     Some(false) => text.weak(),
                     //     Some(true) => text,
@@ -223,17 +235,48 @@ impl TableView<'_> {
                     .with_sample(true)
                     .with_calculation(true)
                     .show(ui)?;
-                // self.with_calculation(ui, STEREOSPECIFIC_NUMBERS13, row)?;
             }
-            (row, bottom::EF) if row != data_frame.height() => {
+            (row, bottom::EF) => {
                 MeanAndStandardDeviation::new(&data_frame, [FACTORS, ENRICHMENT], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
                     .with_calculation(true)
                     .show(ui)?;
             }
-            (row, bottom::SF) if row != data_frame.height() => {
+            (row, bottom::SF) => {
                 MeanAndStandardDeviation::new(&data_frame, [FACTORS, SELECTIVITY], row)
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .with_calculation(true)
+                    .show(ui)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn footer_cell_content_ui(
+        &mut self,
+        ui: &mut Ui,
+        row: usize,
+        column: Range<usize>,
+    ) -> PolarsResult<()> {
+        let data_frame = self.data_frame(ui);
+        match (row, column) {
+            (row, bottom::SN123) => {
+                MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS123], row)
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .show(ui)?;
+            }
+            (row, bottom::SN2) => {
+                MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS2], row)
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .show(ui)?;
+            }
+            (row, bottom::SN13) => {
+                MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS13], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
                     .with_calculation(true)

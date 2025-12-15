@@ -1,4 +1,20 @@
+use crate::r#const::{MEAN, SAMPLE, STANDARD_DEVIATION};
 use polars::prelude::*;
+use std::sync::LazyLock;
+
+pub const MEAN_AND_STANDARD_DEVIATION: LazyLock<DataType> = LazyLock::new(|| {
+    DataType::Struct(vec![
+        Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
+        Field::new(
+            PlSmallStr::from_static(STANDARD_DEVIATION),
+            DataType::Float64,
+        ),
+        Field::new(
+            PlSmallStr::from_static(SAMPLE),
+            DataType::Array(Box::new(DataType::Float64), 0),
+        ),
+    ])
+});
 
 /// Extension methods for [`Schema`]
 pub trait SchemaExt {

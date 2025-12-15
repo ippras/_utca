@@ -1,4 +1,4 @@
-use self::{correlations::Correlations, sum::Sum, table::TableView};
+use self::{correlations::Correlations, properties::Properties, table::TableView};
 use super::{Behavior, MARGIN};
 #[cfg(feature = "markdown")]
 use crate::r#const::markdown::CORRELATIONS;
@@ -6,20 +6,19 @@ use crate::{
     app::{
         computers::calculation::{
             Computed as CalculationComputed, Key as CalculationKey,
-            correlations::{
-                Computed as CalculationCorrelationsComputed, Key as CalculationCorrelationsKey,
-            },
-            sum::{
-                Computed as CalculationSumComputed, Key as CalculationSumKey,
+            correlations::{Computed as CorrelationsComputed, Key as CorrelationsKey},
+            properties::{
+                Computed as PropertiesComputed, Key as PropertiesKey,
                 biodiesel::{
-                    Computed as CalculationSumBiodieselComputed, Key as CalculationSumBiodieselKey,
+                    Computed as BiodieselPropertiesComputed, Key as BiodieselPropertiesKey,
                 },
             },
         },
         identifiers::COMPOSE,
-        states::calculation::{State, settings::Settings},
+        states::calculation::{ID_SOURCE, State, settings::Settings},
         widgets::butons::{ResetButton, ResizeButton, SettingsButton},
     },
+    r#const::THRESHOLD,
     export::ron,
     utils::{
         HashedDataFrame, HashedMetaDataFrame,
@@ -47,8 +46,6 @@ use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, from_fn};
 use tracing::instrument;
-
-const ID_SOURCE: &str = "Calculation";
 
 /// Calculation pane
 #[derive(Deserialize, Serialize)]
@@ -397,7 +394,7 @@ impl Pane {
             .map(ToOwned::to_owned)
             .collect();
         state.settings.threshold.manual =
-            self.target["Filter"].bool()?.into_no_null_iter().collect();
+            self.target[THRESHOLD].bool()?.into_no_null_iter().collect();
         TableView::new(&self.target, state).show(ui);
         Ok(())
     }
@@ -406,8 +403,8 @@ impl Pane {
 impl Pane {
     fn windows(&mut self, ui: &mut Ui, state: &mut State) {
         self.correlations_window(ui, state);
-        self.sum_window(ui, state);
-        self.biodiesel_sum_window(ui, state);
+        self.properties_window(ui, state);
+        self.biodiesel_properties_window(ui, state);
         self.settings_window(ui, state);
     }
 
@@ -439,51 +436,55 @@ impl Pane {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CalculationCorrelationsComputed>()
-                .get(CalculationCorrelationsKey::new(&self.target, settings))
+                .cache::<CorrelationsComputed>()
+                .get(CorrelationsKey::new(&self.target, settings))
         });
         Correlations::new(&data_frame, settings).show(ui);
         Ok(())
     }
 
-    fn sum_window(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SIGMA} Calculation sum"))
-            .id(ui.auto_id_with(ID_SOURCE).with("Sum"))
+    fn properties_window(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SIGMA} Calculation properties"))
+            .id(ui.auto_id_with(ID_SOURCE).with("Properties"))
             .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_sum)
-            .show(ui.ctx(), |ui| self.sum_content(ui, &state.settings));
+            .show(ui.ctx(), |ui| self.properties_content(ui, &state.settings));
     }
 
     #[instrument(skip_all, err)]
-    fn sum_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
+    fn properties_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CalculationSumComputed>()
-                .get(CalculationSumKey::new(&self.target, settings))
+                .cache::<PropertiesComputed>()
+                .get(PropertiesKey::new(&self.target, settings))
         });
-        Sum::new(&data_frame, settings).show(ui).inner
+        Properties::new(&data_frame, settings).show(ui).inner
     }
 
-    fn biodiesel_sum_window(&mut self, ui: &mut Ui, state: &mut State) {
-        Window::new(format!("{SIGMA} Calculation biodiesel sum"))
-            .id(ui.auto_id_with(ID_SOURCE).with("BiodieselSum"))
+    fn biodiesel_properties_window(&mut self, ui: &mut Ui, state: &mut State) {
+        Window::new(format!("{SIGMA} Calculation biodiesel properties"))
+            .id(ui.auto_id_with(ID_SOURCE).with("BiodieselProperties"))
             .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_biodiesel_sum)
             .show(ui.ctx(), |ui| {
-                self.biodiesel_sum_content(ui, &state.settings)
+                self.biodiesel_properties_content(ui, &state.settings)
             });
     }
 
     #[instrument(skip_all, err)]
-    fn biodiesel_sum_content(&mut self, ui: &mut Ui, settings: &Settings) -> PolarsResult<()> {
+    fn biodiesel_properties_content(
+        &mut self,
+        ui: &mut Ui,
+        settings: &Settings,
+    ) -> PolarsResult<()> {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<CalculationSumBiodieselComputed>()
-                .get(CalculationSumBiodieselKey::new(&self.target, settings))
+                .cache::<BiodieselPropertiesComputed>()
+                .get(BiodieselPropertiesKey::new(&self.target, settings))
         });
-        Sum::new(&data_frame, settings).show(ui).inner
+        Properties::new(&data_frame, settings).show(ui).inner
     }
 
     fn settings_window(&mut self, ui: &mut Ui, state: &mut State) {
@@ -498,5 +499,5 @@ impl Pane {
 }
 
 mod correlations;
-mod sum;
+mod properties;
 mod table;
