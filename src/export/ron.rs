@@ -3,6 +3,7 @@ pub use self::native::save;
 #[cfg(target_arch = "wasm32")]
 pub use self::web::save;
 
+use crate::utils::HashedDataFrame;
 use anyhow::Result;
 use metadata::{Metadata, polars::MetaDataFrame};
 use polars::frame::DataFrame;
@@ -18,8 +19,6 @@ const CONFIG: LazyLock<PrettyConfig> =
 
 #[cfg(not(target_arch = "wasm32"))]
 mod native {
-    use crate::utils::HashedDataFrame;
-
     use super::*;
     use std::{fs::File, io::Write};
 
@@ -44,7 +43,7 @@ mod web {
 
     #[instrument(skip(frame), err)]
     pub fn save(
-        frame: &MetaDataFrame<impl Borrow<Metadata>, impl Borrow<DataFrame>>,
+        frame: &MetaDataFrame<impl Borrow<Metadata>, impl Borrow<HashedDataFrame>>,
         name: &str,
     ) -> Result<()> {
         let frame = MetaDataFrame::new(frame.meta.borrow(), frame.data.borrow());
