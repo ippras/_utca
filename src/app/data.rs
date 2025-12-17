@@ -1,7 +1,4 @@
-use crate::{
-    app::{identifiers::CONFIGURE, panes::configuration::Pane as ConfigurationPane},
-    utils::HashedMetaDataFrame,
-};
+use crate::{app::identifiers::CONFIGURE, utils::HashedMetaDataFrame};
 use egui::{CentralPanel, Color32, Id, Label, MenuBar, RichText, ScrollArea, TopBottomPanel, Ui};
 use egui_dnd::dnd;
 use egui_l20n::{ResponseExt, UiExt as _};

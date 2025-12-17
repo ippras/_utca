@@ -15,8 +15,8 @@ pub(crate) const SAMPLE: &str = "Sample";
 pub(crate) const SELECTIVITY: &str = "Selectivity";
 pub(crate) const STANDARD_DEVIATION: &str = "StandardDeviation";
 pub(crate) const STANDARD: &str = "Standard";
-pub(crate) const STEREOSPECIFIC_NUMBERS: &str = "StereospecificNumbers";
 pub(crate) const THRESHOLD: &str = "Threshold";
+// pub(crate) const STEREOSPECIFIC_NUMBERS: &str = "StereospecificNumbers";
 
 #[cfg(feature = "markdown")]
 #[rustfmt::skip]

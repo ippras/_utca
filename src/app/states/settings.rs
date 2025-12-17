@@ -1,8 +1,5 @@
-use ahash::HashSet;
-use egui::{ComboBox, Context, Grid, Id, RichText, Sense, Sides, Ui};
-use egui_dnd::dnd;
+use egui::{ComboBox, Grid, Id, Sense, Ui};
 use egui_l20n::UiExt as _;
-use egui_phosphor::regular::{DOTS_SIX_VERTICAL, EYE, EYE_SLASH};
 use egui_tiles::ContainerKind;
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};

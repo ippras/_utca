@@ -6,7 +6,6 @@ pub use self::web::save;
 use crate::utils::HashedDataFrame;
 use anyhow::Result;
 use metadata::{Metadata, polars::MetaDataFrame};
-use polars::frame::DataFrame;
 use ron::{
     extensions::Extensions,
     ser::{PrettyConfig, to_string_pretty},
