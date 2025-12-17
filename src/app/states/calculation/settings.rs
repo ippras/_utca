@@ -4,7 +4,7 @@ use crate::{
     text::Text,
 };
 use egui::{
-    ComboBox, Grid, Popup, PopupCloseBehavior, Response, RichText, ScrollArea, Slider,
+    ComboBox, DragValue, Grid, Popup, PopupCloseBehavior, Response, RichText, ScrollArea, Slider,
     SliderClamping, Ui, Widget,
     containers::menu::{MenuButton, MenuConfig},
 };
@@ -48,7 +48,7 @@ pub(crate) struct Settings {
     // Special parameters
     pub(crate) christie: bool,
     pub(crate) normalize: Normalize,
-    pub(crate) standard: Option<String>,
+    pub(crate) standard: Standard,
     pub(crate) threshold: Threshold,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
@@ -80,7 +80,7 @@ impl Settings {
             // Special parameters
             christie: false,
             normalize: Normalize::new(),
-            standard: None,
+            standard: Standard::new(),
             threshold: Threshold::new(),
             unsigned: true,
             weighted: false,
@@ -214,23 +214,24 @@ impl Settings {
 
     /// Standard
     fn standard(&mut self, ui: &mut Ui) {
+        // Label
         ui.horizontal(|ui| {
             ui.label(ui.localize("Standard"))
                 .on_hover_localized("Standard.hover");
-            let mut checked = self.standard.is_some();
+            let mut checked = self.standard.label.is_some();
             if ui
                 .checkbox(&mut checked, ())
                 .on_hover_localized("Standard?OptionCategory=none")
                 .changed()
             {
-                self.standard = if checked {
+                self.standard.label = if checked {
                     self.fatty_acids.first().cloned()
                 } else {
                     None
                 };
             }
             ui.add_enabled_ui(checked, |ui| {
-                let text = match &self.standard {
+                let text = match &self.standard.label {
                     Some(standard) => Cow::Owned(standard.clone()),
                     None => Cow::from(""),
                 };
@@ -239,7 +240,7 @@ impl Settings {
                     .show_ui(ui, |ui| {
                         for fatty_acid in &self.fatty_acids {
                             ui.selectable_value(
-                                &mut self.standard,
+                                &mut self.standard.label,
                                 Some(fatty_acid.clone()),
                                 fatty_acid,
                             )
@@ -251,8 +252,33 @@ impl Settings {
             });
             ui.add_enabled_ui(self.fatty_acids.contains(&"Margaric".to_owned()), |ui| {
                 if ui.button((BOOKMARK, "17:0")).clicked() {
-                    self.standard = Some("Margaric".to_owned());
+                    self.standard.label = Some("Margaric".to_owned());
                 };
+            });
+        });
+        // Value
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("Standard"))
+                .on_hover_localized("Standard.hover");
+            let mut checked = self.standard.value.is_some();
+            if ui
+                .checkbox(&mut checked, ())
+                .on_hover_localized("Standard?OptionCategory=none")
+                .changed()
+            {
+                self.standard.value = if checked {
+                    Some(OrderedFloat(0.0))
+                } else {
+                    None
+                };
+            }
+            ui.add_enabled_ui(checked, |ui| match &mut self.standard.value {
+                Some(value) => DragValue::new(&mut value.0)
+                    .range(0.0..=f64::MAX)
+                    .custom_formatter(|value, _| format!("{value:.0$}", self.precision))
+                    .ui(ui)
+                    .on_hover_text(value.to_string()),
+                None => DragValue::new(&mut 0.0).ui(ui),
             });
         });
     }
@@ -702,31 +728,21 @@ impl Default for Normalize {
     }
 }
 
-// /// Standard
-// #[derive(Clone, Debug, Deserialize, Hash, PartialEq, Serialize)]
-// pub(crate) struct Standard(Option<String>);
+/// Standard
+#[derive(Clone, Debug, Default, Deserialize, Hash, PartialEq, Serialize)]
+pub(crate) struct Standard {
+    pub(crate) label: Option<String>,
+    pub(crate) value: Option<OrderedFloat<f64>>,
+}
 
-// impl Standard {
-//     pub(crate) fn as_deref(&self) -> Option<&str> {
-//         self.0.as_deref()
-//     }
-// }
-
-// impl Text for Standard {
-//     fn text(&self) -> &str {
-//         match &self.0 {
-//             Some(standard) => standard,
-//             None => "-",
-//         }
-//     }
-
-//     fn hover_text(&self) -> &str {
-//         match &self.0 {
-//             Some(standard) => standard,
-//             None => "Standard?OptionCategory=none",
-//         }
-//     }
-// }
+impl Standard {
+    pub(crate) fn new() -> Self {
+        Self {
+            label: None,
+            value: None,
+        }
+    }
+}
 
 /// Stereospecific numbers
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Serialize)]
@@ -740,7 +756,7 @@ impl StereospecificNumbers {
     pub(crate) fn text(&self) -> &'static str {
         match self {
             Self::OneAndTwoAndTree => "StereospecificNumber.abbreviation?number=123",
-            Self::OneAndThree => "StereospecificNumber.abbreviation?number=1",
+            Self::OneAndThree => "StereospecificNumber.abbreviation?number=13",
             Self::Two => "StereospecificNumber.abbreviation?number=2",
         }
     }
@@ -748,7 +764,7 @@ impl StereospecificNumbers {
     pub(crate) fn hover_text(&self) -> &'static str {
         match self {
             Self::OneAndTwoAndTree => "StereospecificNumber?number=123",
-            Self::OneAndThree => "StereospecificNumber?number=1",
+            Self::OneAndThree => "StereospecificNumber?number=13",
             Self::Two => "StereospecificNumber?number=2",
         }
     }

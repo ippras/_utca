@@ -29,10 +29,8 @@ impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
-        // Filter threshold
-        if key.threshold_filter {
-            lazy_frame = lazy_frame.filter(col(THRESHOLD));
-        }
+        // Filter
+        lazy_frame = filter(lazy_frame, key);
         // Compute
         lazy_frame = compute(lazy_frame, key)?;
         lazy_frame.collect()
@@ -70,50 +68,16 @@ impl<'a> Key<'a> {
 /// Calculation biodiesel properties value
 type Value = DataFrame;
 
-// fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
-//     // let length = length(&key.frame)?;
-//     // Пока не будет готов
-//     // https://github.com/pola-rs/polars/pull/23316
-//     let iter = |expr: Expr| {
-//         (0..length).map(move |index| {
-//             expr.clone()
-//                 .struct_()
-//                 .field_by_name(SAMPLE)
-//                 .arr()
-//                 .get(lit(index as IdxSize), false)
-//         })
-//     };
-//     let sample = |name: &str, f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
-//         concat_arr(iter(col(name)).map(f).collect())
-//     };
-//     let stereospecific_numbers = |name: &str, f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
-//         Ok(as_struct(vec![
-//             sample(name, f)?.arr().mean().alias(MEAN),
-//             sample(name, f)?
-//                 .arr()
-//                 .std(key.ddof)
-//                 .alias(STANDARD_DEVIATION),
-//             sample(name, f)?.alias(SAMPLE),
-//         ])
-//         .alias(name))
-//     };
-//     let property = |f: fn(Expr) -> Expr| -> PolarsResult<Expr> {
-//         Ok(as_struct(vec![
-//             stereospecific_numbers(STEREOSPECIFIC_NUMBERS123, f)?,
-//             stereospecific_numbers(STEREOSPECIFIC_NUMBERS13, f)?,
-//             stereospecific_numbers(STEREOSPECIFIC_NUMBERS2, f)?,
-//         ]))
-//     };
-//     Ok(lazy_frame.select([
-//         property(cetane_number)?.alias("CetaneNumber"),
-//         property(cold_filter_plugging_point)?.alias("ColdFilterPluggingPoint"),
-//         property(degree_of_unsaturation)?.alias("DegreeOfUnsaturation"),
-//         property(iodine_value)?.alias("IodineValue"),
-//         property(long_chain_saturated_factor)?.alias("LongChainSaturatedFactor"),
-//         property(oxidation_stability)?.alias("OxidationStability"),
-//     ]))
-// }
+fn filter(lazy_frame: LazyFrame, key: Key) -> LazyFrame {
+    if key.threshold_filter {
+        lazy_frame.filter(col(THRESHOLD))
+    } else {
+        lazy_frame
+    }
+}
 
+// Пока не будет готов
+// https://github.com/pola-rs/polars/pull/23316
 fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let mut exprs = Vec::with_capacity(4);
     // Names

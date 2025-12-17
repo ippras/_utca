@@ -1,5 +1,5 @@
 use crate::{
-    app::states::calculation::settings::{Normalize, Settings, Threshold},
+    app::states::calculation::settings::{Normalize, Settings, Standard, Threshold},
     assets::CHRISTIE,
     r#const::{
         ENRICHMENT, FACTOR, FACTORS, MASK, MEAN, SAMPLE, SELECTIVITY, STANDARD, STANDARD_DEVIATION,
@@ -10,6 +10,7 @@ use crate::{
 use const_format::formatcp;
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
+use ordered_float::OrderedFloat;
 use polars::prelude::*;
 use polars_ext::prelude::*;
 
@@ -69,7 +70,7 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) normalize_factors: bool,
     pub(crate) normalize: Normalize,
-    pub(crate) standard: Option<&'a str>,
+    pub(crate) standard: &'a Standard,
     pub(crate) threshold: &'a Threshold,
     pub(crate) unsigned: bool,
     pub(crate) weighted: bool,
@@ -84,7 +85,7 @@ impl<'a> Key<'a> {
             ddof: settings.ddof,
             normalize_factors: settings.normalize_factors,
             normalize: settings.normalize,
-            standard: settings.standard.as_deref(),
+            standard: &settings.standard,
             threshold: &settings.threshold,
             unsigned: settings.unsigned,
             weighted: settings.weighted,
@@ -138,7 +139,7 @@ fn standard(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
     // Стандарт - true, все остальные - false.
     // `lit(standard)` - без `lit()` будет искать столбец `standard`
     lazy_frame = lazy_frame.with_column(
-        match key.standard {
+        match key.standard.label.as_deref() {
             Some(standard) => col(LABEL).eq(lit(standard)),
             None => lit(false),
         }
@@ -146,9 +147,12 @@ fn standard(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
     );
     // Standard[i]
     // Отношения площадей к площади стандарта.
+    let mut expr = SN123 / SN123.filter(col(STANDARD)).first();
+    if let Some(OrderedFloat(value)) = key.standard.value {
+        expr = expr * lit(value);
+    }
     lazy_frame.with_column(
-        (SN123 / SN123.filter(col(STANDARD)).first())
-            .name()
+        expr.name()
             .replace(STEREOSPECIFIC_NUMBERS123, STANDARD, true),
     )
 }
@@ -287,11 +291,11 @@ fn mean_and_standard_deviations(lazy_frame: LazyFrame, key: Key) -> PolarsResult
 }
 
 fn mean_and_standard_deviation(expr: Expr, ddof: u8) -> PolarsResult<Expr> {
-    let sample = concat_arr(vec![expr])?;
+    let array = concat_arr(vec![expr])?;
     Ok(as_struct(vec![
-        sample.clone().arr().mean().alias(MEAN),
-        sample.clone().arr().std(ddof).alias(STANDARD_DEVIATION),
-        sample.alias(SAMPLE),
+        array.clone().arr().mean().alias(MEAN),
+        array.clone().arr().std(ddof).alias(STANDARD_DEVIATION),
+        array.alias(SAMPLE),
     ]))
 }
 
@@ -327,8 +331,7 @@ fn mean_and_standard_deviation(expr: Expr, ddof: u8) -> PolarsResult<Expr> {
 //     destruct(names) / to_mass(names).sum()
 // }
 
-pub(crate) mod correlations;
-pub(crate) mod properties;
+pub(crate) mod sum;
 pub(crate) mod table;
 
 #[cfg(test)]

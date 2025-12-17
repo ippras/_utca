@@ -21,10 +21,8 @@ impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
-        // Filter threshold
-        if key.threshold_filter {
-            lazy_frame = lazy_frame.filter(col(THRESHOLD));
-        }
+        // Filter
+        lazy_frame = filter(lazy_frame, key);
         // Compute
         lazy_frame = compute(lazy_frame, key)?;
         lazy_frame.collect()
@@ -63,6 +61,14 @@ impl<'a> Key<'a> {
 
 /// Calculation properties value
 type Value = DataFrame;
+
+fn filter(lazy_frame: LazyFrame, key: Key) -> LazyFrame {
+    if key.threshold_filter {
+        lazy_frame.filter(col(THRESHOLD))
+    } else {
+        lazy_frame
+    }
+}
 
 fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let mut exprs = Vec::with_capacity(4);

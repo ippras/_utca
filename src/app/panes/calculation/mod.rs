@@ -6,11 +6,13 @@ use crate::{
     app::{
         computers::calculation::{
             Computed as CalculationComputed, Key as CalculationKey,
-            correlations::{Computed as CorrelationsComputed, Key as CorrelationsKey},
-            properties::{
-                Computed as PropertiesComputed, Key as PropertiesKey,
-                biodiesel::{
-                    Computed as BiodieselPropertiesComputed, Key as BiodieselPropertiesKey,
+            sum::{
+                correlations::{Computed as CorrelationsComputed, Key as CorrelationsKey},
+                properties::{
+                    Computed as PropertiesComputed, Key as PropertiesKey,
+                    biodiesel::{
+                        Computed as BiodieselPropertiesComputed, Key as BiodieselPropertiesKey,
+                    },
                 },
             },
         },
@@ -60,10 +62,7 @@ impl Pane {
         Self {
             id: None,
             frames,
-            target: HashedDataFrame {
-                data_frame: DataFrame::empty(),
-                hash: 0,
-            },
+            target: HashedDataFrame::EMPTY,
         }
     }
 

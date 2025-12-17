@@ -95,6 +95,7 @@ impl<const N: usize> MeanAndStandardDeviation<'_, N> {
                     .field_by_name(SAMPLE)?
                     .array()?
                     .get_as_series(self.row)
+                && sample.len() > 1
             {
                 response = response.on_hover_ui(|ui| {
                     ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);

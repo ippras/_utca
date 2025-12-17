@@ -9,12 +9,15 @@ use crate::r#const::markdown::{
 };
 use crate::{
     app::{states::calculation::settings::Settings, widgets::MeanAndStandardDeviation},
-    r#const::NAME,
+    r#const::{EM_DASH, NAME},
 };
-use egui::{Grid, InnerResponse, Response, TextWrapMode, Ui, Widget, WidgetText};
+#[cfg(feature = "markdown")]
+use egui::Popup;
+use egui::{Grid, InnerResponse, Response, Ui, Widget};
 #[cfg(feature = "markdown")]
 use egui_ext::Markdown as _;
 use egui_l20n::prelude::*;
+use egui_phosphor::regular::INFO;
 use polars::prelude::*;
 
 /// Properties widget
@@ -46,8 +49,19 @@ impl<'a> Properties<'a> {
                 for column in columns {
                     match column.name().as_str() {
                         NAME => {
-                            let name = self.data_frame[NAME].str()?.get(row).unwrap_or_default();
-                            ui.label(ui.localize(name));
+                            ui.horizontal(|ui| -> PolarsResult<()> {
+                                ui.visuals_mut().button_frame = false;
+                                #[allow(unused_variables)]
+                                let response = ui.button(INFO);
+                                let name = self.data_frame[NAME].str()?.get(row).unwrap_or(EM_DASH);
+                                ui.label(ui.localize(name));
+                                #[cfg(feature = "markdown")]
+                                Popup::menu(&response).show(|ui| {
+                                    ui.markdown(asset(name));
+                                });
+                                Ok(())
+                            })
+                            .inner?;
                         }
                         name => {
                             MeanAndStandardDeviation::new(&self.data_frame, [name], row)
@@ -121,8 +135,8 @@ impl Widget for Properties<'_> {
 }
 
 #[cfg(feature = "markdown")]
-fn asset(index: &str) -> &str {
-    match index {
+fn asset(name: &str) -> &str {
+    match name {
         // "Conjugated" => CONJUGATED,
         // "Monounsaturated" => MONOUNSATURATED,
         // "Polyunsaturated" => POLYUNSATURATED,
