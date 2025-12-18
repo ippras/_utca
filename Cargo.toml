@@ -31,7 +31,8 @@ log = "0.4.29"
 ordered-float = { version = "5.1.0", features = ["serde"] }
 # polars = { version = "0.52.0", default-features = false, features = [
 # fea5335e5befc493af208a34c6b4162a1cbd2798 2025-11-12
-polars = { git = "https://github.com/pola-rs/polars", rev = "fea5335", default-features = false, features = [
+# 05f6f2db49c6721f8208b3bbcca5ec54568e34c4 2025-12-17
+polars = { git = "https://github.com/pola-rs/polars", rev = "05f6f2d", default-features = false, features = [
     "array_arithmetic",
     "bitwise",
     "concat_str",
@@ -102,12 +103,12 @@ atom = { git = "https://github.com/ippras/atom" }
 egui_ext = { git = "https://github.com/kgv/egui_ext" }
 egui_l20n = { git = "https://github.com/kgv/egui_l20n", features = ["macros"] }
 egui_tiles_ext = { git = "https://github.com/kgv/egui_tiles_ext" }
-lipid = { git = "https://github.com/ippras/lipid", branch = "fea5335" }
-metadata = { git = "https://github.com/ippras/metadata", branch = "fea5335", features = [
+lipid = { git = "https://github.com/ippras/lipid", branch = "05f6f2d" }
+metadata = { git = "https://github.com/ippras/metadata", branch = "05f6f2d", features = [
     "egui",
     "polars",
 ] }
-polars_ext = { git = "https://github.com/kgv/polars_ext", branch = "fea5335", features = [
+polars_ext = { git = "https://github.com/kgv/polars_ext", branch = "05f6f2d", features = [
     "array",
     "temporal_conversions",
 ] }
