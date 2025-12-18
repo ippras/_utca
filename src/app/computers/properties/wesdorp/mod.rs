@@ -3,6 +3,7 @@
 //! [Moorthy2016](https://doi.org/10.1007/s11746-016-2935-1)
 //! [Seilert2021](https://doi.org/10.1002/aocs.12515)
 
+#[allow(ambiguous_glob_imports)]
 use super::T_0;
 use lipid::prelude::*;
 use polars::{

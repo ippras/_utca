@@ -121,9 +121,10 @@ fn length(data_frame: &DataFrame) -> PolarsResult<usize> {
             && field2.name == "StandardDeviation"
             && field2.dtype == DataType::Float64
             && field3.name == "Array"
-            && let DataType::Array(box DataType::Float64, length) = field3.dtype
+            && let DataType::Array(data_type, length) = &field3.dtype
+            && *data_type == Box::new(DataType::Float64)
         {
-            return Ok(length);
+            return Ok(*length);
         }
     }
     polars_bail!(SchemaMismatch: "Invalid composition schema: expected `{SCHEMA:?}`, got = `{schema:?}`");

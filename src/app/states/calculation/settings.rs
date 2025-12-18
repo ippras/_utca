@@ -236,7 +236,7 @@ impl Settings {
                     None => Cow::from(""),
                 };
                 ComboBox::from_id_salt("Standard")
-                    .selected_text(text.as_str())
+                    .selected_text(&*text)
                     .show_ui(ui, |ui| {
                         for fatty_acid in &self.fatty_acids {
                             ui.selectable_value(
