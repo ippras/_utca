@@ -23,7 +23,7 @@ egui_dnd = "0.14.0"
 egui_extras = { version = "0.33.3", features = ["datepicker", "serde", "svg"] }
 egui_plot = "0.34.0"
 egui_table = "0.6.0"
-egui_tiles = "0.14.0"
+egui_tiles = "0.14.1"
 ehttp = { version = "0.6.0", features = ["json", "native-async"] }
 indexmap = "2.12.1"
 itertools = "0.14.0"
