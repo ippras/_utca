@@ -126,7 +126,10 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                 })?
                 .to_vec(),
         )?
-        .explode()
+        .explode(ExplodeOptions {
+            empty_as_null: true,
+            keep_nulls: true,
+        })
         .alias(stereospecific_numbers);
         exprs.push(expr);
     }

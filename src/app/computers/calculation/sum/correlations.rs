@@ -116,7 +116,13 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                 ..Default::default()
             },
         )
-        .explode(cols([SAMPLE1, SAMPLE2]));
+        .explode(
+            cols([SAMPLE1, SAMPLE2]),
+            ExplodeOptions {
+                empty_as_null: true,
+                keep_nulls: true,
+            },
+        );
     // Correlation and format
     lazy_frame =
         lazy_frame

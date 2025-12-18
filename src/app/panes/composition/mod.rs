@@ -316,7 +316,10 @@ impl Pane {
         data_frame
             .data_frame
             .lazy()
-            .select([col("Species").explode()])
+            .select([col("Species").explode(ExplodeOptions {
+                empty_as_null: true,
+                keep_nulls: true,
+            })])
             .unnest(by_name(["Species"], true), None)
             .sort(
                 ["Value"],

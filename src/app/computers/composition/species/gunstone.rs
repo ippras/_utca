@@ -163,7 +163,7 @@ fn factors(mut lazy_frame: LazyFrame) -> PolarsResult<LazyFrame> {
     // Unpivot
     lazy_frame = lazy_frame
         .unpivot(UnpivotArgsDSL {
-            on: by_name(["S_3", "S_2U", "SU_2", "U_3"], true),
+            on: Some(by_name(["S_3", "S_2U", "SU_2", "U_3"], true)),
             index: empty(),
             variable_name: None,
             value_name: Some(PlSmallStr::from_static("Factor")),

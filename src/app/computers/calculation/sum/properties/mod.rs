@@ -145,7 +145,10 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                 })
                 .collect::<PolarsResult<_>>()?,
         )?
-        .explode()
+        .explode(ExplodeOptions {
+            empty_as_null: true,
+            keep_nulls: true,
+        })
         .alias(name);
         exprs.push(expr);
     }
