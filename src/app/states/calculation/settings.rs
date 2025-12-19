@@ -602,7 +602,7 @@ impl Table {
 pub(crate) struct Indices(Vec<Index>);
 
 impl Indices {
-    pub(crate) fn new() -> Self {
+    fn new() -> Self {
         Self(vec![
             Index::new("Saturated"),
             Index::new("Monounsaturated"),
@@ -626,26 +626,6 @@ impl Indices {
             Index::new("UnsaturationIndex"),
             Index::new("IodineValue"),
         ])
-    }
-
-    pub(crate) fn iter_visible(&self) -> impl Iterator<Item = &str> {
-        self.0
-            .iter()
-            .filter_map(|index| index.visible.then_some(&*index.name))
-    }
-}
-
-impl Deref for Indices {
-    type Target = Vec<Index>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Indices {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
 
@@ -687,6 +667,20 @@ impl Indices {
                 index.visible = visible;
             }
         }
+    }
+}
+
+impl Deref for Indices {
+    type Target = Vec<Index>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Indices {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -797,7 +791,7 @@ impl Threshold {
             filter: false,
             is_auto: true,
             manual: Vec::new(),
-            sort: true,
+            sort: false,
         }
     }
 }

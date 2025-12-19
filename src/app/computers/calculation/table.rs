@@ -11,90 +11,119 @@ use polars_ext::prelude::*;
 use std::sync::LazyLock;
 use tracing::instrument;
 
+// const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+//     Arc::new(Schema::from_iter([
+//         Field::new(PlSmallStr::from_static(LABEL), DataType::String),
+//         field!(FATTY_ACID),
+//         Field::new(
+//             PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS123),
+//             DataType::Struct(vec![
+//                 Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
+//                 Field::new(
+//                     PlSmallStr::from_static(STANDARD_DEVIATION),
+//                     DataType::Float64,
+//                 ),
+//                 Field::new(
+//                     PlSmallStr::from_static(SAMPLE),
+//                     DataType::Array(Box::new(DataType::Float64), 0),
+//                 ),
+//             ]),
+//         ),
+//         Field::new(
+//             PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS2),
+//             DataType::Struct(vec![
+//                 Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
+//                 Field::new(
+//                     PlSmallStr::from_static(STANDARD_DEVIATION),
+//                     DataType::Float64,
+//                 ),
+//                 Field::new(
+//                     PlSmallStr::from_static(SAMPLE),
+//                     DataType::Array(Box::new(DataType::Float64), 0),
+//                 ),
+//             ]),
+//         ),
+//         Field::new(
+//             PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS13),
+//             DataType::Struct(vec![
+//                 Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
+//                 Field::new(
+//                     PlSmallStr::from_static(STANDARD_DEVIATION),
+//                     DataType::Float64,
+//                 ),
+//                 Field::new(
+//                     PlSmallStr::from_static(SAMPLE),
+//                     DataType::Array(Box::new(DataType::Float64), 0),
+//                 ),
+//             ]),
+//         ),
+//         // Field::new(
+//         //     PlSmallStr::from_static(FACTORS),
+//         //     DataType::Struct(vec![
+//         //         Field::new(
+//         //             PlSmallStr::from_static(ENRICHMENT),
+//         //             DataType::Struct(vec![
+//         //                 Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
+//         //                 Field::new(
+//         //                     PlSmallStr::from_static(STANDARD_DEVIATION),
+//         //                     DataType::Float64,
+//         //                 ),
+//         //                 Field::new(
+//         //                     PlSmallStr::from_static(SAMPLE),
+//         //                     DataType::Array(Box::new(DataType::Float64), 0),
+//         //                 ),
+//         //             ]),
+//         //         ),
+//         //         Field::new(
+//         //             PlSmallStr::from_static(SELECTIVITY),
+//         //             DataType::Struct(vec![
+//         //                 Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
+//         //                 Field::new(
+//         //                     PlSmallStr::from_static(STANDARD_DEVIATION),
+//         //                     DataType::Float64,
+//         //                 ),
+//         //                 Field::new(
+//         //                     PlSmallStr::from_static(SAMPLE),
+//         //                     DataType::Array(Box::new(DataType::Float64), 0),
+//         //                 ),
+//         //             ]),
+//         //         ),
+//         //     ]),
+//         // ),
+//         Field::new(
+//             PlSmallStr::from_static(STANDARD),
+//             DataType::Struct(vec![
+//                 Field::new(
+//                     PlSmallStr::from_static(FACTOR),
+//                     DataType::Array(Box::new(DataType::Float64), 0),
+//                 ),
+//                 Field::new(PlSmallStr::from_static(MASK), DataType::Boolean),
+//             ]),
+//         ),
+//         Field::new(PlSmallStr::from_static(THRESHOLD), DataType::Boolean),
+//     ]))
+// });
 const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
     Arc::new(Schema::from_iter([
         Field::new(PlSmallStr::from_static(LABEL), DataType::String),
         field!(FATTY_ACID),
         Field::new(
             PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS123),
-            DataType::Struct(vec![
-                Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
-                Field::new(
-                    PlSmallStr::from_static(STANDARD_DEVIATION),
-                    DataType::Float64,
-                ),
-                Field::new(
-                    PlSmallStr::from_static(SAMPLE),
-                    DataType::Array(Box::new(DataType::Float64), 0),
-                ),
-            ]),
+            DataType::Array(Box::new(DataType::Float64), 0),
         ),
         Field::new(
             PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS2),
-            DataType::Struct(vec![
-                Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
-                Field::new(
-                    PlSmallStr::from_static(STANDARD_DEVIATION),
-                    DataType::Float64,
-                ),
-                Field::new(
-                    PlSmallStr::from_static(SAMPLE),
-                    DataType::Array(Box::new(DataType::Float64), 0),
-                ),
-            ]),
+            DataType::Array(Box::new(DataType::Float64), 0),
         ),
         Field::new(
             PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS13),
-            DataType::Struct(vec![
-                Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
-                Field::new(
-                    PlSmallStr::from_static(STANDARD_DEVIATION),
-                    DataType::Float64,
-                ),
-                Field::new(
-                    PlSmallStr::from_static(SAMPLE),
-                    DataType::Array(Box::new(DataType::Float64), 0),
-                ),
-            ]),
-        ),
-        Field::new(
-            PlSmallStr::from_static(FACTORS),
-            DataType::Struct(vec![
-                Field::new(
-                    PlSmallStr::from_static(ENRICHMENT),
-                    DataType::Struct(vec![
-                        Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
-                        Field::new(
-                            PlSmallStr::from_static(STANDARD_DEVIATION),
-                            DataType::Float64,
-                        ),
-                        Field::new(
-                            PlSmallStr::from_static(SAMPLE),
-                            DataType::Array(Box::new(DataType::Float64), 0),
-                        ),
-                    ]),
-                ),
-                Field::new(
-                    PlSmallStr::from_static(SELECTIVITY),
-                    DataType::Struct(vec![
-                        Field::new(PlSmallStr::from_static(MEAN), DataType::Float64),
-                        Field::new(
-                            PlSmallStr::from_static(STANDARD_DEVIATION),
-                            DataType::Float64,
-                        ),
-                        Field::new(
-                            PlSmallStr::from_static(SAMPLE),
-                            DataType::Array(Box::new(DataType::Float64), 0),
-                        ),
-                    ]),
-                ),
-            ]),
+            DataType::Array(Box::new(DataType::Float64), 0),
         ),
         Field::new(
             PlSmallStr::from_static(STANDARD),
             DataType::Struct(vec![
                 Field::new(
-                    PlSmallStr::from_static(FACTOR),
+                    PlSmallStr::from_static(FACTORS),
                     DataType::Array(Box::new(DataType::Float64), 0),
                 ),
                 Field::new(PlSmallStr::from_static(MASK), DataType::Boolean),
@@ -140,6 +169,7 @@ impl ComputerMut<Key<'_>, Value> for Computer {
 pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
     pub(crate) ddof: u8,
+    pub(crate) normalize_factors: bool,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
     pub(crate) significant: bool,
@@ -151,6 +181,7 @@ impl<'a> Key<'a> {
         Self {
             frame,
             ddof: settings.ddof,
+            normalize_factors: settings.normalize_factors,
             percent: settings.percent,
             precision: settings.precision,
             significant: settings.significant,
@@ -191,56 +222,44 @@ fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
 }
 
 fn body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    println!("T0!!!!!!: {}", lazy_frame.clone().collect()?);
+    // Factors
+    let r#struct = |name| {
+        col(name)
+            .arr()
+            .to_struct(Some(PlanCallback::new(move |index| {
+                Ok(format!("{name}[{index}]"))
+            })))
+    };
+    let mut enrichment_factor = FattyAcidExpr::enrichment_factor(
+        col(STEREOSPECIFIC_NUMBERS2),
+        col(STEREOSPECIFIC_NUMBERS123),
+    );
+    let mut selectivity_factor = concat_arr(vec![
+        col(FATTY_ACID).fatty_acid().selectivity_factor(
+            r#struct(STEREOSPECIFIC_NUMBERS2)
+                .struct_()
+                .field_by_name("*"),
+            r#struct(STEREOSPECIFIC_NUMBERS123)
+                .struct_()
+                .field_by_name("*"),
+        ),
+    ])?;
+    if key.normalize_factors {
+        enrichment_factor = enrichment_factor / lit(3);
+        selectivity_factor = selectivity_factor / lit(3);
+    }
+    lazy_frame = lazy_frame.with_columns([as_struct(vec![
+        mean_standard_deviation_sample(enrichment_factor, key).alias(ENRICHMENT),
+        mean_standard_deviation_sample(selectivity_factor, key).alias(SELECTIVITY),
+    ])
+    .alias(FACTORS)]);
     // Stereospecific numbers
     lazy_frame = lazy_frame.with_columns(
         STEREOSPECIFIC_NUMBERS
-            .map(|name| {
-                as_struct(vec![
-                    col(name)
-                        .struct_()
-                        .field_by_name(MEAN)
-                        .percent(key.percent)
-                        .precision(key.precision, key.significant),
-                    col(name)
-                        .struct_()
-                        .field_by_name(STANDARD_DEVIATION)
-                        .percent(key.percent)
-                        .precision(key.precision + 1, key.significant),
-                    col(name).struct_().field_by_name(SAMPLE).arr().eval(
-                        element()
-                            .percent(key.percent)
-                            .precision(key.precision, key.significant),
-                        false,
-                    ),
-                ])
-                .alias(name)
-            })
+            .map(|name| mean_standard_deviation_sample(col(name), key).alias(name))
             .to_vec(),
     );
-    // Factors
-    lazy_frame = lazy_frame.with_columns([as_struct(
-        [ENRICHMENT, SELECTIVITY]
-            .map(|name| {
-                let expr = col(FACTORS).struct_().field_by_name(name);
-                as_struct(vec![
-                    expr.clone()
-                        .struct_()
-                        .field_by_name(MEAN)
-                        .precision(key.precision, key.significant),
-                    expr.clone()
-                        .struct_()
-                        .field_by_name(STANDARD_DEVIATION)
-                        .precision(key.precision + 1, key.significant),
-                    expr.struct_()
-                        .field_by_name(SAMPLE)
-                        .arr()
-                        .eval(element().precision(key.precision, key.significant), false),
-                ])
-                .alias(name)
-            })
-            .to_vec(),
-    )
-    .alias(FACTORS)]);
     // Properties
     lazy_frame = lazy_frame.with_columns([as_struct(vec![
         col(FATTY_ACID)
@@ -255,14 +274,16 @@ fn body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             .alias(RELATIVE_ATOMIC_MASS),
     ])
     .alias(PROPERTIES)]);
+    println!("T3!!!!!!: {}", lazy_frame.clone().collect()?);
     // Standard
     lazy_frame = lazy_frame.with_columns([col(STANDARD)
         .struct_()
-        .field_by_name(FACTOR)
+        .field_by_name(FACTORS)
         .name()
         .keep()
         .arr()
         .eval(element().precision(key.precision, key.significant), false)]);
+    println!("T4!!!!!!: {}", lazy_frame.clone().collect()?);
     // Calculations
     let predicate = col(STEREOSPECIFIC_NUMBERS123)
         .struct_()
@@ -340,35 +361,8 @@ fn sum(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     Ok(lazy_frame.select(
         STEREOSPECIFIC_NUMBERS
             .try_map(|name| -> PolarsResult<_> {
-                let array = eval_arr(col(name).struct_().field_by_name(SAMPLE), |expr| {
-                    expr.filter(THRESHOLD).sum()
-                })?;
-                Ok(as_struct(vec![
-                    array
-                        .clone()
-                        .arr()
-                        .mean()
-                        .percent(key.percent)
-                        .precision(key.precision, key.significant)
-                        .alias(MEAN),
-                    array
-                        .clone()
-                        .arr()
-                        .std(key.ddof)
-                        .percent(key.percent)
-                        .precision(key.precision + 1, key.significant)
-                        .alias(STANDARD_DEVIATION),
-                    array
-                        .arr()
-                        .eval(
-                            element()
-                                .percent(key.percent)
-                                .precision(key.precision, key.significant),
-                            false,
-                        )
-                        .alias(SAMPLE),
-                ])
-                .alias(name))
+                let array = eval_arr(col(name), |expr| expr.filter(THRESHOLD).sum())?;
+                Ok(mean_standard_deviation_sample(array, key).alias(name))
             })?
             .to_vec(),
     ))
@@ -402,4 +396,52 @@ fn calculation_sf(
         format_str("1 / 3 * ({} * {}) / ({} * {})", [sn2, u123, sn123, u2])?,
         lit(NULL),
     ))
+}
+
+fn mean_standard_deviation_sample(array: Expr, key: Key) -> Expr {
+    as_struct(vec![
+        array
+            .clone()
+            .arr()
+            .mean()
+            .percent(key.percent)
+            .precision(key.precision, key.significant)
+            .alias(MEAN),
+        array
+            .clone()
+            .arr()
+            .std(key.ddof)
+            .percent(key.percent)
+            .precision(key.precision + 1, key.significant)
+            .alias(STANDARD_DEVIATION),
+        array
+            .arr()
+            .eval(
+                element()
+                    .percent(key.percent)
+                    .precision(key.precision, key.significant),
+                false,
+            )
+            .alias(SAMPLE),
+    ])
+}
+
+fn enrichment_factor(sn2: Expr, sn123: Expr, key: Key) -> Expr {
+    let mut enrichment_factor = FattyAcidExpr::enrichment_factor(sn2, sn123);
+    // if key.normalize_factors {
+    //     enrichment_factor = enrichment_factor / lit(3);
+    // }
+    enrichment_factor
+        .name()
+        .replace(STEREOSPECIFIC_NUMBERS2, ENRICHMENT, true)
+}
+
+fn selectivity_factor(sn2: Expr, sn123: Expr, key: Key) -> Expr {
+    let mut selectivity_factor = col(FATTY_ACID).fatty_acid().selectivity_factor(sn2, sn123);
+    // if key.normalize_factors {
+    //     selectivity_factor = selectivity_factor / lit(3);
+    // }
+    selectivity_factor
+        .name()
+        .replace(STEREOSPECIFIC_NUMBERS2, SELECTIVITY, true)
 }
