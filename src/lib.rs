@@ -1,4 +1,5 @@
 #![feature(array_try_map)]
+#![feature(debug_closure_helpers)]
 #![feature(decl_macro)]
 #![feature(if_let_guard)]
 #![feature(result_option_map_or_default)]

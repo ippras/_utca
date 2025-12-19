@@ -67,4 +67,29 @@ integrity:
 git branch -d <branch_name>
 git push origin -d <branch_name>
 
-== TODO
+## Fix
+
+### Local
+
+`rustup install nightly-2025-10-29`
+
+### Workflows
+
+From
+
+```yml
+uses: dtolnay/rust-toolchain@nightly
+with:
+    target: wasm32-unknown-unknown
+```
+
+To
+
+```yml
+uses: dtolnay/rust-toolchain@master
+with:
+    target: wasm32-unknown-unknown
+    toolchain: nightly-2025-10-28
+```
+
+## TODO

@@ -12,9 +12,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Setup rust # setup rust toolchain for wasm
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@master
         with:
           target: wasm32-unknown-unknown
+          toolchain: nightly-2025-10-28
       - name: Cache rust # cache the rust build artefacts
         uses: Swatinem/rust-cache@v2
       - name: Download and install trunk
