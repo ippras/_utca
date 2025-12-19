@@ -57,7 +57,7 @@ impl TableView<'_> {
             .num_rows(num_rows)
             .columns(vec![
                 Column::default()
-                    .resizable(self.state.settings.resize_table);
+                    .resizable(self.state.settings.resizable);
                 num_columns
             ])
             .num_sticky_cols(self.state.settings.sticky_columns)
@@ -109,7 +109,7 @@ impl TableView<'_> {
             }
             (0, LABEL) => {
                 let response = ui.heading(ui.localize("Label"));
-                if self.state.settings.edit_table && response.hovered() {
+                if self.state.settings.edit && response.hovered() {
                     ui.ctx().input(|input| {
                         for event in &input.raw.events {
                             if let Event::Paste(text) = event {
@@ -129,7 +129,7 @@ impl TableView<'_> {
                     let response = ui
                         .heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
                         .on_hover_localized("StereospecificNumber?number=2");
-                    if self.state.settings.edit_table && response.hovered() {
+                    if self.state.settings.edit && response.hovered() {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
                                 if let Event::Paste(text) = event {
@@ -142,7 +142,7 @@ impl TableView<'_> {
                     let response = ui
                         .heading(ui.localize("StereospecificNumber.abbreviation?number=1223"))
                         .on_hover_localized("StereospecificNumber?number=1223");
-                    if self.state.settings.edit_table && response.hovered() {
+                    if self.state.settings.edit && response.hovered() {
                         ui.ctx().input(|input| {
                             for event in &input.raw.events {
                                 if let Event::Paste(text) = event {
@@ -157,7 +157,7 @@ impl TableView<'_> {
                 let response = ui
                     .heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_localized("StereospecificNumber?number=123");
-                if self.state.settings.edit_table && response.hovered() {
+                if self.state.settings.edit && response.hovered() {
                     ui.ctx().input(|input| {
                         for event in &input.raw.events {
                             if let Event::Paste(text) = event {
@@ -220,7 +220,7 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         match (row, column) {
             (row, INDEX) => {
-                if self.state.settings.edit_table {
+                if self.state.settings.edit {
                     if ui.button(MINUS).clicked() {
                         self.state.event.delete_table_row = Some(row);
                     }
@@ -234,7 +234,7 @@ impl TableView<'_> {
                 let fatty_acid = self.data.try_fatty_acid()?;
                 let label = self.data["Label"].str()?;
                 let inner_response = LabelWidget::new(label, fatty_acid, row)
-                    .editable(self.state.settings.edit_table)
+                    .editable(self.state.settings.edit)
                     .hover_names(self.state.settings.hover_names)
                     .show(ui);
                 if inner_response.response.changed() {
@@ -254,7 +254,7 @@ impl TableView<'_> {
             (row, FA) => {
                 let fatty_acid = self.data.try_fatty_acid()?.get(row)?;
                 let inner_response = FattyAcidWidget::new(fatty_acid.as_ref())
-                    .editable(self.state.settings.edit_table)
+                    .editable(self.state.settings.edit)
                     .hover(true)
                     .show(ui);
                 if inner_response.response.changed() {
@@ -272,7 +272,7 @@ impl TableView<'_> {
                 })?;
                 let value = data_frame[STEREOSPECIFIC_NUMBERS123].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
-                    .editable(self.state.settings.edit_table)
+                    .editable(self.state.settings.edit)
                     .precision(Some(self.state.settings.precision))
                     .hover(true)
                     .show(ui);
@@ -292,7 +292,7 @@ impl TableView<'_> {
                 let name = data_frame.get_columns()[3].name().as_str();
                 let value = data_frame[name].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
-                    .editable(self.state.settings.edit_table)
+                    .editable(self.state.settings.edit)
                     .precision(Some(self.state.settings.precision))
                     .hover(true)
                     .show(ui);
@@ -309,7 +309,7 @@ impl TableView<'_> {
     fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         match column {
             INDEX => {
-                if self.state.settings.edit_table {
+                if self.state.settings.edit {
                     if ui.button(PLUS).clicked() {
                         self.state.event.add_table_row = true;
                     }

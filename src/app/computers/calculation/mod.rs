@@ -3,7 +3,7 @@ use crate::{
     assets::CHRISTIE,
     r#const::{
         ENRICHMENT, FACTOR, FACTORS, MASK, MEAN, SAMPLE, SELECTIVITY, STANDARD, STANDARD_DEVIATION,
-        THRESHOLD,
+        STEREOSPECIFIC_NUMBERS, THRESHOLD,
     },
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
@@ -13,6 +13,10 @@ use lipid::prelude::*;
 use ordered_float::OrderedFloat;
 use polars::prelude::*;
 use polars_ext::prelude::*;
+
+const SN: Expr = Expr::Selector(Selector::Matches(PlSmallStr::from_static(formatcp!(
+    r#"^{STEREOSPECIFIC_NUMBERS}.+$"#
+))));
 
 const SN123: Expr = Expr::Selector(Selector::Matches(PlSmallStr::from_static(formatcp!(
     r#"^{STEREOSPECIFIC_NUMBERS123}\[\d+\]$"#
@@ -112,18 +116,18 @@ fn exprs(index: usize) -> [Expr; 3] {
 }
 
 fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    println!("C0!!!!!!: {}", lazy_frame.clone().collect()?);
     // Christie
     lazy_frame = christie(lazy_frame, key);
     // Standard
     lazy_frame = standard(lazy_frame, key);
     // Normalize
-    // Обнуляет значения стандарта при пасчете долей.
-    lazy_frame = lazy_frame.with_columns([
-        normalize_experimental(SN123.nullify(col(STANDARD).not()), key),
-        normalize_experimental(SN2.nullify(col(STANDARD).not()), key),
-    ]);
+    // Нормализует входные данные, обнуляет значения стандарта при расчете долей.
+    lazy_frame = lazy_frame.with_columns([normalize(SN.nullify(col(STANDARD).not()), key)]);
+    println!("C1!!!!!!: {}", lazy_frame.clone().collect()?);
     // Threshold
     lazy_frame = threshold(lazy_frame, key)?;
+    println!("C2!!!!!!: {}", lazy_frame.clone().collect()?);
     // Calculate
     lazy_frame = lazy_frame.with_columns([
         sn13(SN123, SN2, key),
@@ -162,9 +166,9 @@ fn threshold(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     // Стандарт - true, все остальные - автоматически или вручную.
     Ok(lazy_frame.with_column(
         if key.threshold.is_auto {
-            col(STANDARD)
-                .or(any_horizontal([SN123.gt_eq(key.threshold.auto.0)])?)
-                .or(any_horizontal([SN2.gt_eq(key.threshold.auto.0)])?)
+            col(STANDARD).or(any_horizontal([SN.gt_eq(key.threshold.auto.0)])?)
+            // .or(any_horizontal([SN123.gt_eq(key.threshold.auto.0)])?)
+            // .or(any_horizontal([SN2.gt_eq(key.threshold.auto.0)])?)
         } else {
             lit(Series::from_iter(&key.threshold.manual))
         }
@@ -194,7 +198,7 @@ fn christie(lazy_frame: LazyFrame, key: Key) -> LazyFrame {
 }
 
 /// Normalize experimental data
-fn normalize_experimental(mut expr: Expr, key: Key) -> Expr {
+fn normalize(mut expr: Expr, key: Key) -> Expr {
     if key.weighted {
         expr = expr * col(FATTY_ACID).fatty_acid().relative_atomic_mass(None);
     }

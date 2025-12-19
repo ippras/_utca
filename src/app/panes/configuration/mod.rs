@@ -20,7 +20,7 @@ use egui_phosphor::regular::{
 };
 use egui_tiles::{TileId, UiResponse};
 use lipid::prelude::*;
-use metadata::egui::MetadataWidget;
+use metadata::{egui::MetadataWidget, polars::MetaDataFrame};
 use polars::prelude::*;
 use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
@@ -156,12 +156,12 @@ impl Pane {
         .on_hover_localized("List");
         ui.separator();
         ResetButton::new(&mut state.event.reset_table_state).ui(ui);
-        ResizeButton::new(&mut state.settings.resize_table).ui(ui);
-        EditButton::new(&mut state.settings.edit_table).ui(ui);
+        ResizeButton::new(&mut state.settings.resizable).ui(ui);
+        EditButton::new(&mut state.settings.edit).ui(ui);
         self.rename_button(ui, state);
         // Clear
         ui.add_enabled_ui(
-            state.settings.edit_table && self.frames[state.settings.index].data.height() > 0,
+            state.settings.edit && self.frames[state.settings.index].data.height() > 0,
             |ui| {
                 if ui
                     .button(RichText::new(ERASER).heading())
@@ -174,7 +174,7 @@ impl Pane {
             },
         );
         // Delete
-        ui.add_enabled_ui(state.settings.edit_table && self.frames.len() > 1, |ui| {
+        ui.add_enabled_ui(state.settings.edit && self.frames.len() > 1, |ui| {
             if ui
                 .button(RichText::new(TRASH).heading())
                 .on_hover_localized("DeleteTable")
@@ -197,7 +197,7 @@ impl Pane {
     /// Rename
     fn rename_button(&mut self, ui: &mut Ui, state: &State) {
         ui.add_enabled_ui(
-            state.settings.edit_table && self.frames[state.settings.index].data.height() > 0,
+            state.settings.edit && self.frames[state.settings.index].data.height() > 0,
             |ui| {
                 if ui
                     .button(RichText::new(TEXT_AA).heading())
@@ -259,6 +259,16 @@ impl Pane {
                         .unwrap()
                 }
             }
+            if ui
+                .button((FLOPPY_DISK, "RON 1,2(2,3)"))
+                .on_hover_localized("Save")
+                .on_hover_ui(|ui| {
+                    ui.label(format!("{name}.fa.utca.ron"));
+                })
+                .clicked()
+            {
+                _ = self.save_ron_to_sn12_23(&name, state);
+            }
         });
     }
 
@@ -268,6 +278,21 @@ impl Pane {
             &self.frames[state.settings.index],
             &format!("{name}.utca.ron"),
         )
+    }
+
+    #[instrument(skip(self, state), err)]
+    fn save_ron_to_sn12_23(&self, name: impl Debug + Display, state: &State) -> Result<()> {
+        let frame = &self.frames[state.settings.index];
+        let mut data_frame = frame.data.data_frame.clone();
+        data_frame.rename(
+            STEREOSPECIFIC_NUMBERS2,
+            PlSmallStr::from_static(STEREOSPECIFIC_NUMBERS12_23),
+        )?;
+        let frame = MetaDataFrame {
+            meta: &frame.meta,
+            data: HashedDataFrame::new(data_frame)?,
+        };
+        export::ron::save(&frame, &format!("{name}.utca.ron"))
     }
 
     /// Calculation button
@@ -284,7 +309,7 @@ impl Pane {
     }
 
     fn central(&mut self, ui: &mut Ui, state: &mut State) {
-        if state.settings.edit_table {
+        if state.settings.edit {
             self.meta(ui, state);
         }
         self.data(ui, state);
