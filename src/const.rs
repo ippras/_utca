@@ -5,7 +5,10 @@ pub(crate) const CALCULATION: &str = "Calculation";
 pub(crate) const ENRICHMENT: &str = "Enrichment";
 pub(crate) const FACTOR: &str = "Factor";
 pub(crate) const FACTORS: &str = "Factors";
+pub(crate) const GROUP: &str = "Group";
 pub(crate) const IODINE_VALUE: &str = "IodineValue";
+pub(crate) const KEY: &str = "Key";
+pub(crate) const KEYS: &str = "Keys";
 pub(crate) const MASK: &str = "Mask";
 pub(crate) const MEAN: &str = "Mean";
 pub(crate) const NAME: &str = "Name";
@@ -13,10 +16,14 @@ pub(crate) const PROPERTIES: &str = "Properties";
 pub(crate) const RELATIVE_ATOMIC_MASS: &str = "RelativeAtomicMass";
 pub(crate) const SAMPLE: &str = "Sample";
 pub(crate) const SELECTIVITY: &str = "Selectivity";
+pub(crate) const SPECIES: &str = "Species";
 pub(crate) const STANDARD_DEVIATION: &str = "StandardDeviation";
 pub(crate) const STANDARD: &str = "Standard";
-pub(crate) const THRESHOLD: &str = "Threshold";
 pub(crate) const STEREOSPECIFIC_NUMBERS: &str = "StereospecificNumbers";
+pub(crate) const THRESHOLD: &str = "Threshold";
+pub(crate) const VALUE: &str = "Value";
+pub(crate) const VALUES: &str = "Values";
+pub(crate) const TRIACYLGLYCEROLS: &str = "Triacylglycerols";
 
 #[cfg(feature = "markdown")]
 #[rustfmt::skip]

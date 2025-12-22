@@ -250,18 +250,9 @@ impl Pane {
                 .select([
                     col(LABEL),
                     col(FATTY_ACID),
-                    col(STEREOSPECIFIC_NUMBERS123)
-                        .struct_()
-                        .field_by_name("Mean")
-                        .alias(STEREOSPECIFIC_NUMBERS123),
-                    col(STEREOSPECIFIC_NUMBERS13)
-                        .struct_()
-                        .field_by_name("Mean")
-                        .alias(STEREOSPECIFIC_NUMBERS13),
-                    col(STEREOSPECIFIC_NUMBERS2)
-                        .struct_()
-                        .field_by_name("Mean")
-                        .alias(STEREOSPECIFIC_NUMBERS2),
+                    col(STEREOSPECIFIC_NUMBERS123),
+                    col(STEREOSPECIFIC_NUMBERS13),
+                    col(STEREOSPECIFIC_NUMBERS2),
                 ])
                 .collect()?;
             frames.push(MetaDataFrame::new(

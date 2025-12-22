@@ -1,11 +1,16 @@
 use crate::{
     app::states::composition::{Discriminants, Method, Settings},
+    r#const::VALUE,
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
+use const_format::formatcp;
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
 use tracing::instrument;
+
+/// Starts with `VALUE`
+const VALUE_: &str = formatcp!(r#"^{VALUE}.*$"#);
 
 /// Composition computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -22,28 +27,29 @@ impl Computer {
             Some(index) => &key.frames[index..=index],
             None => &key.frames[..],
         };
-        let compute = |frame: &HashedMetaDataFrame, suffix: &str| -> PolarsResult<LazyFrame> {
+        let compute = |frame: &HashedMetaDataFrame| {
             // Это вызов fn compute.
-            Ok(compute(frame.data.data_frame.clone().lazy(), key)?.select([
-                col(LABEL),
-                col(TRIACYLGLYCEROL),
-                col("Value").name().suffix(suffix),
-            ]))
+            compute(frame.data.data_frame.clone().lazy(), key)
         };
-        let mut lazy_frame = compute(&frames[0], "[0]")?;
+        let mut lazy_frame = indexed(compute(&frames[0])?, 0);
         // println!("spec 0: {}", lazy_frame.clone().collect().unwrap());
-        for (index, frame) in frames[1..].iter().enumerate() {
+        for index in 1..frames.len() {
             lazy_frame = lazy_frame.join(
-                compute(frame, &format!("[{}]", index + 1))?,
+                indexed(compute(&key.frames[index])?, index),
                 [col(LABEL), col(TRIACYLGLYCEROL)],
                 [col(LABEL), col(TRIACYLGLYCEROL)],
                 JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
             );
         }
+        lazy_frame = lazy_frame.select([
+            col(LABEL),
+            col(TRIACYLGLYCEROL),
+            concat_arr(vec![col(VALUE_)])?.alias(VALUE),
+        ]);
         // println!("spec 1: {}", lazy_frame.clone().collect().unwrap());
         // Mean, standard deviation, sample
-        lazy_frame = mean_and_standard_deviation(lazy_frame, key)?;
-        // println!("spec 2: {}", lazy_frame.clone().collect().unwrap());
+        // lazy_frame = mean_and_standard_deviation(lazy_frame, key)?;
+        println!("S 2: {}", lazy_frame.clone().collect().unwrap());
         HashedDataFrame::new(lazy_frame.collect()?)
     }
 }
@@ -77,21 +83,31 @@ impl<'a> Key<'a> {
 }
 
 /// Composition value
+///
+/// | Label     | Triacylglycerol | Value         |
+/// | --------- | --------------- | ------------- |
+/// | struct[3] | struct[3]       | array[f64, n] |
 type Value = HashedDataFrame;
 
+fn indexed(lazy_frame: LazyFrame, index: usize) -> LazyFrame {
+    lazy_frame.select([
+        col(LABEL),
+        col(TRIACYLGLYCEROL),
+        col(VALUE).name().suffix(&format!("[{index}]")),
+    ])
+}
+
 // From:
-// ┌────────────────┬────────────────────┬────────────────────┬───────────────────┬───────────────────┐
-// │ Label          ┆ FattyAcid          ┆ StereospecificNumb ┆ StereospecificNum ┆ StereospecificNum │
-// │ ---            ┆ ---                ┆ ers123             ┆ bers13            ┆ bers2             │
-// │ str            ┆ struct[2]          ┆ ---                ┆ ---               ┆ ---               │
-// │                ┆                    ┆ f64                ┆ f64               ┆ f64               │
-// ╞════════════════╪════════════════════╪════════════════════╪═══════════════════╪═══════════════════╡
+//
+// | Label | FattyAcid | StereospecificNumbers123 | StereospecificNumbers13 | StereospecificNumbers2 |
+// | ----- | --------- | ------------------------ | ----------------------- | ---------------------- |
+// | str   | struct[2] | f64                      | f64                     | f64                    |
+//
 // To:
-// ┌───────────────────────────────────────────┬───────────────────────────────────────────┬───────┐
-// │ Label                                     ┆ Triacylglycerol                           ┆ Value │
-// │ ---                                       ┆ ---                                       ┆ ---   │
-// │ struct[3]                                 ┆ struct[3]                                 ┆ f64   │
-// ╞═══════════════════════════════════════════╪═══════════════════════════════════════════╪═══════╡
+//
+// | Label     | Triacylglycerol | Value |
+// | --------- | --------------- | ----- |
+// | struct[3] | struct[3]       | f64   |
 fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     match key.method {
         Method::Gunstone => gunstone::compute(lazy_frame, key.discriminants),
@@ -100,29 +116,16 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     }
 }
 
-fn mean_and_standard_deviation(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
-    let sample = || concat_arr(vec![col(r#"^Value\[\d+\]$"#)]);
-    Ok(lazy_frame.with_column(
-        as_struct(vec![
-            sample()?.arr().mean().alias("Mean"),
-            sample()?.arr().std(key.ddof).alias("StandardDeviation"),
-            sample()?.alias("Array"),
-        ])
-        .alias("Value"),
-    ))
-}
-// fn mean_and_standard_deviation(ddof: u8) -> PolarsResult<[Expr; 3]> {
-//     let sample = || concat_arr(vec![col(r#"^Value\[\d+\]$"#)]);
-//     Ok([
-//         col(LABEL),
-//         col(TRIACYLGLYCEROL),
+// fn mean_and_standard_deviation(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+//     let array = concat_arr(vec![col(VALUE_)])?;
+//     Ok(lazy_frame.with_column(
 //         as_struct(vec![
-//             sample()?.arr().mean().alias("Mean"),
-//             sample()?.arr().std(ddof).alias("StandardDeviation"),
-//             sample()?.alias("Array"),
+//             array.clone().arr().mean().alias(MEAN),
+//             array.clone().arr().std(key.ddof).alias(STANDARD_DEVIATION),
+//             array.alias(SAMPLE),
 //         ])
-//         .alias("Value"),
-//     ])
+//         .alias(VALUE),
+//     ))
 // }
 
 mod gunstone;

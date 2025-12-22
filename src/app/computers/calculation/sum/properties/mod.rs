@@ -90,40 +90,36 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                 .iter()
                 .filter(|index| index.visible)
                 .map(|index| {
-                    let array =
-                        eval_arr(
-                            col(name).struct_().field_by_name(SAMPLE),
-                            |expr| match &*index.name {
-                                "Saturated" => saturated(expr),
-                                "Monounsaturated" => monounsaturated(expr),
-                                "Polyunsaturated" => polyunsaturated(expr),
-                                "Unsaturated" => unsaturated(expr, None),
-                                "Unsaturated-9" => unsaturated(expr, NonZeroI8::new(-9)),
-                                "Unsaturated-6" => unsaturated(expr, NonZeroI8::new(-6)),
-                                "Unsaturated-3" => unsaturated(expr, NonZeroI8::new(-3)),
-                                "Unsaturated9" => unsaturated(expr, NonZeroI8::new(9)),
-                                "Trans" => trans(expr),
-                                "Conjugated" => conjugated(expr),
-                                "EicosapentaenoicAndDocosahexaenoic" => {
-                                    eicosapentaenoic_and_docosahexaenoic(expr)
-                                }
-                                "FishLipidQuality" => fish_lipid_quality(expr),
-                                "HealthPromotingIndex" => health_promoting_index(expr),
-                                "HypocholesterolemicToHypercholesterolemic" => {
-                                    hypocholesterolemic_to_hypercholesterolemic(expr)
-                                }
-                                "IndexOfAtherogenicity" => index_of_atherogenicity(expr),
-                                "IndexOfThrombogenicity" => index_of_thrombogenicity(expr),
-                                "LinoleicToAlphaLinolenic" => linoleic_to_alpha_linolenic(expr),
-                                "Polyunsaturated-6ToPolyunsaturated-3" => {
-                                    polyunsaturated_6_to_polyunsaturated_3(expr)
-                                }
-                                "PolyunsaturatedToSaturated" => polyunsaturated_to_saturated(expr),
-                                "UnsaturationIndex" => unsaturation_index(expr),
-                                "IodineValue" => iodine_value(expr),
-                                _ => unreachable!(),
-                            },
-                        )?;
+                    let array = eval_arr(col(name), |expr| match &*index.name {
+                        "Saturated" => saturated(expr),
+                        "Monounsaturated" => monounsaturated(expr),
+                        "Polyunsaturated" => polyunsaturated(expr),
+                        "Unsaturated" => unsaturated(expr, None),
+                        "Unsaturated-9" => unsaturated(expr, NonZeroI8::new(-9)),
+                        "Unsaturated-6" => unsaturated(expr, NonZeroI8::new(-6)),
+                        "Unsaturated-3" => unsaturated(expr, NonZeroI8::new(-3)),
+                        "Unsaturated9" => unsaturated(expr, NonZeroI8::new(9)),
+                        "Trans" => trans(expr),
+                        "Conjugated" => conjugated(expr),
+                        "EicosapentaenoicAndDocosahexaenoic" => {
+                            eicosapentaenoic_and_docosahexaenoic(expr)
+                        }
+                        "FishLipidQuality" => fish_lipid_quality(expr),
+                        "HealthPromotingIndex" => health_promoting_index(expr),
+                        "HypocholesterolemicToHypercholesterolemic" => {
+                            hypocholesterolemic_to_hypercholesterolemic(expr)
+                        }
+                        "IndexOfAtherogenicity" => index_of_atherogenicity(expr),
+                        "IndexOfThrombogenicity" => index_of_thrombogenicity(expr),
+                        "LinoleicToAlphaLinolenic" => linoleic_to_alpha_linolenic(expr),
+                        "Polyunsaturated-6ToPolyunsaturated-3" => {
+                            polyunsaturated_6_to_polyunsaturated_3(expr)
+                        }
+                        "PolyunsaturatedToSaturated" => polyunsaturated_to_saturated(expr),
+                        "UnsaturationIndex" => unsaturation_index(expr),
+                        "IodineValue" => iodine_value(expr),
+                        _ => unreachable!(),
+                    })?;
                     Ok(as_struct(vec![
                         array
                             .clone()

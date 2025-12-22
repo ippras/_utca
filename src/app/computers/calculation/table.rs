@@ -150,6 +150,7 @@ impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
         schema(&key.frame)?;
+        println!("T: {:?}", key);
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
         lazy_frame = filter_and_sort(lazy_frame, key);
         lazy_frame = format(lazy_frame, key)?;
@@ -222,7 +223,6 @@ fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
 }
 
 fn body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
-    println!("T0!!!!!!: {}", lazy_frame.clone().collect()?);
     // Factors
     let r#struct = |name| {
         col(name)
@@ -250,14 +250,14 @@ fn body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         selectivity_factor = selectivity_factor / lit(3);
     }
     lazy_frame = lazy_frame.with_columns([as_struct(vec![
-        mean_standard_deviation_sample(enrichment_factor, key).alias(ENRICHMENT),
-        mean_standard_deviation_sample(selectivity_factor, key).alias(SELECTIVITY),
+        mean_and_standard_deviation(enrichment_factor, key).alias(ENRICHMENT),
+        mean_and_standard_deviation(selectivity_factor, key).alias(SELECTIVITY),
     ])
     .alias(FACTORS)]);
     // Stereospecific numbers
     lazy_frame = lazy_frame.with_columns(
         STEREOSPECIFIC_NUMBERS
-            .map(|name| mean_standard_deviation_sample(col(name), key).alias(name))
+            .map(|name| mean_and_standard_deviation(col(name), key).alias(name))
             .to_vec(),
     );
     // Properties
@@ -274,21 +274,23 @@ fn body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             .alias(RELATIVE_ATOMIC_MASS),
     ])
     .alias(PROPERTIES)]);
-    println!("T3!!!!!!: {}", lazy_frame.clone().collect()?);
     // Standard
-    lazy_frame = lazy_frame.with_columns([as_struct(vec![
-        mean_standard_deviation_sample(
-            col(STANDARD).struct_().field_by_name(FACTORS),
-            Key {
-                percent: false,
-                ..key
-            },
-        )
-        .alias(STEREOSPECIFIC_NUMBERS123), // TODO: у далить .alias(STEREOSPECIFIC_NUMBERS123)
-        col(STANDARD).struct_().field_by_name(MASK),
-    ])
-    .alias(STANDARD)]);
-    println!("T4!!!!!!: {}", lazy_frame.clone().collect()?);
+    lazy_frame = lazy_frame.with_column(
+        as_struct(vec![
+            mean_and_standard_deviation(
+                col(STANDARD)
+                    .struct_()
+                    .field_by_name(STEREOSPECIFIC_NUMBERS123),
+                Key {
+                    percent: false,
+                    ..key
+                },
+            )
+            .alias(STEREOSPECIFIC_NUMBERS123),
+            col(STANDARD).struct_().field_by_name(MASK),
+        ])
+        .alias(STANDARD),
+    );
     // Calculations
     let predicate = col(STEREOSPECIFIC_NUMBERS123)
         .struct_()
@@ -367,7 +369,7 @@ fn sum(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         STEREOSPECIFIC_NUMBERS
             .try_map(|name| -> PolarsResult<_> {
                 let array = eval_arr(col(name), |expr| expr.filter(THRESHOLD).sum())?;
-                Ok(mean_standard_deviation_sample(array, key).alias(name))
+                Ok(mean_and_standard_deviation(array, key).alias(name))
             })?
             .to_vec(),
     ))
@@ -403,7 +405,7 @@ fn calculation_sf(
     ))
 }
 
-fn mean_standard_deviation_sample(array: Expr, key: Key) -> Expr {
+fn mean_and_standard_deviation(array: Expr, key: Key) -> Expr {
     as_struct(vec![
         array
             .clone()
@@ -429,24 +431,4 @@ fn mean_standard_deviation_sample(array: Expr, key: Key) -> Expr {
             )
             .alias(SAMPLE),
     ])
-}
-
-fn enrichment_factor(sn2: Expr, sn123: Expr, key: Key) -> Expr {
-    let mut enrichment_factor = FattyAcidExpr::enrichment_factor(sn2, sn123);
-    // if key.normalize_factors {
-    //     enrichment_factor = enrichment_factor / lit(3);
-    // }
-    enrichment_factor
-        .name()
-        .replace(STEREOSPECIFIC_NUMBERS2, ENRICHMENT, true)
-}
-
-fn selectivity_factor(sn2: Expr, sn123: Expr, key: Key) -> Expr {
-    let mut selectivity_factor = col(FATTY_ACID).fatty_acid().selectivity_factor(sn2, sn123);
-    // if key.normalize_factors {
-    //     selectivity_factor = selectivity_factor / lit(3);
-    // }
-    selectivity_factor
-        .name()
-        .replace(STEREOSPECIFIC_NUMBERS2, SELECTIVITY, true)
 }

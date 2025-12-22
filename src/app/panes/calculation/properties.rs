@@ -8,7 +8,10 @@ use crate::r#const::markdown::{
     UNSATURATION_INDEX,
 };
 use crate::{
-    app::{states::calculation::settings::Settings, widgets::MeanAndStandardDeviation},
+    app::{
+        states::calculation::settings::Settings,
+        widgets::mean_and_standard_deviation::MeanAndStandardDeviation,
+    },
     r#const::{EM_DASH, NAME},
 };
 #[cfg(feature = "markdown")]

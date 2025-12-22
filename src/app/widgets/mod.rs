@@ -4,7 +4,6 @@ pub(super) use self::{
     float::FloatWidget,
     github::Github,
     label::{Inner, LabelWidget},
-    mean_and_standard_deviation::MeanAndStandardDeviation,
 };
 
 pub(super) mod about;
@@ -13,5 +12,4 @@ pub(super) mod fatty_acid;
 pub(super) mod float;
 pub(super) mod github;
 pub(super) mod label;
-
-mod mean_and_standard_deviation;
+pub(super) mod mean_and_standard_deviation;

@@ -1,11 +1,11 @@
 use super::ID_SOURCE;
 use crate::{
     app::{
-        computers::composition::table::{Computed as TableComputed, Key as TableKey},
         panes::MARGIN,
         states::composition::State,
-        widgets::FloatWidget,
+        widgets::{FloatWidget, mean_and_standard_deviation::MeanAndStandardDeviation},
     },
+    r#const::{KEY, MEAN, SAMPLE, SPECIES, VALUE, VALUES},
     text::Text,
     utils::{HashedDataFrame, egui::ResponseExt as _},
 };
@@ -94,14 +94,14 @@ impl TableView<'_> {
                     ui.heading(ui.localize(composition.text()))
                         .on_hover_text(ui.localize(composition.hover_text()));
                 } else if column.start != 0 {
-                    ui.heading("Value");
+                    ui.heading(VALUE);
                 }
             }
             (2, column) => {
                 if column.start % 2 == 1 {
-                    ui.heading("Key");
+                    ui.heading(KEY);
                 } else if column.start != 0 {
-                    ui.heading("Value");
+                    ui.heading(VALUE);
                 }
             }
             _ => {}
@@ -122,6 +122,11 @@ impl TableView<'_> {
         }
     }
 
+    // ┌─────────────────────────────┬───────────────┬──────────────────────┬─────────────────────────────┐
+    // │ 0                           ┆ 1.Key         ┆ 1.Value              ┆ Species                     │
+    // │ ---                         ┆ ---           ┆ ---                  ┆ ---                         │
+    // │ struct[2]                   ┆ str           ┆ struct[3]            ┆ list[struct[3]]             │
+    // ╞═════════════════════════════╪═══════════════╪══════════════════════╪═════════════════════════════╡
     fn body_cell_content_ui(
         &mut self,
         ui: &mut Ui,
@@ -130,32 +135,23 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         match (row, column) {
             (row, top::INDEX) => {
-                let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<TableComputed>()
-                        .get(TableKey::new(self.data_frame, &self.state.settings))
-                });
                 ui.horizontal(|ui| -> PolarsResult<()> {
-                    ui.menu_button(LIST, |ui| self.list_button_content(ui, &data_frame, row))
-                        .inner
-                        .transpose()?;
+                    ui.menu_button(LIST, |ui| {
+                        self.list_button_content(ui, &self.data_frame, row)
+                    })
+                    .inner
+                    .transpose()?;
                     ui.label(row.to_string());
                     Ok(())
                 })
                 .inner?;
             }
             (row, column) => {
-                let data_frame = ui.memory_mut(|memory| {
-                    memory
-                        .caches
-                        .cache::<TableComputed>()
-                        .get(TableKey::new(self.data_frame, &self.state.settings))
-                });
                 let index = (column.start + 1) / 2 - 1;
                 let name = &*index.to_string();
-                if column.start % 2 == 1 {
-                    let key = data_frame[name].struct_()?.field_by_name("Key")?;
+                // if column.start % 2 == 1 {
+                if !column.start.is_multiple_of(2) {
+                    let key = self.data_frame[name].struct_()?.field_by_name(KEY)?;
                     let text = key.str_value(row)?;
                     Label::new(text).truncate().ui(ui);
                     // ui.label(text);
@@ -212,22 +208,26 @@ impl TableView<'_> {
                     //     }
                     // };
                     // response.on_hover_ui(|ui| {
-                    //     let species = self.data_frame["Species"].as_materialized_series();
+                    //     let species = self.data_frame[SPECIES].as_materialized_series();
                     //     _ = self.species(species, row, ui);
                     // });
                 } else {
-                    let value = data_frame[name].struct_()?.field_by_name("Value")?;
-                    let mean = value.struct_()?.field_by_name("Mean")?;
-                    if let Some(mean) = mean.f64()?.get(row) {
-                        let response = ui
-                            .label(format!("{mean:.0$}", self.state.settings.precision))
-                            .on_hover_text(mean.to_string());
-                        if response.hovered() {
-                            response
-                                .standard_deviation(&value, row)?
-                                .array(&value, row)?;
-                        }
-                    }
+                    MeanAndStandardDeviation::new(&self.data_frame, [name, VALUE], row)
+                        .with_standard_deviation(self.state.settings.standard_deviation)
+                        .with_sample(true)
+                        .show(ui)?;
+                    // let value = self.data_frame[name].struct_()?.field_by_name(VALUE)?;
+                    // let mean = value.struct_()?.field_by_name(MEAN)?;
+                    // if let Some(mean) = mean.f64()?.get(row) {
+                    //     let response = ui
+                    //         .label(format!("{mean:.0$}", self.state.settings.precision))
+                    //         .on_hover_text(mean.to_string());
+                    //     if response.hovered() {
+                    //         response
+                    //             .standard_deviation(&value, row)?
+                    //             .array(&value, row)?;
+                    //     }
+                    // }
                 }
             }
         }
@@ -240,10 +240,9 @@ impl TableView<'_> {
         data_frame: &DataFrame,
         row: usize,
     ) -> PolarsResult<()> {
-        let species_series = data_frame["Species"].as_materialized_series();
+        let species_series = data_frame[SPECIES].as_materialized_series();
         if let Some(species) = species_series.list()?.get_as_series(row) {
-            ui.heading("Species")
-                .on_hover_text(species.len().to_string());
+            ui.heading(SPECIES).on_hover_text(species.len().to_string());
             ui.separator();
             ScrollArea::vertical()
                 .auto_shrink([false, true])
@@ -256,7 +255,7 @@ impl TableView<'_> {
                                 .field_by_name(LABEL)?
                                 .str()?
                                 .iter()
-                                .zip(species.struct_()?.field_by_name("Value")?.f64()?)
+                                .zip(species.struct_()?.field_by_name(VALUE)?.f64()?)
                                 .enumerate()
                             {
                                 ui.label(index.to_string());
@@ -282,7 +281,7 @@ impl TableView<'_> {
         if column.start == self.state.settings.selections.len() * 2 {
             self.value(
                 ui,
-                self.data_frame["Values"].as_materialized_series(),
+                self.data_frame[VALUES].as_materialized_series(),
                 None,
                 self.state.settings.selections.len() - 1,
             )?;
@@ -299,11 +298,11 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         let value = if let Some(row) = row {
             array_value(series, row, |array| {
-                Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+                Ok(array.struct_()?.field_by_name(MEAN)?.f64()?.get(index))
             })?
         } else {
             array_sum(series, |array| {
-                Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+                Ok(array.struct_()?.field_by_name(MEAN)?.f64()?.get(index))
             })?
         };
         let response = FloatWidget::new(value)
@@ -337,11 +336,11 @@ impl TableView<'_> {
         //     DataType::Array(inner, _) if inner.is_struct() => {
         //         let value = if let Some(row) = row {
         //             array_value(series, row, |array| {
-        //                 Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+        //                 Ok(array.struct_()?.field_by_name(MEAN)?.f64()?.get(index))
         //             })?
         //         } else {
         //             array_sum(series, |array| {
-        //                 Ok(array.struct_()?.field_by_name("Mean")?.f64()?.get(index))
+        //                 Ok(array.struct_()?.field_by_name(MEAN)?.f64()?.get(index))
         //             })?
         //         };
         //         let response = FloatWidget::new(value)
@@ -366,9 +365,9 @@ impl TableView<'_> {
     // #[instrument(skip(self, series, ui), err)]
     // fn species(&self, series: &Series, row: usize, ui: &mut Ui) -> PolarsResult<()> {
     //     let Some(species) = series.list()?.get_as_series(row) else {
-    //         polars_bail!(NoData: r#"no "Species" list in row: {row}"#);
+    //         polars_bail!(NoData: r#"no SPECIES list in row: {row}"#);
     //     };
-    //     ui.heading("Species")
+    //     ui.heading(SPECIES)
     //         .on_hover_text(species.len().to_string());
     //     ui.separator();
     //     ScrollArea::vertical()
@@ -383,7 +382,7 @@ impl TableView<'_> {
     //                         .try_triacylglycerol()?
     //                         .fields(|series| Ok(series.str()?.clone()))?
     //                         .iter()
-    //                         .zip(species.struct_()?.field_by_name("Value")?.f64()?)
+    //                         .zip(species.struct_()?.field_by_name(VALUE)?.f64()?)
     //                         .enumerate()
     //                     {
     //                         ui.label(index.to_string());
@@ -456,15 +455,15 @@ impl TableView<'_> {
     #[instrument(skip(self, series, ui), err)]
     fn array(&self, series: &Series, row: usize, index: usize, ui: &mut Ui) -> PolarsResult<()> {
         let Some(values) = series.array()?.get_as_series(row) else {
-            polars_bail!(NoData: r#"no "Values" in row: {row}"#);
+            polars_bail!(NoData: r#"no {VALUES} in row: {row}"#);
         };
         let Some(array) = values
             .struct_()?
-            .field_by_name("Array")?
+            .field_by_name(SAMPLE)?
             .array()?
             .get_as_series(index)
         else {
-            polars_bail!(NoData: r#"no "Array" in index: {index}"#);
+            polars_bail!(NoData: r#"no {SAMPLE} in index: {index}"#);
         };
         let text = format_list!(array.f64()?.iter().map(|item| {
             from_fn(move |f| match item {
@@ -549,8 +548,7 @@ impl ResponseExt for Response {
     fn species(mut self, species: &Series, row: usize) -> PolarsResult<Self> {
         if let Some(species) = species.list()?.get_as_series(row) {
             self = self.try_on_enabled_hover_ui(|ui| -> PolarsResult<()> {
-                ui.heading("Species")
-                    .on_hover_text(species.len().to_string());
+                ui.heading(SPECIES).on_hover_text(species.len().to_string());
                 ui.separator();
                 ScrollArea::vertical()
                     .auto_shrink([false, true])
@@ -563,7 +561,7 @@ impl ResponseExt for Response {
                                     .field_by_name(LABEL)?
                                     .str()?
                                     .iter()
-                                    .zip(species.struct_()?.field_by_name("Value")?.f64()?)
+                                    .zip(species.struct_()?.field_by_name(VALUE)?.f64()?)
                                     .enumerate()
                                 {
                                     ui.label(index.to_string());
@@ -601,7 +599,7 @@ impl ResponseExt for Response {
     fn array(mut self, value: &Series, row: usize) -> PolarsResult<Self> {
         if let Some(array) = value
             .struct_()?
-            .field_by_name("Array")?
+            .field_by_name(SAMPLE)?
             .array()?
             .get_as_series(row)
             && array.len() > 1

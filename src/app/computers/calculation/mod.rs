@@ -1,7 +1,7 @@
 use crate::{
     app::states::calculation::settings::{Normalize, Settings, Standard, Threshold},
     assets::CHRISTIE,
-    r#const::{FACTOR, FACTORS, MASK, STANDARD, STEREOSPECIFIC_NUMBERS, THRESHOLD},
+    r#const::{FACTOR, MASK, STANDARD, STEREOSPECIFIC_NUMBERS, THRESHOLD},
     utils::{HashedDataFrame, HashedMetaDataFrame},
 };
 use const_format::formatcp;
@@ -38,13 +38,14 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
+        println!("C: {:?}", key);
         let mut lazy_frame = match key.index {
             Some(index) => compute(&key.frames[index].data.data_frame, key)?,
             None => {
-                let mut lazy_frame = select(compute(&key.frames[0].data.data_frame, key)?, 0);
+                let mut lazy_frame = indexed(compute(&key.frames[0].data.data_frame, key)?, 0);
                 for index in 1..key.frames.len() {
                     lazy_frame = lazy_frame.join(
-                        select(compute(&key.frames[index].data.data_frame, key)?, index),
+                        indexed(compute(&key.frames[index].data.data_frame, key)?, index),
                         [col(LABEL), col(FATTY_ACID)],
                         [col(LABEL), col(FATTY_ACID)],
                         JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
@@ -53,6 +54,7 @@ impl Computer {
                 lazy_frame
             }
         };
+        // Concat arrays
         lazy_frame = lazy_frame.select([
             col(LABEL),
             col(FATTY_ACID),
@@ -63,17 +65,13 @@ impl Computer {
                 concat_arr(vec![
                     col(STANDARD_)
                         .struct_()
-                        .field_by_name(FACTORS)
-                        .struct_()
                         .field_by_name(STEREOSPECIFIC_NUMBERS123),
-                ])?
-                .alias(FACTORS),
+                ])?,
                 any_horizontal([col(STANDARD_).struct_().field_by_name(MASK)])?,
             ])
             .alias(STANDARD),
             any_horizontal([col(THRESHOLD_).alias(THRESHOLD)])?,
         ]);
-        println!("C!!!!!!: {}", lazy_frame.clone().collect()?);
         HashedDataFrame::new(lazy_frame.collect()?)
     }
 }
@@ -117,9 +115,13 @@ impl<'a> Key<'a> {
 }
 
 /// Calculation value
+///
+/// | Label | FattyAcid | StereospecificNumbers123 | StereospecificNumbers13 | StereospecificNumbers2 | Standard  | Threshold |
+/// | ----- | --------- | ------------------------ | ----------------------- | ---------------------- | --------- | --------- |
+/// | str   | struct[2] | array[f64, n]            | array[f64, n]           | array[f64, n]          | struct[2] | bool      |
 type Value = HashedDataFrame;
 
-fn select(lazy_frame: LazyFrame, index: usize) -> LazyFrame {
+fn indexed(lazy_frame: LazyFrame, index: usize) -> LazyFrame {
     lazy_frame.select([
         col(LABEL),
         col(FATTY_ACID),
@@ -132,7 +134,6 @@ fn select(lazy_frame: LazyFrame, index: usize) -> LazyFrame {
 
 fn compute(data_frame: &DataFrame, key: Key) -> PolarsResult<LazyFrame> {
     let mut lazy_frame = data_frame.clone().lazy();
-    println!("C0!!!!!!: {}", lazy_frame.clone().collect()?);
     // Christie
     lazy_frame = christie(lazy_frame, key);
     // Standard
@@ -147,20 +148,13 @@ fn compute(data_frame: &DataFrame, key: Key) -> PolarsResult<LazyFrame> {
     lazy_frame = threshold(lazy_frame, key)?;
     // Calculate
     let schema = data_frame.schema();
-    // println!("schema!!!!!!: {:?}", schema);
     if schema.contains(STEREOSPECIFIC_NUMBERS2) {
-        println!("SN2!!!!!!: {}", lazy_frame.clone().collect()?);
         lazy_frame = sn2(lazy_frame, key);
     } else if schema.contains(STEREOSPECIFIC_NUMBERS13) {
-        println!("SN13!!!!!!: {}", lazy_frame.clone().collect()?);
         lazy_frame = sn13(lazy_frame, key);
     } else if schema.contains(STEREOSPECIFIC_NUMBERS12_23) {
-        println!("SN12_23!!!!!!: {}", lazy_frame.clone().collect()?);
         lazy_frame = sn12_23(lazy_frame, key);
-    } else {
-        unreachable!()
     }
-    println!("C3!!!!!!: {}", lazy_frame.clone().collect()?);
     Ok(lazy_frame)
 }
 
@@ -184,12 +178,7 @@ fn standard(lazy_frame: LazyFrame, key: Key) -> LazyFrame {
     };
     lazy_frame.with_column(
         as_struct(vec![
-            as_struct(vec![
-                factors(STEREOSPECIFIC_NUMBERS123),
-                // factors(STEREOSPECIFIC_NUMBERS13),
-                // factors(STEREOSPECIFIC_NUMBERS2),
-            ])
-            .alias(FACTORS),
+            factors(STEREOSPECIFIC_NUMBERS123),
             mask.clone().alias(MASK),
         ])
         .alias(STANDARD),
@@ -279,104 +268,6 @@ fn sn12_23(lazy_frame: LazyFrame, key: Key) -> LazyFrame {
         ])
         .drop(cols([STEREOSPECIFIC_NUMBERS12_23]))
 }
-
-// fn enrichment_factor(sn2: Expr, sn123: Expr, key: Key) -> Expr {
-//     let mut enrichment_factor = FattyAcidExpr::enrichment_factor(sn2.clone(), sn123.clone());
-//     if key.normalize_factors {
-//         enrichment_factor = enrichment_factor / lit(3);
-//     }
-//     enrichment_factor
-//         .name()
-//         .replace(STEREOSPECIFIC_NUMBERS2, EF, true)
-// }
-
-// fn selectivity_factor(sn2: Expr, sn123: Expr, key: Key) -> Expr {
-//     let mut selectivity_factor = col(FATTY_ACID).fatty_acid().selectivity_factor(sn2, sn123);
-//     if key.normalize_factors {
-//         selectivity_factor = selectivity_factor / lit(3);
-//     }
-//     selectivity_factor
-//         .name()
-//         .replace(STEREOSPECIFIC_NUMBERS2, SF, true)
-// }
-
-// // Mean and standard deviation
-// fn mean_and_standard_deviations(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
-//     Ok(match key.index {
-//         Some(index) => {
-//             let sn123 = col(format!("{STEREOSPECIFIC_NUMBERS123}[{index}]"));
-//             let sn13 = col(format!("{STEREOSPECIFIC_NUMBERS13}[{index}]"));
-//             let sn2 = col(format!("{STEREOSPECIFIC_NUMBERS2}[{index}]"));
-//             let enrichment_factor = col(format!("{FACTORS}.{ENRICHMENT}[{index}]"));
-//             let selectivity_factor = col(format!("{FACTORS}.{SELECTIVITY}[{index}]"));
-//             lazy_frame.select([
-//                 col(LABEL),
-//                 col(FATTY_ACID),
-//                 mean_and_standard_deviation(sn123, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS123),
-//                 mean_and_standard_deviation(sn2, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS2),
-//                 mean_and_standard_deviation(sn13, key.ddof)?.alias(STEREOSPECIFIC_NUMBERS13),
-//                 as_struct(vec![
-//                     mean_and_standard_deviation(enrichment_factor, key.ddof)?.alias(ENRICHMENT),
-//                     mean_and_standard_deviation(selectivity_factor, key.ddof)?.alias(SELECTIVITY),
-//                 ])
-//                 .alias(FACTORS),
-//                 as_struct(vec![
-//                     concat_arr(vec![col(format!("{STANDARD}[{index}]"))])?.alias(FACTOR),
-//                     col(STANDARD).alias(MASK),
-//                 ])
-//                 .alias(STANDARD),
-//                 col(THRESHOLD),
-//             ])
-//         }
-//         None => {
-//             let enrichment_factors = col(formatcp!(r#"^{FACTORS}.{ENRICHMENT}\[\d+\]$"#));
-//             let selectivity_factors = col(formatcp!(r#"^{FACTORS}.{SELECTIVITY}\[\d+\]$"#));
-//             lazy_frame.select([
-//                 col(LABEL),
-//                 col(FATTY_ACID),
-//                 mean_and_standard_deviation(col(SN123), key.ddof)?.alias(STEREOSPECIFIC_NUMBERS123),
-//                 mean_and_standard_deviation(col(SN2), key.ddof)?.alias(STEREOSPECIFIC_NUMBERS2),
-//                 mean_and_standard_deviation(col(SN13), key.ddof)?.alias(STEREOSPECIFIC_NUMBERS13),
-//                 as_struct(vec![
-//                     mean_and_standard_deviation(enrichment_factors, key.ddof)?.alias(ENRICHMENT),
-//                     mean_and_standard_deviation(selectivity_factors, key.ddof)?.alias(SELECTIVITY),
-//                 ])
-//                 .alias(FACTORS),
-//                 as_struct(vec![
-//                     concat_arr(vec![col(formatcp!(r#"^{STANDARD}\[\d+\]$"#))])?.alias(FACTOR),
-//                     col(STANDARD).alias(MASK),
-//                 ])
-//                 .alias(STANDARD),
-//                 col(THRESHOLD),
-//             ])
-//         }
-//     })
-// }
-
-// fn mean_and_standard_deviation(expr: Expr, ddof: u8) -> PolarsResult<Expr> {
-//     let array = concat_arr(vec![expr])?;
-//     Ok(as_struct(vec![
-//         array.clone().arr().mean().alias(MEAN),
-//         array.clone().arr().std(ddof).alias(STANDARD_DEVIATION),
-//         array.alias(SAMPLE),
-//     ]))
-// }
-
-// /// Extension methods for [`Expr`]
-// trait ExprExt {
-//     fn mean_and_standard_deviation(self, ddof: u8) -> PolarsResult<Expr>;
-// }
-
-// impl ExprExt for Expr {
-//     fn mean_and_standard_deviation(self, ddof: u8) -> PolarsResult<Expr> {
-//         let sample = concat_arr(vec![self])?;
-//         Ok(as_struct(vec![
-//             sample.clone().arr().mean().alias(MEAN),
-//             sample.clone().arr().std(ddof).alias(STANDARD_DEVIATION),
-//             sample.alias(SAMPLE),
-//         ]))
-//     }
-// }
 
 // // n = m / M
 // fn to_mole(names: [&str; 2]) -> Expr {

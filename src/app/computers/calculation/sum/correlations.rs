@@ -91,9 +91,7 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     // Select
     lazy_frame = lazy_frame.select([
         col(LABEL),
-        col(key.stereospecific_numbers.to_string())
-            .struct_()
-            .field_by_name(SAMPLE),
+        col(key.stereospecific_numbers.to_string()).alias(SAMPLE),
     ]);
     // Cross join
     // Установить maintain_order

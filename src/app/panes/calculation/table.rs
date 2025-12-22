@@ -6,7 +6,7 @@ use crate::{
         computers::calculation::table::{Computed as TableComputed, Key as TableKey},
         panes::MARGIN,
         states::calculation::{ID_SOURCE, State},
-        widgets::MeanAndStandardDeviation,
+        widgets::mean_and_standard_deviation::MeanAndStandardDeviation,
     },
     r#const::*,
     utils::{HashedDataFrame, egui::ResponseExt},
@@ -18,7 +18,7 @@ use egui_l20n::prelude::*;
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use lipid::prelude::*;
-use polars::prelude::{array::ArrayNameSpace, *};
+use polars::prelude::*;
 use std::ops::Range;
 use tracing::instrument;
 
@@ -157,6 +157,7 @@ impl TableView<'_> {
         column: Range<usize>,
     ) -> PolarsResult<()> {
         let data_frame = self.data_frame(ui);
+        // Color
         if let Some(standard) = data_frame[STANDARD]
             .struct_()?
             .field_by_name(MASK)?
@@ -210,13 +211,6 @@ impl TableView<'_> {
             }
             (row, bottom::FATTY_ACID) => {
                 if let Some(fatty_acid) = data_frame.try_fatty_acid()?.delta()?.get(row) {
-                    // let mut text = RichText::new(fatty_acid);
-                    // Strong standard and weak filtered
-                    // text = match data_frame[THRESHOLD].bool()?.get(row) {
-                    //     None => text.strong(),
-                    //     Some(false) => text.weak(),
-                    //     Some(true) => text,
-                    // };
                     Label::new(fatty_acid).truncate().ui(ui);
                 }
             }

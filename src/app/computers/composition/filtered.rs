@@ -1,5 +1,6 @@
 use crate::{
     app::states::composition::{ECN_MONO, MASS_MONO, Settings, TYPE_MONO, UNSATURATION_MONO},
+    r#const::{KEYS, VALUES},
     utils::HashedDataFrame,
 };
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -52,7 +53,7 @@ fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     for (index, selection) in settings.selections.iter().enumerate() {
         // Key
         for (key, value) in &selection.filter.key {
-            let expr = col("Keys").struct_().field_by_index(index as _);
+            let expr = col(KEYS).struct_().field_by_index(index as _);
             match selection.composition {
                 MASS_MONO | ECN_MONO | TYPE_MONO | UNSATURATION_MONO if value[0] => {
                     predicate = predicate.and(expr.neq(lit(LiteralValue::from(key.clone()))));
@@ -84,12 +85,13 @@ fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
             }
         }
         // Value
-        let expr = col("Values")
-            .arr()
-            .get(lit(index as u32), false)
-            .struct_()
-            .field_by_name("Mean");
-        predicate = predicate.and(expr.gt_eq(lit(selection.filter.value)));
+        predicate = predicate.and(
+            col(VALUES)
+                .list()
+                .get(lit(index as IdxSize), false)
+                .arr()
+                .agg(element().gt_eq(lit(selection.filter.value)).any(true)),
+        );
     }
     lazy_frame.filter(predicate)
 }

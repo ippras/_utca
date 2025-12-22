@@ -93,18 +93,15 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         let expr = concat_arr(
             BIODIESEL_PROPERTIES
                 .try_map(|property| -> PolarsResult<_> {
-                    let array = eval_arr(
-                        col(stereospecific_numbers).struct_().field_by_name(SAMPLE),
-                        |expr| match property {
-                            "CetaneNumber" => cetane_number(expr),
-                            "ColdFilterPluggingPoint" => cold_filter_plugging_point(expr),
-                            "DegreeOfUnsaturation" => degree_of_unsaturation(expr),
-                            "IodineValue" => iodine_value(expr),
-                            "LongChainSaturatedFactor" => long_chain_saturated_factor(expr),
-                            "OxidationStability" => oxidation_stability(expr),
-                            _ => unreachable!(),
-                        },
-                    )?;
+                    let array = eval_arr(col(stereospecific_numbers), |expr| match property {
+                        "CetaneNumber" => cetane_number(expr),
+                        "ColdFilterPluggingPoint" => cold_filter_plugging_point(expr),
+                        "DegreeOfUnsaturation" => degree_of_unsaturation(expr),
+                        "IodineValue" => iodine_value(expr),
+                        "LongChainSaturatedFactor" => long_chain_saturated_factor(expr),
+                        "OxidationStability" => oxidation_stability(expr),
+                        _ => unreachable!(),
+                    })?;
                     Ok(as_struct(vec![
                         array
                             .clone()

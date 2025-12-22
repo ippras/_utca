@@ -4,8 +4,7 @@ use crate::app::states::composition::{
     SPECIES_STEREO, Settings, State, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO,
     UNSATURATION_STEREO,
 };
-use egui::{Align2, Color32, Id, Ui, Vec2b};
-use egui_plot::{AxisHints, Bar, BarChart, Line, Plot, PlotPoints};
+use egui::Ui;
 use polars::prelude::*;
 
 /// Composition plot

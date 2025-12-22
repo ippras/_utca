@@ -1,4 +1,4 @@
-use self::{plot::PlotView, sum::Sum, table::TableView};
+use self::{plot::PlotView, sum::symmetry::Symmetry, table::TableView};
 use super::{Behavior, MARGIN};
 use crate::{
     app::{
@@ -6,7 +6,8 @@ use crate::{
             Computed as CompositionComputed, Key as CompositionKey,
             filtered::{Computed as FilteredComputed, Key as FilteredKey},
             species::{Computed as SpeciesComputed, Key as SpeciesKey},
-            sum::symmetry::{Computed as SumSymmetryComputed, Key as SumSymmetryKey},
+            sum::symmetry::{Computed as SymmetryComputed, Key as SymmetryKey},
+            table::{Computed as TableComputed, Key as TableKey},
             unique::{Computed as UniqueComputed, Key as UniqueKey},
         },
         states::composition::{ID_SOURCE, Settings, State, View},
@@ -56,10 +57,7 @@ impl Pane {
             id: None,
             frames,
             species: HashedDataFrame::EMPTY,
-            target: HashedDataFrame {
-                data_frame: DataFrame::empty(),
-                hash: 0,
-            },
+            target: HashedDataFrame::EMPTY,
         }
     }
 
@@ -338,15 +336,22 @@ impl Pane {
             }
         });
         // Filtered
-        let filtered_data_frame = ui.memory_mut(|memory| {
+        let data_frame = ui.memory_mut(|memory| {
             memory.caches.cache::<FilteredComputed>().get(FilteredKey {
                 data_frame: &self.target,
                 settings: &state.settings,
             })
         });
+        // Table
+        let data_frame = ui.memory_mut(|memory| {
+            memory
+                .caches
+                .cache::<TableComputed>()
+                .get(TableKey::new(&data_frame, &state.settings))
+        });
         match state.settings.view {
-            View::Plot => PlotView::new(&filtered_data_frame, state).show(ui),
-            View::Table => TableView::new(&filtered_data_frame, state).show(ui),
+            View::Plot => PlotView::new(&data_frame, state).show(ui),
+            View::Table => TableView::new(&data_frame, state).show(ui),
         }
     }
 }
@@ -388,10 +393,10 @@ impl Pane {
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
-                .cache::<SumSymmetryComputed>()
-                .get(SumSymmetryKey::new(&self.species, settings))
+                .cache::<SymmetryComputed>()
+                .get(SymmetryKey::new(&self.species, settings))
         });
-        Sum::new(&data_frame, settings).show(ui).inner
+        Symmetry::new(&data_frame, settings).show(ui).inner
     }
 }
 
