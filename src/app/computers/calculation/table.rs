@@ -276,13 +276,18 @@ fn body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     .alias(PROPERTIES)]);
     println!("T3!!!!!!: {}", lazy_frame.clone().collect()?);
     // Standard
-    lazy_frame = lazy_frame.with_columns([col(STANDARD)
-        .struct_()
-        .field_by_name(FACTORS)
-        .name()
-        .keep()
-        .arr()
-        .eval(element().precision(key.precision, key.significant), false)]);
+    lazy_frame = lazy_frame.with_columns([as_struct(vec![
+        mean_standard_deviation_sample(
+            col(STANDARD).struct_().field_by_name(FACTORS),
+            Key {
+                percent: false,
+                ..key
+            },
+        )
+        .alias(STEREOSPECIFIC_NUMBERS123), // TODO: у далить .alias(STEREOSPECIFIC_NUMBERS123)
+        col(STANDARD).struct_().field_by_name(MASK),
+    ])
+    .alias(STANDARD)]);
     println!("T4!!!!!!: {}", lazy_frame.clone().collect()?);
     // Calculations
     let predicate = col(STEREOSPECIFIC_NUMBERS123)

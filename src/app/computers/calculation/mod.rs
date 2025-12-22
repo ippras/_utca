@@ -38,15 +38,21 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        let mut lazy_frame = select(compute(&key.frames[0].data.data_frame, key)?, 0);
-        for index in 1..key.frames.len() {
-            lazy_frame = lazy_frame.join(
-                select(compute(&key.frames[index].data.data_frame, key)?, index),
-                [col(LABEL), col(FATTY_ACID)],
-                [col(LABEL), col(FATTY_ACID)],
-                JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
-            );
-        }
+        let mut lazy_frame = match key.index {
+            Some(index) => compute(&key.frames[index].data.data_frame, key)?,
+            None => {
+                let mut lazy_frame = select(compute(&key.frames[0].data.data_frame, key)?, 0);
+                for index in 1..key.frames.len() {
+                    lazy_frame = lazy_frame.join(
+                        select(compute(&key.frames[index].data.data_frame, key)?, index),
+                        [col(LABEL), col(FATTY_ACID)],
+                        [col(LABEL), col(FATTY_ACID)],
+                        JoinArgs::new(JoinType::Full).with_coalesce(JoinCoalesce::CoalesceColumns),
+                    );
+                }
+                lazy_frame
+            }
+        };
         lazy_frame = lazy_frame.select([
             col(LABEL),
             col(FATTY_ACID),

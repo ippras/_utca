@@ -18,12 +18,12 @@ use egui_l20n::prelude::*;
 use egui_phosphor::regular::HASH;
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
 use lipid::prelude::*;
-use polars::prelude::*;
+use polars::prelude::{array::ArrayNameSpace, *};
 use std::ops::Range;
 use tracing::instrument;
 
-const LEN: usize = top::FS.end;
-const TOP: &[Range<usize>] = &[top::ID, top::SN, top::FS];
+const LEN: usize = top::FACTORS.end;
+const TOP: &[Range<usize>] = &[top::IDENTIFIER, top::STEREOSPECIFIC_NUMBERS, top::FACTORS];
 
 /// Calculation table
 pub(crate) struct TableView<'a> {
@@ -83,14 +83,14 @@ impl TableView<'_> {
         }
         match (row, column) {
             // Top
-            (0, top::ID) => {
+            (0, top::IDENTIFIER) => {
                 ui.heading(ui.localize("Identifier.abbreviation"))
                     .on_hover_localized("Identifier");
             }
-            (0, top::SN) => {
+            (0, top::STEREOSPECIFIC_NUMBERS) => {
                 ui.heading(ui.localize("StereospecificNumber?number=many"));
             }
-            (0, top::FS) => {
+            (0, top::FACTORS) => {
                 ui.heading(ui.localize("Factors"));
             }
             // Bottom
@@ -100,23 +100,23 @@ impl TableView<'_> {
             (1, bottom::LABEL) => {
                 ui.heading(ui.localize("Label"));
             }
-            (1, bottom::FA) => {
+            (1, bottom::FATTY_ACID) => {
                 ui.heading(ui.localize("FattyAcid.abbreviation"))
                     .on_hover_localized("FattyAcid");
             }
-            (1, bottom::SN123) => {
+            (1, bottom::STEREOSPECIFIC_NUMBERS123) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=123"))
                     .on_hover_localized("StereospecificNumber?number=123");
             }
-            (1, bottom::SN2) => {
+            (1, bottom::STEREOSPECIFIC_NUMBERS2) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=2"))
                     .on_hover_localized("StereospecificNumber?number=2");
             }
-            (1, bottom::SN13) => {
+            (1, bottom::STEREOSPECIFIC_NUMBERS13) => {
                 ui.heading(ui.localize("StereospecificNumber.abbreviation?number=13"))
                     .on_hover_localized("StereospecificNumber?number=13");
             }
-            (1, bottom::EF) => {
+            (1, bottom::ENRICHMENT_FACTOR) => {
                 #[allow(unused_variables)]
                 let response = ui.heading(ui.localize("EnrichmentFactor.abbreviation"));
                 #[cfg(feature = "markdown")]
@@ -124,7 +124,7 @@ impl TableView<'_> {
                     ui.markdown(ENRICHMENT_FACTOR);
                 });
             }
-            (1, bottom::SF) => {
+            (1, bottom::SELECTIVITY_FACTOR) => {
                 #[allow(unused_variables)]
                 let response = ui.heading(ui.localize("SelectivityFactor.abbreviation"));
                 #[cfg(feature = "markdown")]
@@ -157,7 +157,15 @@ impl TableView<'_> {
         column: Range<usize>,
     ) -> PolarsResult<()> {
         let data_frame = self.data_frame(ui);
-        if let Some(threshold) = data_frame[THRESHOLD].bool()?.get(row)
+        if let Some(standard) = data_frame[STANDARD]
+            .struct_()?
+            .field_by_name(MASK)?
+            .bool()?
+            .get(row)
+            && standard
+        {
+            ui.visuals_mut().override_text_color = Some(ui.visuals().strong_text_color());
+        } else if let Some(threshold) = data_frame[THRESHOLD].bool()?.get(row)
             && !threshold
         {
             ui.multiply_opacity(ui.visuals().disabled_alpha());
@@ -172,7 +180,6 @@ impl TableView<'_> {
                         |ui| -> PolarsResult<()> {
                             ui.heading(ui.localize(PROPERTIES));
                             let properties = &data_frame[PROPERTIES];
-                            let standard = &data_frame[STANDARD];
                             Grid::new(ui.next_auto_id())
                                 .show(ui, |ui| {
                                     ui.label(ui.localize(IODINE_VALUE));
@@ -194,10 +201,6 @@ impl TableView<'_> {
                                             .str_value(),
                                     );
                                     ui.end_row();
-
-                                    ui.label(ui.localize(STANDARD));
-                                    ui.label(standard.get(row)?.str_value());
-                                    ui.end_row();
                                     Ok(())
                                 })
                                 .inner
@@ -205,7 +208,7 @@ impl TableView<'_> {
                     )?;
                 }
             }
-            (row, bottom::FA) => {
+            (row, bottom::FATTY_ACID) => {
                 if let Some(fatty_acid) = data_frame.try_fatty_acid()?.delta()?.get(row) {
                     // let mut text = RichText::new(fatty_acid);
                     // Strong standard and weak filtered
@@ -217,33 +220,63 @@ impl TableView<'_> {
                     Label::new(fatty_acid).truncate().ui(ui);
                 }
             }
-            (row, bottom::SN123) => {
+            (row, bottom::STEREOSPECIFIC_NUMBERS123) => {
                 MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS123], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
-                    .show(ui)?;
+                    .show(ui)?
+                    .try_on_hover_ui(|ui| -> PolarsResult<()> {
+                        ui.heading(ui.localize(STANDARD));
+                        let factors = &data_frame[STANDARD]
+                            .struct_()?
+                            .field_by_name(STEREOSPECIFIC_NUMBERS123)?;
+                        let mean = factors
+                            .struct_()?
+                            .field_by_name(MEAN)?
+                            .f64()?
+                            .get(row)
+                            .unwrap_or_default();
+                        let standard_deviation = factors
+                            .struct_()?
+                            .field_by_name(STANDARD_DEVIATION)?
+                            .f64()?
+                            .get(row)
+                            .unwrap_or_default();
+                        let sample_series = factors.struct_()?.field_by_name(SAMPLE)?;
+                        let sample = sample_series.get(row)?.str_value();
+                        Grid::new(ui.next_auto_id())
+                            .show(ui, |ui| {
+                                ui.label(ui.localize(FACTORS));
+                                ui.label(format!(
+                                    "{mean}{NO_BREAK_SPACE}±{standard_deviation} {sample}"
+                                ));
+                                ui.end_row();
+                                Ok(())
+                            })
+                            .inner
+                    })?;
             }
-            (row, bottom::SN2) => {
+            (row, bottom::STEREOSPECIFIC_NUMBERS2) => {
                 MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS2], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
                     .show(ui)?;
             }
-            (row, bottom::SN13) => {
+            (row, bottom::STEREOSPECIFIC_NUMBERS13) => {
                 MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS13], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
                     .with_calculation(true)
                     .show(ui)?;
             }
-            (row, bottom::EF) => {
+            (row, bottom::ENRICHMENT_FACTOR) => {
                 MeanAndStandardDeviation::new(&data_frame, [FACTORS, ENRICHMENT], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
                     .with_calculation(true)
                     .show(ui)?;
             }
-            (row, bottom::SF) => {
+            (row, bottom::SELECTIVITY_FACTOR) => {
                 MeanAndStandardDeviation::new(&data_frame, [FACTORS, SELECTIVITY], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
@@ -263,19 +296,19 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         let data_frame = self.data_frame(ui);
         match (row, column) {
-            (row, bottom::SN123) => {
+            (row, bottom::STEREOSPECIFIC_NUMBERS123) => {
                 MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS123], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
                     .show(ui)?;
             }
-            (row, bottom::SN2) => {
+            (row, bottom::STEREOSPECIFIC_NUMBERS2) => {
                 MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS2], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
                     .show(ui)?;
             }
-            (row, bottom::SN13) => {
+            (row, bottom::STEREOSPECIFIC_NUMBERS13) => {
                 MeanAndStandardDeviation::new(&data_frame, [STEREOSPECIFIC_NUMBERS13], row)
                     .with_standard_deviation(self.state.settings.standard_deviation)
                     .with_sample(true)
@@ -390,20 +423,25 @@ impl TableDelegate for TableView<'_> {
 mod top {
     use super::*;
 
-    pub(super) const ID: Range<usize> = 0..3;
-    pub(super) const SN: Range<usize> = ID.end..ID.end + 3;
-    pub(super) const FS: Range<usize> = SN.end..SN.end + 2;
+    pub(super) const IDENTIFIER: Range<usize> = 0..3;
+    pub(super) const STEREOSPECIFIC_NUMBERS: Range<usize> = IDENTIFIER.end..IDENTIFIER.end + 3;
+    pub(super) const FACTORS: Range<usize> =
+        STEREOSPECIFIC_NUMBERS.end..STEREOSPECIFIC_NUMBERS.end + 2;
 }
 
 mod bottom {
     use super::*;
 
-    pub(super) const INDEX: Range<usize> = top::ID.start..top::ID.start + 1;
+    pub(super) const INDEX: Range<usize> = top::IDENTIFIER.start..top::IDENTIFIER.start + 1;
     pub(super) const LABEL: Range<usize> = INDEX.end..INDEX.end + 1;
-    pub(super) const FA: Range<usize> = LABEL.end..LABEL.end + 1;
-    pub(super) const SN123: Range<usize> = top::SN.start..top::SN.start + 1;
-    pub(super) const SN2: Range<usize> = SN123.end..SN123.end + 1;
-    pub(super) const SN13: Range<usize> = SN2.end..SN2.end + 1;
-    pub(super) const EF: Range<usize> = top::FS.start..top::FS.start + 1;
-    pub(super) const SF: Range<usize> = EF.end..EF.end + 1;
+    pub(super) const FATTY_ACID: Range<usize> = LABEL.end..LABEL.end + 1;
+    pub(super) const STEREOSPECIFIC_NUMBERS123: Range<usize> =
+        top::STEREOSPECIFIC_NUMBERS.start..top::STEREOSPECIFIC_NUMBERS.start + 1;
+    pub(super) const STEREOSPECIFIC_NUMBERS2: Range<usize> =
+        STEREOSPECIFIC_NUMBERS123.end..STEREOSPECIFIC_NUMBERS123.end + 1;
+    pub(super) const STEREOSPECIFIC_NUMBERS13: Range<usize> =
+        STEREOSPECIFIC_NUMBERS2.end..STEREOSPECIFIC_NUMBERS2.end + 1;
+    pub(super) const ENRICHMENT_FACTOR: Range<usize> = top::FACTORS.start..top::FACTORS.start + 1;
+    pub(super) const SELECTIVITY_FACTOR: Range<usize> =
+        ENRICHMENT_FACTOR.end..ENRICHMENT_FACTOR.end + 1;
 }
