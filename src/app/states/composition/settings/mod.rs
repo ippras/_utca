@@ -26,7 +26,10 @@ use egui_l20n::prelude::*;
 use egui_phosphor::regular::{BOOKMARK, CHART_BAR, DOTS_SIX_VERTICAL, ERASER, MINUS, PLUS, TABLE};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
-use std::hash::{Hash, Hasher};
+use std::{
+    borrow::Cow,
+    hash::{Hash, Hasher},
+};
 
 /// Composition settings
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -53,6 +56,8 @@ pub(crate) struct Settings {
     pub(crate) sort: Sort,
     // Gunstone method
     pub(crate) discriminants: Discriminants,
+
+    pub(crate) symmetry: Symmetry,
 }
 
 impl Settings {
@@ -82,6 +87,8 @@ impl Settings {
             sort: Sort::Value,
             // Gunstone method
             discriminants: Discriminants::new(),
+
+            symmetry: Symmetry::new(),
         }
     }
 
@@ -159,6 +166,11 @@ impl Settings {
                 ui.labeled_separator(ui.localize("Statistics"));
                 self.ddof(ui);
             }
+
+            // Symmetry
+            ui.collapsing(ui.localize("Symmetry"), |ui| {
+                self.symmetry(ui);
+            });
         });
     }
 
@@ -515,6 +527,48 @@ impl Settings {
                 .ui(ui);
         });
     }
+
+    /// Symmetry
+    fn symmetry(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("SymmetryA"))
+                .on_hover_localized("SymmetryA.hover");
+            let mut checked = self.symmetry.a.is_some();
+            if ui
+                .checkbox(&mut checked, ())
+                .on_hover_localized("Standard?OptionCategory=none")
+                .changed()
+            {
+                self.symmetry.a = if checked { Some(String::new()) } else { None };
+            }
+            ui.add_enabled_ui(checked, |ui| {
+                if let Some(text) = &mut self.symmetry.a {
+                    ui.text_edit_singleline(text);
+                } else {
+                    ui.text_edit_singleline(&mut String::new());
+                }
+            });
+        });
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("SymmetryB"))
+                .on_hover_localized("SymmetryB.hover");
+            let mut checked = self.symmetry.b.is_some();
+            if ui
+                .checkbox(&mut checked, ())
+                .on_hover_localized("Standard?OptionCategory=none")
+                .changed()
+            {
+                self.symmetry.b = if checked { Some(String::new()) } else { None };
+            }
+            ui.add_enabled_ui(checked, |ui| {
+                if let Some(text) = &mut self.symmetry.b {
+                    ui.text_edit_singleline(text);
+                } else {
+                    ui.text_edit_singleline(&mut String::new());
+                }
+            });
+        });
+    }
 }
 
 impl Default for Settings {
@@ -702,6 +756,19 @@ impl Selection {
             composition: Composition::new(),
             filter: Filter::new(),
         }
+    }
+}
+
+/// Symmetry
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub(crate) struct Symmetry {
+    pub(crate) a: Option<String>,
+    pub(crate) b: Option<String>,
+}
+
+impl Symmetry {
+    pub(crate) fn new() -> Self {
+        Self { a: None, b: None }
     }
 }
 

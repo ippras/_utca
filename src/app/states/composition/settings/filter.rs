@@ -106,8 +106,8 @@ impl Widget for FilterWidget<'_> {
             ui.visuals_mut().widgets.inactive = ui.visuals().widgets.active;
             FUNNEL
         };
-        let response = SubMenuButton::new(title)
-            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::IgnoreClicks))
+        let response = MenuButton::new(title)
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
             .ui(ui, |ui| -> PolarsResult<()> {
                 ui.heading(format!(
                     "{} {}",

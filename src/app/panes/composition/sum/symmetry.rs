@@ -7,7 +7,11 @@ use crate::{
     },
     r#const::{EM_DASH, GROUP, TRIACYLGLYCEROLS, VALUE},
 };
-use egui::{Grid, InnerResponse, Response, ScrollArea, Ui, Widget};
+use egui::{
+    Grid, InnerResponse, PopupCloseBehavior, Response, ScrollArea, Ui, Widget,
+    containers::menu::{MenuButton, MenuConfig},
+};
+use egui_ext::InnerResponseExt;
 use egui_l20n::prelude::*;
 use egui_phosphor::regular::LIST;
 use lipid::prelude::LABEL;
@@ -53,38 +57,40 @@ impl<'a> Symmetry<'a> {
             .list()?
             .get_as_series(row)
             .unwrap_or_default();
-        ui.menu_button(LIST, |ui| {
-            ScrollArea::vertical()
-                .auto_shrink([false, true])
-                .max_height(ui.spacing().combo_height)
-                .show(ui, |ui| {
-                    Grid::new(ui.next_auto_id())
-                        .show(ui, |ui| -> PolarsResult<()> {
-                            for (index, label) in triacylglycerols
-                                .struct_()?
-                                .field_by_name(LABEL)?
-                                .iter()
-                                .enumerate()
-                            {
-                                ui.label(index.to_string());
-                                ui.label(label.to_string());
-                                NewMeanAndStandardDeviation::new(
-                                    &triacylglycerols.struct_()?.field_by_name(VALUE)?,
-                                    index,
-                                )
-                                .with_standard_deviation(self.settings.standard_deviation)
-                                .with_sample(true)
-                                .show(ui)?;
-                                ui.end_row();
-                            }
-                            Ok(())
-                        })
-                        .inner
-                })
-                .inner
-        })
-        .inner
-        .transpose()?;
+        MenuButton::new(LIST)
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+            .ui(ui, |ui| {
+                ScrollArea::vertical()
+                    .auto_shrink([false, true])
+                    .max_height(ui.spacing().combo_height)
+                    .show(ui, |ui| {
+                        Grid::new(ui.next_auto_id())
+                            .show(ui, |ui| -> PolarsResult<()> {
+                                for (index, label) in triacylglycerols
+                                    .struct_()?
+                                    .field_by_name(LABEL)?
+                                    .iter()
+                                    .enumerate()
+                                {
+                                    ui.label(index.to_string());
+                                    ui.label(label.to_string());
+                                    NewMeanAndStandardDeviation::new(
+                                        &triacylglycerols.struct_()?.field_by_name(VALUE)?,
+                                        index,
+                                    )
+                                    .with_standard_deviation(self.settings.standard_deviation)
+                                    .with_sample(true)
+                                    .show(ui)?;
+                                    ui.end_row();
+                                }
+                                Ok(())
+                            })
+                            .inner
+                    })
+                    .inner
+            })
+            .1
+            .transpose()?;
         Ok(())
     }
 }

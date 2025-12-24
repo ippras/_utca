@@ -75,11 +75,6 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let sn1 = col(LABEL).triacylglycerol().stereospecific_number1();
     let sn2 = col(LABEL).triacylglycerol().stereospecific_number2();
     let sn3 = col(LABEL).triacylglycerol().stereospecific_number3();
-    let mut triacylglycerols = as_struct(vec![
-        col(LABEL),
-        mean_and_standard_deviation(col(VALUE), key).alias(VALUE),
-    ])
-    .alias(TRIACYLGLYCEROLS);
     // Group, format, sort
     Ok(lazy_frame
         .group_by([
