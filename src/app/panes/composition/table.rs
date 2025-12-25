@@ -4,13 +4,12 @@ use crate::{
         panes::MARGIN, states::composition::State,
         widgets::mean_and_standard_deviation::NewMeanAndStandardDeviation,
     },
-    r#const::{KEY, MEAN, SPECIES, VALUE},
+    r#const::{KEY, SPECIES, VALUE},
     text::Text,
     utils::HashedDataFrame,
 };
 use egui::{
-    Context, Frame, Grid, Id, Label, Margin, PopupCloseBehavior, RichText, ScrollArea, TextStyle,
-    Ui, Widget,
+    Context, Frame, Grid, Id, Label, Margin, PopupCloseBehavior, ScrollArea, TextStyle, Ui, Widget,
     containers::menu::{MenuButton, MenuConfig},
 };
 use egui_ext::InnerResponseExt as _;
@@ -90,7 +89,7 @@ impl TableView<'_> {
             }
             (1, column) if column.start != 0 => {
                 let index = column.start / 2;
-                let composition = self.state.settings.selections[index].composition;
+                let composition = self.state.settings.compositions[index];
                 ui.heading(ui.localize(composition.text()))
                     .on_hover_text(ui.localize(composition.hover_text()));
             }

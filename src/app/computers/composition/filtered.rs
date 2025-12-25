@@ -50,48 +50,48 @@ type Value = HashedDataFrame;
 
 fn filter(lazy_frame: LazyFrame, settings: &Settings) -> LazyFrame {
     let mut predicate = lit(true);
-    for (index, selection) in settings.selections.iter().enumerate() {
-        // Key
-        for (key, value) in &selection.filter.key {
-            let expr = col(KEYS).struct_().field_by_index(index as _);
-            match selection.composition {
-                MASS_MONO | ECN_MONO | TYPE_MONO | UNSATURATION_MONO if value[0] => {
-                    predicate = predicate.and(expr.neq(lit(LiteralValue::from(key.clone()))));
-                }
-                _ => {
-                    let expr = expr.triacylglycerol();
-                    if value[0] {
-                        predicate = predicate.and(
-                            expr.clone()
-                                .stereospecific_number1()
-                                .neq(lit(LiteralValue::from(key.clone()))),
-                        );
-                    }
-                    if value[1] {
-                        predicate = predicate.and(
-                            expr.clone()
-                                .stereospecific_number2()
-                                .neq(lit(LiteralValue::from(key.clone()))),
-                        );
-                    }
-                    if value[2] {
-                        predicate = predicate.and(
-                            expr.clone()
-                                .stereospecific_number3()
-                                .neq(lit(LiteralValue::from(key.clone()))),
-                        );
-                    }
-                }
-            }
-        }
-        // Value
-        predicate = predicate.and(
-            col(VALUES)
-                .list()
-                .get(lit(index as IdxSize), false)
-                .arr()
-                .agg(element().gt_eq(lit(selection.filter.value)).any(true)),
-        );
-    }
+    // for (index, selection) in settings.compositions.iter().enumerate() {
+    //     // Key
+    //     for (key, value) in &selection.filter.key {
+    //         let expr = col(KEYS).struct_().field_by_index(index as _);
+    //         match selection.composition {
+    //             MASS_MONO | ECN_MONO | TYPE_MONO | UNSATURATION_MONO if value[0] => {
+    //                 predicate = predicate.and(expr.neq(lit(LiteralValue::from(key.clone()))));
+    //             }
+    //             _ => {
+    //                 let expr = expr.triacylglycerol();
+    //                 if value[0] {
+    //                     predicate = predicate.and(
+    //                         expr.clone()
+    //                             .stereospecific_number1()
+    //                             .neq(lit(LiteralValue::from(key.clone()))),
+    //                     );
+    //                 }
+    //                 if value[1] {
+    //                     predicate = predicate.and(
+    //                         expr.clone()
+    //                             .stereospecific_number2()
+    //                             .neq(lit(LiteralValue::from(key.clone()))),
+    //                     );
+    //                 }
+    //                 if value[2] {
+    //                     predicate = predicate.and(
+    //                         expr.clone()
+    //                             .stereospecific_number3()
+    //                             .neq(lit(LiteralValue::from(key.clone()))),
+    //                     );
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     // Value
+    //     predicate = predicate.and(
+    //         col(VALUES)
+    //             .list()
+    //             .get(lit(index as IdxSize), false)
+    //             .arr()
+    //             .agg(element().gt_eq(lit(selection.filter.value)).any(true)),
+    //     );
+    // }
     lazy_frame.filter(predicate)
 }

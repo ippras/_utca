@@ -78,15 +78,15 @@ impl PartialEq for Filter {
 
 /// Filter widget
 pub struct FilterWidget<'a> {
-    selection: &'a mut Selection,
+    composition: &'a mut Selection,
     series: &'a Series,
     percent: bool,
 }
 
 impl<'a> FilterWidget<'a> {
-    pub fn new(selection: &'a mut Selection, series: &'a Series) -> Self {
+    pub fn new(composition: &'a mut Selection, series: &'a Series) -> Self {
         Self {
-            selection,
+            composition,
             series,
             percent: false,
         }
@@ -100,7 +100,7 @@ impl<'a> FilterWidget<'a> {
 
 impl Widget for FilterWidget<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let title = if self.selection.filter == Default::default() {
+        let title = if self.composition.filter == Default::default() {
             FUNNEL_X
         } else {
             ui.visuals_mut().widgets.inactive = ui.visuals().widgets.active;
@@ -113,18 +113,18 @@ impl Widget for FilterWidget<'_> {
                     "{} {}",
                     ui.localize(&format!(
                         "{}.abbreviation",
-                        self.selection.composition.text(),
+                        self.composition.composition.text(),
                     )),
                     ui.localize("Filter?case=lower"),
                 ));
                 // Key
                 ui.labeled_separator("Key");
-                match self.selection.composition {
+                match self.composition.composition {
                     MASS_MONO | ECN_MONO | TYPE_MONO | UNSATURATION_MONO => {
                         let series = self.series.unique()?.sort(Default::default())?;
                         ui.add(ColumnWidget {
                             indices: vec![0, 1, 2],
-                            selection: self.selection,
+                            selection: self.composition,
                             series,
                         });
                     }
@@ -133,7 +133,7 @@ impl Widget for FilterWidget<'_> {
                         let series = fields[0].unique()?.sort(Default::default())?;
                         ui.add(ColumnWidget {
                             indices: vec![0, 1, 2],
-                            selection: self.selection,
+                            selection: self.composition,
                             series,
                         });
                     }
@@ -143,13 +143,13 @@ impl Widget for FilterWidget<'_> {
                             let series = fields[0].unique()?.sort(Default::default())?;
                             ui[0].add(ColumnWidget {
                                 indices: vec![0, 2],
-                                selection: self.selection,
+                                selection: self.composition,
                                 series,
                             });
                             let series = fields[1].unique()?.sort(Default::default())?;
                             ui[1].add(ColumnWidget {
                                 indices: vec![1],
-                                selection: self.selection,
+                                selection: self.composition,
                                 series,
                             });
                             Ok(())
@@ -163,7 +163,7 @@ impl Widget for FilterWidget<'_> {
                                 let series = fields[index].unique()?.sort(Default::default())?;
                                 ui[index].add(ColumnWidget {
                                     indices: vec![index],
-                                    selection: self.selection,
+                                    selection: self.composition,
                                     series,
                                 });
                             }
@@ -176,7 +176,7 @@ impl Widget for FilterWidget<'_> {
                 ui.horizontal(|ui| {
                     ui.label("Value");
                     ui.add(
-                        Slider::new(&mut self.selection.filter.value, 0.0..=1.0)
+                        Slider::new(&mut self.composition.filter.value, 0.0..=1.0)
                             .clamping(SliderClamping::Always)
                             .logarithmic(true)
                             .custom_formatter(|mut value, _| {

@@ -1,8 +1,8 @@
 use crate::{
     app::states::composition::{
-        ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO, SPECIES_POSITIONAL,
-        SPECIES_STEREO, Selection, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
-        UNSATURATION_MONO, UNSATURATION_STEREO,
+        Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO,
+        SPECIES_POSITIONAL, SPECIES_STEREO, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL,
+        TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
     },
     r#const::{KEY, KEYS, SPECIES, VALUE, VALUES},
     utils::HashedDataFrame,
@@ -67,7 +67,7 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) order: Order,
     pub(crate) round_mass: u32,
-    pub(crate) selections: &'a Vec<Selection>,
+    pub(crate) compositions: &'a Vec<Composition>,
     pub(crate) sort: Sort,
 }
 
@@ -80,7 +80,7 @@ impl<'a> Key<'a> {
             ddof: settings.ddof,
             order: settings.order,
             round_mass: settings.round_mass,
-            selections: &settings.selections,
+            compositions: &settings.compositions,
             sort: settings.sort,
         }
     }
@@ -107,9 +107,9 @@ fn compose(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     // eval_arr(col(VALUE).arr().eval(element().cum_count(false), false), |expr| )?;
     println!("OG 1: {}", lazy_frame.clone().collect().unwrap());
     // Composition
-    for (index, selection) in key.selections.iter().enumerate() {
+    for (index, composition) in key.compositions.iter().enumerate() {
         lazy_frame = lazy_frame.with_column(
-            match selection.composition {
+            match *composition {
                 MASS_MONO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map(|_| {

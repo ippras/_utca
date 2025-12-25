@@ -51,7 +51,7 @@ pub(crate) struct Settings {
     pub(crate) method: Method,
     pub(crate) order: Order,
     pub(crate) round_mass: u32,
-    pub(crate) selections: Vec<Selection>,
+    pub(crate) compositions: Vec<Composition>,
     pub(crate) show_filtered: bool,
     pub(crate) sort: Sort,
     // Gunstone method
@@ -62,8 +62,8 @@ pub(crate) struct Settings {
 
 impl Settings {
     pub(crate) fn new() -> Self {
-        let mut selections = Vec::new();
-        selections.push(Selection::new());
+        let mut compositions = Vec::new();
+        compositions.push(Composition::new());
         Self {
             index: None,
             // Display
@@ -79,7 +79,7 @@ impl Settings {
             // Parameters
             ddof: 1,
             adduct: 0.0,
-            selections,
+            compositions,
             method: Method::VanderWal,
             order: Order::Descending,
             round_mass: 2,
@@ -92,7 +92,7 @@ impl Settings {
         }
     }
 
-    pub(crate) fn show(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
+    pub(crate) fn show(&mut self, ui: &mut Ui) {
         ScrollArea::vertical().show(ui, |ui| {
             self.precision(ui);
             self.significant(ui);
@@ -130,8 +130,10 @@ impl Settings {
                 ui.labeled_separator(ui.localize("Gunstone"));
                 self.discriminants(ui);
             }
-            self.compose(ui, target);
+            self.compose(ui);
 
+            // Mass
+            ui.labeled_separator(ui.localize("Mass"));
             self.adduct(ui);
             self.round_mass(ui);
 
@@ -139,22 +141,6 @@ impl Settings {
             ui.labeled_separator(ui.localize("View"));
 
             self.show_filtered(ui);
-
-            // // Join
-            // ui.label(ui.localize("Join"));
-            // ComboBox::from_id_salt("join")
-            //     .selected_text(self.join.text())
-            //     .show_ui(ui, |ui| {
-            //         ui.selectable_value(&mut self.join, Join::Left, Join::Left.text())
-            //             .on_hover_ui(|ui| {Join::Left.hover_text();});
-            //         ui.selectable_value(&mut self.join, Join::And, Join::And.text())
-            //             .on_hover_ui(|ui| {Join::And.hover_text();});
-            //         ui.selectable_value(&mut self.join, Join::Or, Join::Or.text())
-            //             .on_hover_ui(|ui| {Join::Or.hover_text();});
-            //     })
-            //     .response
-            //     .on_hover_ui(|ui| {self.join.hover_text();});
-            //
 
             // Sort
             ui.labeled_separator(ui.localize("Sort"));
@@ -206,7 +192,11 @@ impl Settings {
         ui.horizontal(|ui| {
             ui.label(ui.localize("StickyColumns"))
                 .on_hover_localized("StickyColumns.hover");
-            Slider::new(&mut self.sticky_columns, 0..=self.selections.len() * 2 + 1).ui(ui);
+            Slider::new(
+                &mut self.sticky_columns,
+                0..=self.compositions.len() * 2 + 1,
+            )
+            .ui(ui);
         });
     }
 
@@ -277,11 +267,15 @@ impl Settings {
     }
 
     /// Compose
-    fn compose(&mut self, ui: &mut Ui, target: &HashedDataFrame) {
+    fn compose(&mut self, ui: &mut Ui) {
         Grid::new(ui.next_auto_id()).show(ui, |ui| {
             // Compose
             ui.label(ui.localize("Compose"));
             // Plus, bookmarks
+            let compositions: Vec<_> = COMPOSITIONS
+                .iter()
+                .filter(|composition| !self.compositions.contains(composition))
+                .collect();
             ui.horizontal(|ui| {
                 MenuButton::new(PLUS)
                     .config(
@@ -296,7 +290,7 @@ impl Settings {
                                 let mut current_value = ui.data_mut(|data| {
                                     data.get_temp::<Option<Composition>>(id).flatten()
                                 });
-                                for selected_value in COMPOSITIONS {
+                                for &&selected_value in &compositions {
                                     let response = ui
                                         .selectable_value(
                                             &mut current_value,
@@ -307,13 +301,7 @@ impl Settings {
                                             ui.label(ui.localize(selected_value.hover_text()));
                                         });
                                     if response.clicked() {
-                                        let selection = Selection {
-                                            composition: selected_value,
-                                            filter: Default::default(),
-                                        };
-                                        if !self.selections.contains(&selection) {
-                                            self.selections.push(selection);
-                                        }
+                                        self.compositions.push(selected_value);
                                         current_value = None;
                                     }
                                 }
@@ -327,28 +315,19 @@ impl Settings {
                     ))
                     .clicked()
                 {
-                    self.selections = vec![Selection {
-                        composition: SPECIES_POSITIONAL,
-                        filter: Filter::new(),
-                    }];
+                    self.compositions = vec![SPECIES_POSITIONAL];
                 };
                 if ui
                     .button((BOOKMARK, ui.localize(SPECIES_MONO.abbreviation_text())))
                     .clicked()
                 {
-                    self.selections = vec![Selection {
-                        composition: SPECIES_MONO,
-                        filter: Filter::new(),
-                    }];
+                    self.compositions = vec![SPECIES_MONO];
                 };
                 if ui
                     .button((BOOKMARK, ui.localize(TYPE_POSITIONAL.abbreviation_text())))
                     .clicked()
                 {
-                    self.selections = vec![Selection {
-                        composition: TYPE_POSITIONAL,
-                        filter: Filter::new(),
-                    }];
+                    self.compositions = vec![TYPE_POSITIONAL];
                 };
             });
             ui.end_row();
@@ -357,8 +336,8 @@ impl Settings {
             ui.label("");
             ui.vertical(|ui| {
                 let response = dnd(ui, ui.next_auto_id()).show_vec(
-                    &mut self.selections,
-                    |ui, selection, handle, state| {
+                    &mut self.compositions,
+                    |ui, current_value, handle, state| {
                         ui.horizontal(|ui| {
                             handle.ui(ui, |ui| {
                                 ui.label(DOTS_SIX_VERTICAL);
@@ -366,52 +345,37 @@ impl Settings {
                             // Delete
                             delete = delete.or(ui.button(MINUS).clicked().then_some(state.index));
                             ComboBox::from_id_salt(ui.next_auto_id())
-                                .selected_text(ui.localize(selection.composition.text()))
+                                .selected_text(ui.localize(current_value.text()))
                                 .show_ui(ui, |ui| {
-                                    for composition in COMPOSITIONS {
-                                        if ui
-                                            .selectable_value(
-                                                &mut selection.composition,
-                                                composition,
-                                                ui.localize(composition.text()),
-                                            )
-                                            .on_hover_ui(|ui| {
-                                                ui.label(ui.localize(composition.hover_text()));
-                                            })
-                                            .changed()
-                                        {
-                                            selection.filter = Default::default();
-                                        }
+                                    for selected_value in &compositions {
+                                        ui.selectable_value(
+                                            current_value,
+                                            **selected_value,
+                                            ui.localize(selected_value.text()),
+                                        )
+                                        .on_hover_ui(
+                                            |ui| {
+                                                ui.label(ui.localize(selected_value.hover_text()));
+                                            },
+                                        );
                                     }
                                 })
                                 .response
                                 .on_hover_ui(|ui| {
-                                    ui.label(ui.localize(selection.composition.hover_text()));
+                                    ui.label(ui.localize(current_value.hover_text()));
                                 });
-                            if let Some(series) = target["Keys"]
-                                .struct_()
-                                .unwrap()
-                                .fields_as_series()
-                                .get(state.index)
-                            {
-                                let series =
-                                    series.unique().unwrap().sort(Default::default()).unwrap();
-                                FilterWidget::new(selection, &series)
-                                    .percent(self.percent)
-                                    .ui(ui);
-                            }
                         });
                     },
                 );
                 if let Some(index) = delete {
-                    self.selections.remove(index);
+                    self.compositions.remove(index);
                 }
                 if response.is_drag_finished() {
-                    response.update_vec(&mut self.selections);
+                    response.update_vec(&mut self.compositions);
                 }
                 // Если пуст, то вставляет значение по умолчанию (не может быть пустым).
-                if self.selections.is_empty() {
-                    self.selections.push(Selection::new());
+                if self.compositions.is_empty() {
+                    self.compositions.push(Composition::new());
                 }
             });
         });

@@ -376,7 +376,7 @@ impl Pane {
             .default_pos(ui.next_widget_position())
             .open(&mut state.windows.open_settings)
             .show(ui.ctx(), |ui| {
-                state.settings.show(ui, &self.target);
+                state.settings.show(ui);
             });
     }
 

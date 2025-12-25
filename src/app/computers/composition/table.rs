@@ -1,7 +1,7 @@
 use crate::{
     app::states::composition::{
-        ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
-        SPECIES_STEREO, Selection, Settings, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
+        Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO,
+        SPECIES_POSITIONAL, SPECIES_STEREO, Settings, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
         UNSATURATION_MONO, UNSATURATION_STEREO,
     },
     r#const::{KEY, KEYS, MEAN, SAMPLE, SPECIES, STANDARD_DEVIATION, VALUE, VALUES},
@@ -47,7 +47,7 @@ pub(crate) struct Key<'a> {
     pub(crate) ddof: u8,
     pub(crate) percent: bool,
     pub(crate) precision: usize,
-    pub(crate) selections: &'a Vec<Selection>,
+    pub(crate) compositions: &'a Vec<Composition>,
     pub(crate) significant: bool,
 }
 
@@ -58,7 +58,7 @@ impl<'a> Key<'a> {
             ddof: settings.ddof,
             percent: settings.percent,
             precision: settings.precision,
-            selections: &settings.selections,
+            compositions: &settings.compositions,
             significant: settings.significant,
         }
     }
@@ -77,7 +77,7 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
 /// Body
 fn body(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let mut exprs = Vec::new();
-    for index in 0..key.selections.len() {
+    for index in 0..key.compositions.len() {
         // Key
         let triacylglycerol = col(KEYS)
             .struct_()
@@ -89,7 +89,7 @@ fn body(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             triacylglycerol.stereospecific_number3(),
         ];
         exprs.push(
-            match key.selections[index].composition {
+            match key.compositions[index] {
                 ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO | UNSATURATION_STEREO => {
                     format_str("[{}; {}; {}]", args)?
                 }
@@ -199,7 +199,7 @@ fn sum(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
         eval_arr(col(VALUES).list().last(), |element| element.sum())?,
         key,
     )
-    .alias(format!("{VALUE}[{}]", key.selections.len() - 1))]))
+    .alias(format!("{VALUE}[{}]", key.compositions.len() - 1))]))
 }
 
 fn mean_and_standard_deviation(array: Expr, key: Key) -> Expr {
