@@ -29,11 +29,11 @@ impl Computer {
         // ╞═════════════════╪════════════════════════════════╪═══════════════════════════════════════════════╡
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
         println!("T0: {}", lazy_frame.clone().collect().unwrap());
-        let sum = lazy_frame
-            .clone()
-            .select([eval_arr(col(VALUES).list().last(), |element| {
-                element.sum()
-            })?]);
+        let sum = lazy_frame.clone().select([mean_and_standard_deviation(
+            eval_arr(col(VALUES).list().last(), |element| element.sum())?,
+            key,
+        )
+        .alias(format!("{KEY}[{}]", key.selections.len() - 1))]);
         println!("Tx: {}", sum.clone().collect().unwrap());
         lazy_frame = format(lazy_frame, key)?;
         println!("T1: {}", lazy_frame.clone().collect().unwrap());
@@ -77,7 +77,38 @@ type Value = HashedDataFrame;
 
 /// Format
 fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    let mut exprs = Vec::new();
+    for index in 0..key.selections.len() {
+        // Key
+        let triacylglycerol = col(KEYS)
+            .struct_()
+            .field_by_index(index as _)
+            .triacylglycerol();
+        let args = [
+            triacylglycerol.clone().stereospecific_number1(),
+            triacylglycerol.clone().stereospecific_number2(),
+            triacylglycerol.stereospecific_number3(),
+        ];
+        exprs.push(
+            match key.selections[index].composition {
+                ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO | UNSATURATION_STEREO => {
+                    format_str("[{}; {}; {}]", args)?
+                }
+                SPECIES_POSITIONAL | TYPE_POSITIONAL => format_str("[{}/2; {}; {}/2]", args)?,
+                ECN_MONO | MASS_MONO | SPECIES_MONO | TYPE_MONO | UNSATURATION_MONO => {
+                    format_str("[{}/3; {}/3; {}/3]", args)?
+                }
+            }
+            .alias(format!("{KEY}[{index}]")),
+        );
+        // Value
+        exprs.push(
+            mean_and_standard_deviation(col(VALUES).list().get(lit(index as IdxSize), false), key)
+                .alias(format!("{VALUE}[{index}]")),
+        );
+    }
     let species = col(SPECIES).list().eval(as_struct(vec![
+        // Label
         {
             let label = element().struct_().field_by_name(LABEL).triacylglycerol();
             format_str(
@@ -90,6 +121,7 @@ fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             )?
             .alias(LABEL)
         },
+        // Triacylglycerol
         {
             let triacylglycerol = {
                 element()
@@ -118,54 +150,139 @@ fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             )?
             .alias(TRIACYLGLYCEROL)
         },
-        element()
-            .struct_()
-            .field_by_name(VALUE)
-            .arr()
-            .mean()
-            .percent(key.percent)
-            .precision(key.precision, key.significant)
-            .alias(VALUE),
+        // Value
+        mean_and_standard_deviation(element().struct_().field_by_name(VALUE), key).alias(VALUE),
     ]));
-    // Key, value
-    Ok(lazy_frame.select(
-        (0..key.selections.len())
-            .map(|index| {
-                as_struct(vec![
-                    {
-                        let triacylglycerol = col(KEYS)
-                            .struct_()
-                            .field_by_index(index as _)
-                            .triacylglycerol();
-                        let args = [
-                            triacylglycerol.clone().stereospecific_number1(),
-                            triacylglycerol.clone().stereospecific_number2(),
-                            triacylglycerol.stereospecific_number3(),
-                        ];
-                        match key.selections[index].composition {
-                            ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO
-                            | UNSATURATION_STEREO => format_str("[{}; {}; {}]", args).unwrap(),
-                            SPECIES_POSITIONAL | TYPE_POSITIONAL => {
-                                format_str("[{}/2; {}; {}/2]", args).unwrap()
-                            }
-                            ECN_MONO | MASS_MONO | SPECIES_MONO | TYPE_MONO | UNSATURATION_MONO => {
-                                format_str("[{}/3; {}/3; {}/3]", args).unwrap()
-                            }
-                        }
-                        .alias(KEY)
-                    },
-                    mean_and_standard_deviation(
-                        col(VALUES).list().get(lit(index as IdxSize), false),
-                        key,
-                    )
-                    .alias(VALUE),
-                ])
-                .alias(index.to_string())
-            })
-            .chain(once(species))
-            .collect::<Vec<_>>(),
-    ))
+    exprs.push(species);
+    Ok(lazy_frame.select(exprs).with_row_index(INDEX, None))
+    // Ok(lazy_frame.select(
+    //     (0..key.selections.len())
+    //         .map(|index| {
+    //             as_struct(vec![
+    //                 {
+    //                     let triacylglycerol = col(KEYS)
+    //                         .struct_()
+    //                         .field_by_index(index as _)
+    //                         .triacylglycerol();
+    //                     let args = [
+    //                         triacylglycerol.clone().stereospecific_number1(),
+    //                         triacylglycerol.clone().stereospecific_number2(),
+    //                         triacylglycerol.stereospecific_number3(),
+    //                     ];
+    //                     match key.selections[index].composition {
+    //                         ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO
+    //                         | UNSATURATION_STEREO => format_str("[{}; {}; {}]", args).unwrap(),
+    //                         SPECIES_POSITIONAL | TYPE_POSITIONAL => {
+    //                             format_str("[{}/2; {}; {}/2]", args).unwrap()
+    //                         }
+    //                         ECN_MONO | MASS_MONO | SPECIES_MONO | TYPE_MONO | UNSATURATION_MONO => {
+    //                             format_str("[{}/3; {}/3; {}/3]", args).unwrap()
+    //                         }
+    //                     }
+    //                     .alias(KEY)
+    //                 },
+    //                 mean_and_standard_deviation(
+    //                     col(VALUES).list().get(lit(index as IdxSize), false),
+    //                     key,
+    //                 )
+    //                 .alias(VALUE),
+    //             ])
+    //             .alias(index.to_string())
+    //         })
+    //         .chain(once(species))
+    //         .collect::<Vec<_>>(),
+    // ))
 }
+// fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+//     let species = col(SPECIES).list().eval(as_struct(vec![
+//         {
+//             let label = element().struct_().field_by_name(LABEL).triacylglycerol();
+//             format_str(
+//                 "[{}; {}; {}]",
+//                 [
+//                     label.clone().stereospecific_number1(),
+//                     label.clone().stereospecific_number2(),
+//                     label.stereospecific_number3(),
+//                 ],
+//             )?
+//             .alias(LABEL)
+//         },
+//         {
+//             let triacylglycerol = {
+//                 element()
+//                     .struct_()
+//                     .field_by_name(TRIACYLGLYCEROL)
+//                     .triacylglycerol()
+//             };
+//             format_str(
+//                 "[{}; {}; {}]",
+//                 [
+//                     triacylglycerol
+//                         .clone()
+//                         .stereospecific_number1()
+//                         .fatty_acid()
+//                         .format(),
+//                     triacylglycerol
+//                         .clone()
+//                         .stereospecific_number2()
+//                         .fatty_acid()
+//                         .format(),
+//                     triacylglycerol
+//                         .stereospecific_number3()
+//                         .fatty_acid()
+//                         .format(),
+//                 ],
+//             )?
+//             .alias(TRIACYLGLYCEROL)
+//         },
+//         element()
+//             .struct_()
+//             .field_by_name(VALUE)
+//             .arr()
+//             .mean()
+//             .percent(key.percent)
+//             .precision(key.precision, key.significant)
+//             .alias(VALUE),
+//     ]));
+//     // Key, value
+//     Ok(lazy_frame.select(
+//         (0..key.selections.len())
+//             .map(|index| {
+//                 as_struct(vec![
+//                     {
+//                         let triacylglycerol = col(KEYS)
+//                             .struct_()
+//                             .field_by_index(index as _)
+//                             .triacylglycerol();
+//                         let args = [
+//                             triacylglycerol.clone().stereospecific_number1(),
+//                             triacylglycerol.clone().stereospecific_number2(),
+//                             triacylglycerol.stereospecific_number3(),
+//                         ];
+//                         match key.selections[index].composition {
+//                             ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO
+//                             | UNSATURATION_STEREO => format_str("[{}; {}; {}]", args).unwrap(),
+//                             SPECIES_POSITIONAL | TYPE_POSITIONAL => {
+//                                 format_str("[{}/2; {}; {}/2]", args).unwrap()
+//                             }
+//                             ECN_MONO | MASS_MONO | SPECIES_MONO | TYPE_MONO | UNSATURATION_MONO => {
+//                                 format_str("[{}/3; {}/3; {}/3]", args).unwrap()
+//                             }
+//                         }
+//                         .alias(KEY)
+//                     },
+//                     mean_and_standard_deviation(
+//                         col(VALUES).list().get(lit(index as IdxSize), false),
+//                         key,
+//                     )
+//                     .alias(VALUE),
+//                 ])
+//                 .alias(index.to_string())
+//             })
+//             .chain(once(species))
+//             .collect::<Vec<_>>(),
+//     ))
+// }
 
 fn mean_and_standard_deviation(array: Expr, key: Key) -> Expr {
     as_struct(vec![

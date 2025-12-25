@@ -4,6 +4,12 @@ Standard = { $OptionCategory ->
 }
     .hover = Fatty acid added as a standard.
 
+Composition = { $PluralCategory ->
+    *[one] Composition
+    [other] Compositions
+}
+    .hover = [stereospecific, positional, non-stereospecific], [mass, ECN, species, type, unsaturation] composition.
+
 Correlation = { $PluralCategory ->
     *[one] Correlation
     [other] Correlations

@@ -36,7 +36,7 @@ impl<'a> Symmetry<'a> {
             ui.heading(ui.localize("Symmetry"));
             ui.heading(ui.localize("Value"))
                 .on_hover_localized("Value.hover");
-            ui.heading("");
+            ui.heading(ui.localize("Species"));
             ui.end_row();
             for row in 0..self.data_frame.height() {
                 let group = self.data_frame[GROUP].str()?.get(row).unwrap_or(EM_DASH);
@@ -53,45 +53,45 @@ impl<'a> Symmetry<'a> {
     }
 
     fn list_button(&self, ui: &mut Ui, row: usize) -> PolarsResult<()> {
+        let (_, inner_response) = MenuButton::new(LIST)
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+            .ui(ui, |ui| {
+                ScrollArea::vertical()
+                    .max_height(ui.spacing().combo_height)
+                    .show(ui, |ui| self.list_button_content(ui, row))
+                    .inner
+            });
+        inner_response.transpose()?;
+        Ok(())
+    }
+
+    fn list_button_content(&self, ui: &mut Ui, row: usize) -> PolarsResult<()> {
         let triacylglycerols = self.data_frame[TRIACYLGLYCEROLS]
             .list()?
             .get_as_series(row)
             .unwrap_or_default();
-        MenuButton::new(LIST)
-            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-            .ui(ui, |ui| {
-                ScrollArea::vertical()
-                    .auto_shrink([false, true])
-                    .max_height(ui.spacing().combo_height)
-                    .show(ui, |ui| {
-                        Grid::new(ui.next_auto_id())
-                            .show(ui, |ui| -> PolarsResult<()> {
-                                for (index, label) in triacylglycerols
-                                    .struct_()?
-                                    .field_by_name(LABEL)?
-                                    .iter()
-                                    .enumerate()
-                                {
-                                    ui.label(index.to_string());
-                                    ui.label(label.to_string());
-                                    NewMeanAndStandardDeviation::new(
-                                        &triacylglycerols.struct_()?.field_by_name(VALUE)?,
-                                        index,
-                                    )
-                                    .with_standard_deviation(self.settings.standard_deviation)
-                                    .with_sample(true)
-                                    .show(ui)?;
-                                    ui.end_row();
-                                }
-                                Ok(())
-                            })
-                            .inner
-                    })
-                    .inner
+        Grid::new(ui.next_auto_id())
+            .show(ui, |ui| -> PolarsResult<()> {
+                for (index, label) in triacylglycerols
+                    .struct_()?
+                    .field_by_name(LABEL)?
+                    .iter()
+                    .enumerate()
+                {
+                    ui.label(index.to_string());
+                    ui.label(label.to_string());
+                    NewMeanAndStandardDeviation::new(
+                        &triacylglycerols.struct_()?.field_by_name(VALUE)?,
+                        index,
+                    )
+                    .with_standard_deviation(self.settings.standard_deviation)
+                    .with_sample(true)
+                    .show(ui)?;
+                    ui.end_row();
+                }
+                Ok(())
             })
-            .1
-            .transpose()?;
-        Ok(())
+            .inner
     }
 }
 

@@ -2,7 +2,6 @@
 
 About = About
 Calculation = Calculation
-Composition = Composition
 Configuration = Configuration
 Create = Create
 Edit = Edit
@@ -216,3 +215,5 @@ Group = Group
     .hover = Group.
 Value = Value
     .hover = Value.
+Species = Species
+    .hover = Species.

@@ -1,31 +1,25 @@
 use super::ID_SOURCE;
 use crate::{
     app::{
-        panes::MARGIN,
-        states::composition::State,
-        widgets::{
-            FloatWidget,
-            mean_and_standard_deviation::{MeanAndStandardDeviation, NewMeanAndStandardDeviation},
-        },
+        panes::MARGIN, states::composition::State,
+        widgets::mean_and_standard_deviation::NewMeanAndStandardDeviation,
     },
-    r#const::{KEY, MEAN, SAMPLE, SPECIES, VALUE, VALUES},
+    r#const::{KEY, MEAN, SPECIES, VALUE},
     text::Text,
-    utils::{HashedDataFrame, egui::ResponseExt as _},
+    utils::HashedDataFrame,
 };
 use egui::{
-    Context, Frame, Grid, Id, Label, Margin, Response, RichText, ScrollArea, TextStyle, Ui, Widget,
+    Context, Frame, Grid, Id, Label, Margin, PopupCloseBehavior, RichText, ScrollArea, TextStyle,
+    Ui, Widget,
+    containers::menu::{MenuButton, MenuConfig},
 };
-use egui_l20n::{ResponseExt as _, UiExt as _};
+use egui_ext::InnerResponseExt as _;
+use egui_l20n::prelude::*;
 use egui_phosphor::regular::{HASH, LIST};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
-use itertools::Itertools as _;
 use lipid::prelude::*;
 use polars::prelude::*;
-use polars_utils::format_list;
-use std::{
-    fmt::from_fn,
-    ops::{Add, Range},
-};
+use std::ops::Range;
 use tracing::instrument;
 
 /// Composition table
@@ -53,12 +47,11 @@ impl TableView<'_> {
         }
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
         let num_rows = self.data_frame.height() as u64 + 1;
-        let num_columns = self.state.settings.selections.len() * 2 + 1;
-        // let top = vec![0..1, 1..num_columns, num_columns..num_columns + 1];
-        let top = vec![0..1, 1..num_columns];
+        let num_columns = self.data_frame.width();
+        let top = vec![0..1, 1..num_columns - 1, num_columns - 1..num_columns];
         let mut middle = vec![0..1];
         const STEP: usize = 2;
-        for index in (1..num_columns).step_by(STEP) {
+        for index in (1..num_columns - 1).step_by(STEP) {
             middle.push(index..index + STEP);
         }
         Table::new()
@@ -89,21 +82,20 @@ impl TableView<'_> {
             (0, top::INDEX) => {
                 ui.heading(HASH).on_hover_localized("Index");
             }
-            (0, _) => {
-                ui.heading("Compositions");
+            (0, column) if column.start + 1 < self.data_frame.width() => {
+                ui.heading(ui.localize("Composition?PluralCategory=other"));
             }
-            (1, column) => {
-                if column.start % 2 == 1 {
-                    let index = column.start / 2;
-                    let composition = self.state.settings.selections[index].composition;
-                    ui.heading(ui.localize(composition.text()))
-                        .on_hover_text(ui.localize(composition.hover_text()));
-                } else if column.start != 0 {
-                    ui.heading(VALUE);
-                }
+            (0, _last) => {
+                ui.heading(ui.localize("Species"));
             }
-            (2, column) => {
-                if column.start % 2 == 1 {
+            (1, column) if column.start != 0 => {
+                let index = column.start / 2;
+                let composition = self.state.settings.selections[index].composition;
+                ui.heading(ui.localize(composition.text()))
+                    .on_hover_text(ui.localize(composition.hover_text()));
+            }
+            (2, column) if column.start + 1 < self.data_frame.width() => {
+                if !column.start.is_multiple_of(2) {
                     ui.heading(KEY);
                 } else if column.start != 0 {
                     ui.heading(VALUE);
@@ -140,67 +132,67 @@ impl TableView<'_> {
     ) -> PolarsResult<()> {
         match (row, column) {
             (row, top::INDEX) => {
-                ui.horizontal(|ui| -> PolarsResult<()> {
-                    ui.menu_button(LIST, |ui| self.list_button_content(ui, row))
-                        .inner
-                        .transpose()?;
-                    ui.label(row.to_string());
-                    Ok(())
-                })
-                .inner?;
-            }
-            (row, column) => {
-                let index = (column.start + 1) / 2 - 1;
-                let name = &*index.to_string();
-                if !column.start.is_multiple_of(2) {
-                    let key = self.data_frame[name].struct_()?.field_by_name(KEY)?;
-                    let text = key.str_value(row)?;
-                    Label::new(text).truncate().ui(ui);
-                } else {
-                    NewMeanAndStandardDeviation::new(
-                        &self.data_frame[name].struct_()?.field_by_name(VALUE)?,
-                        row,
-                    )
-                    .with_standard_deviation(self.state.settings.standard_deviation)
-                    .with_sample(true)
-                    .show(ui)?;
+                if let Some(text) = self.data_frame[INDEX].idx()?.get(row) {
+                    ui.label(text.to_string());
                 }
             }
+            (row, column) if column.start + 1 < self.data_frame.width() => {
+                // let index = (column.start + 1) / 2 - 1;
+                // let index = (column.start + 1) / 2 - 1;
+                if !column.start.is_multiple_of(2) {
+                    let key = self.data_frame[column.start].str()?.get(row);
+                    if let Some(text) = key {
+                        Label::new(text).truncate().ui(ui);
+                    }
+                } else {
+                    let value = self.data_frame[column.start].as_materialized_series();
+                    NewMeanAndStandardDeviation::new(&value, row)
+                        .with_standard_deviation(self.state.settings.standard_deviation)
+                        .with_sample(true)
+                        .show(ui)?;
+                }
+            }
+            (row, _last) => {
+                self.list_button(ui, row)?;
+            }
         }
+        Ok(())
+    }
+
+    fn list_button(&self, ui: &mut Ui, row: usize) -> PolarsResult<()> {
+        let (_, inner_response) = MenuButton::new(LIST)
+            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+            .ui(ui, |ui| {
+                ScrollArea::vertical()
+                    .max_height(ui.spacing().combo_height)
+                    .show(ui, |ui| self.list_button_content(ui, row))
+                    .inner
+            });
+        inner_response.transpose()?;
         Ok(())
     }
 
     fn list_button_content(&self, ui: &mut Ui, row: usize) -> PolarsResult<()> {
         let species_series = self.data_frame[SPECIES].as_materialized_series();
         if let Some(species) = species_series.list()?.get_as_series(row) {
-            ui.heading(SPECIES).on_hover_text(species.len().to_string());
+            let len = species.len();
+            ui.heading(SPECIES).on_hover_text(len.to_string());
             ui.separator();
-            ScrollArea::vertical()
-                .auto_shrink([false, true])
-                .max_height(ui.spacing().combo_height)
-                .show(ui, |ui| {
-                    Grid::new(ui.next_auto_id())
-                        .show(ui, |ui| -> PolarsResult<()> {
-                            for (index, (label, value)) in species
-                                .struct_()?
-                                .field_by_name(LABEL)?
-                                .str()?
-                                .iter()
-                                .zip(species.struct_()?.field_by_name(VALUE)?.f64()?)
-                                .enumerate()
-                            {
-                                ui.label(index.to_string());
-                                if let Some(label) = label {
-                                    ui.label(label);
-                                }
-                                if let Some(value) = value {
-                                    ui.label(value.to_string());
-                                }
-                                ui.end_row();
-                            }
-                            Ok(())
-                        })
-                        .inner
+            Grid::new(ui.next_auto_id())
+                .show(ui, |ui| -> PolarsResult<()> {
+                    for index in 0..len {
+                        ui.label(index.to_string());
+                        ui.label(species.struct_()?.field_by_name(LABEL)?.str_value(index)?);
+                        NewMeanAndStandardDeviation::new(
+                            &species.struct_()?.field_by_name(VALUE)?,
+                            index,
+                        )
+                        .with_standard_deviation(self.state.settings.standard_deviation)
+                        .with_sample(true)
+                        .show(ui)?;
+                        ui.end_row();
+                    }
+                    Ok(())
                 })
                 .inner?;
         }
@@ -211,14 +203,7 @@ impl TableView<'_> {
         // Last column
         if column.start == self.state.settings.selections.len() * 2 {
             let last = &self.data_frame[self.data_frame.width() - 2];
-            if let Some(text) = last
-                .struct_()?
-                .field_by_name(VALUE)?
-                .struct_()?
-                .field_by_name(MEAN)?
-                .f64()?
-                .sum()
-            {
+            if let Some(text) = last.struct_()?.field_by_name(MEAN)?.f64()?.sum() {
                 ui.label(RichText::new(text.to_string()).strong());
             }
         }
