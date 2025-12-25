@@ -307,10 +307,13 @@ impl Settings {
                                             ui.label(ui.localize(selected_value.hover_text()));
                                         });
                                     if response.clicked() {
-                                        self.selections.push(Selection {
+                                        let selection = Selection {
                                             composition: selected_value,
                                             filter: Default::default(),
-                                        });
+                                        };
+                                        if !self.selections.contains(&selection) {
+                                            self.selections.push(selection);
+                                        }
                                         current_value = None;
                                     }
                                 }
@@ -362,7 +365,7 @@ impl Settings {
                             });
                             // Delete
                             delete = delete.or(ui.button(MINUS).clicked().then_some(state.index));
-                            ComboBox::from_id_salt(ui.auto_id_with(state.index))
+                            ComboBox::from_id_salt(ui.next_auto_id())
                                 .selected_text(ui.localize(selection.composition.text()))
                                 .show_ui(ui, |ui| {
                                     for composition in COMPOSITIONS {
