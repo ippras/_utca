@@ -11,7 +11,6 @@ use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
 use polars::prelude::*;
 use polars_ext::prelude::*;
-use std::iter::once;
 
 /// Table composition computed
 pub(crate) type Computed = FrameCache<Value, Computer>;
@@ -22,21 +21,14 @@ pub(crate) struct Computer;
 
 impl Computer {
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        // ┌─────────────────┬────────────────────────────────┬───────────────────────────────────────────────┐
-        // │ Keys            ┆ Values                         ┆ Species                                       │
-        // │ ---             ┆ ---                            ┆ ---                                           │
-        // │ struct[1]       ┆ array[struct[3], n]            ┆ list[struct[3]]                               │
-        // ╞═════════════════╪════════════════════════════════╪═══════════════════════════════════════════════╡
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
-        println!("T0: {}", lazy_frame.clone().collect().unwrap());
-        let sum = lazy_frame.clone().select([mean_and_standard_deviation(
-            eval_arr(col(VALUES).list().last(), |element| element.sum())?,
-            key,
-        )
-        .alias(format!("{KEY}[{}]", key.selections.len() - 1))]);
-        println!("Tx: {}", sum.clone().collect().unwrap());
-        lazy_frame = format(lazy_frame, key)?;
-        println!("T1: {}", lazy_frame.clone().collect().unwrap());
+        // | Keys      | Values              | Species         |
+        // | ---       | ---                 | ---             |
+        // | struct[1] | list[array[f64, 3]] | list[struct[3]] |
+        lazy_frame = compute(lazy_frame, key)?;
+        // | Index | Key[n] | Value[n]  | Species         |
+        // | ---   | ---    | ---       | ---             |
+        // | u32   | str    | struct[3] | list[struct[3]] |
         let data_frame = lazy_frame.collect()?;
         HashedDataFrame::new(data_frame)
     }
@@ -75,8 +67,15 @@ impl<'a> Key<'a> {
 /// Table composition value
 type Value = HashedDataFrame;
 
-/// Format
-fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    concat_lf_diagonal(
+        [body(lazy_frame.clone(), key)?, sum(lazy_frame, key)?],
+        UnionArgs::default(),
+    )
+}
+
+/// Body
+fn body(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     let mut exprs = Vec::new();
     for index in 0..key.selections.len() {
         // Key
@@ -193,96 +192,15 @@ fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     //         .collect::<Vec<_>>(),
     // ))
 }
-// fn format(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
-//     let species = col(SPECIES).list().eval(as_struct(vec![
-//         {
-//             let label = element().struct_().field_by_name(LABEL).triacylglycerol();
-//             format_str(
-//                 "[{}; {}; {}]",
-//                 [
-//                     label.clone().stereospecific_number1(),
-//                     label.clone().stereospecific_number2(),
-//                     label.stereospecific_number3(),
-//                 ],
-//             )?
-//             .alias(LABEL)
-//         },
-//         {
-//             let triacylglycerol = {
-//                 element()
-//                     .struct_()
-//                     .field_by_name(TRIACYLGLYCEROL)
-//                     .triacylglycerol()
-//             };
-//             format_str(
-//                 "[{}; {}; {}]",
-//                 [
-//                     triacylglycerol
-//                         .clone()
-//                         .stereospecific_number1()
-//                         .fatty_acid()
-//                         .format(),
-//                     triacylglycerol
-//                         .clone()
-//                         .stereospecific_number2()
-//                         .fatty_acid()
-//                         .format(),
-//                     triacylglycerol
-//                         .stereospecific_number3()
-//                         .fatty_acid()
-//                         .format(),
-//                 ],
-//             )?
-//             .alias(TRIACYLGLYCEROL)
-//         },
-//         element()
-//             .struct_()
-//             .field_by_name(VALUE)
-//             .arr()
-//             .mean()
-//             .percent(key.percent)
-//             .precision(key.precision, key.significant)
-//             .alias(VALUE),
-//     ]));
-//     // Key, value
-//     Ok(lazy_frame.select(
-//         (0..key.selections.len())
-//             .map(|index| {
-//                 as_struct(vec![
-//                     {
-//                         let triacylglycerol = col(KEYS)
-//                             .struct_()
-//                             .field_by_index(index as _)
-//                             .triacylglycerol();
-//                         let args = [
-//                             triacylglycerol.clone().stereospecific_number1(),
-//                             triacylglycerol.clone().stereospecific_number2(),
-//                             triacylglycerol.stereospecific_number3(),
-//                         ];
-//                         match key.selections[index].composition {
-//                             ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO
-//                             | UNSATURATION_STEREO => format_str("[{}; {}; {}]", args).unwrap(),
-//                             SPECIES_POSITIONAL | TYPE_POSITIONAL => {
-//                                 format_str("[{}/2; {}; {}/2]", args).unwrap()
-//                             }
-//                             ECN_MONO | MASS_MONO | SPECIES_MONO | TYPE_MONO | UNSATURATION_MONO => {
-//                                 format_str("[{}/3; {}/3; {}/3]", args).unwrap()
-//                             }
-//                         }
-//                         .alias(KEY)
-//                     },
-//                     mean_and_standard_deviation(
-//                         col(VALUES).list().get(lit(index as IdxSize), false),
-//                         key,
-//                     )
-//                     .alias(VALUE),
-//                 ])
-//                 .alias(index.to_string())
-//             })
-//             .chain(once(species))
-//             .collect::<Vec<_>>(),
-//     ))
-// }
+
+/// Sum
+fn sum(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
+    Ok(lazy_frame.select([mean_and_standard_deviation(
+        eval_arr(col(VALUES).list().last(), |element| element.sum())?,
+        key,
+    )
+    .alias(format!("{VALUE}[{}]", key.selections.len() - 1))]))
+}
 
 fn mean_and_standard_deviation(array: Expr, key: Key) -> Expr {
     as_struct(vec![

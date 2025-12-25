@@ -46,7 +46,7 @@ impl TableView<'_> {
             self.state.reset_table_state = false;
         }
         let height = ui.text_style_height(&TextStyle::Heading) + 2.0 * MARGIN.y;
-        let num_rows = self.data_frame.height() as u64 + 1;
+        let num_rows = self.data_frame.height() as _;
         let num_columns = self.data_frame.width();
         let top = vec![0..1, 1..num_columns - 1, num_columns - 1..num_columns];
         let mut middle = vec![0..1];
@@ -112,18 +112,14 @@ impl TableView<'_> {
         row: usize,
         column: Range<usize>,
     ) -> PolarsResult<()> {
-        if row != self.data_frame.height() {
-            self.body_cell_content_ui(ui, row, column)
-        } else {
-            self.footer_cell_content_ui(ui, column)
-        }
+        self.body_cell_content_ui(ui, row, column)
+        // if row != self.data_frame.height() {
+        //     self.body_cell_content_ui(ui, row, column)
+        // } else {
+        //     self.footer_cell_content_ui(ui, column)
+        // }
     }
 
-    // ┌─────────────────────────────┬───────────────┬──────────────────────┬─────────────────────────────┐
-    // │ 0                           ┆ 1.Key         ┆ 1.Value              ┆ Species                     │
-    // │ ---                         ┆ ---           ┆ ---                  ┆ ---                         │
-    // │ struct[2]                   ┆ str           ┆ struct[3]            ┆ list[struct[3]]             │
-    // ╞═════════════════════════════╪═══════════════╪══════════════════════╪═════════════════════════════╡
     fn body_cell_content_ui(
         &mut self,
         ui: &mut Ui,
@@ -137,7 +133,6 @@ impl TableView<'_> {
                 }
             }
             (row, column) if column.start + 1 < self.data_frame.width() => {
-                // let index = (column.start + 1) / 2 - 1;
                 // let index = (column.start + 1) / 2 - 1;
                 if !column.start.is_multiple_of(2) {
                     let key = self.data_frame[column.start].str()?.get(row);
@@ -160,54 +155,42 @@ impl TableView<'_> {
     }
 
     fn list_button(&self, ui: &mut Ui, row: usize) -> PolarsResult<()> {
-        let (_, inner_response) = MenuButton::new(LIST)
-            .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
-            .ui(ui, |ui| {
-                ScrollArea::vertical()
-                    .max_height(ui.spacing().combo_height)
-                    .show(ui, |ui| self.list_button_content(ui, row))
-                    .inner
-            });
-        inner_response.transpose()?;
-        Ok(())
-    }
-
-    fn list_button_content(&self, ui: &mut Ui, row: usize) -> PolarsResult<()> {
         let species_series = self.data_frame[SPECIES].as_materialized_series();
         if let Some(species) = species_series.list()?.get_as_series(row) {
-            let len = species.len();
-            ui.heading(SPECIES).on_hover_text(len.to_string());
-            ui.separator();
-            Grid::new(ui.next_auto_id())
-                .show(ui, |ui| -> PolarsResult<()> {
-                    for index in 0..len {
-                        ui.label(index.to_string());
-                        ui.label(species.struct_()?.field_by_name(LABEL)?.str_value(index)?);
-                        NewMeanAndStandardDeviation::new(
-                            &species.struct_()?.field_by_name(VALUE)?,
-                            index,
-                        )
-                        .with_standard_deviation(self.state.settings.standard_deviation)
-                        .with_sample(true)
-                        .show(ui)?;
-                        ui.end_row();
-                    }
-                    Ok(())
-                })
-                .inner?;
+            let (_, inner_response) = MenuButton::new(LIST)
+                .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
+                .ui(ui, |ui| {
+                    let len = species.len();
+                    ui.heading(SPECIES).on_hover_text(len.to_string());
+                    ui.separator();
+                    ScrollArea::vertical()
+                        .max_height(ui.spacing().combo_height)
+                        .show(ui, |ui| self.list_button_content(ui, &species))
+                        .inner
+                });
+            inner_response.transpose()?;
         }
         Ok(())
     }
 
-    fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
-        // Last column
-        if column.start == self.state.settings.selections.len() * 2 {
-            let last = &self.data_frame[self.data_frame.width() - 2];
-            if let Some(text) = last.struct_()?.field_by_name(MEAN)?.f64()?.sum() {
-                ui.label(RichText::new(text.to_string()).strong());
-            }
-        }
-        Ok(())
+    fn list_button_content(&self, ui: &mut Ui, species: &Series) -> PolarsResult<()> {
+        Grid::new(ui.next_auto_id())
+            .show(ui, |ui| {
+                for index in 0..species.len() {
+                    ui.label(index.to_string());
+                    ui.label(species.struct_()?.field_by_name(LABEL)?.str_value(index)?);
+                    NewMeanAndStandardDeviation::new(
+                        &species.struct_()?.field_by_name(VALUE)?,
+                        index,
+                    )
+                    .with_standard_deviation(self.state.settings.standard_deviation)
+                    .with_sample(true)
+                    .show(ui)?;
+                    ui.end_row();
+                }
+                Ok(())
+            })
+            .inner
     }
 }
 
