@@ -1,10 +1,13 @@
 use crate::{
-    app::states::composition::{
-        Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO,
-        SPECIES_POSITIONAL, SPECIES_STEREO, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL,
-        TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
+    app::states::{
+        calculation::settings::Threshold,
+        composition::settings::{
+            Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO,
+            SPECIES_POSITIONAL, SPECIES_STEREO, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL,
+            TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
+        },
     },
-    r#const::{KEY, KEYS, SPECIES, VALUE, VALUES},
+    r#const::{KEY, KEYS, SPECIES, THRESHOLD, VALUE, VALUES},
     utils::HashedDataFrame,
 };
 use const_format::formatcp;
@@ -26,6 +29,7 @@ const VALUE_: &str = formatcp!(r#"^{VALUE}.*$"#);
 
 const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
     Arc::new(Schema::from_iter([
+        Field::new(PlSmallStr::from_static(THRESHOLD), DataType::Boolean),
         field!(LABEL[DataType::String]),
         field!(TRIACYLGLYCEROL),
         Field::new(
@@ -64,11 +68,12 @@ pub(crate) struct Key<'a> {
     pub(crate) frame: &'a HashedDataFrame,
     pub(crate) index: Option<usize>,
     pub(crate) adduct: OrderedFloat<f64>,
+    pub(crate) compositions: &'a Vec<Composition>,
     pub(crate) ddof: u8,
     pub(crate) order: Order,
     pub(crate) round_mass: u32,
-    pub(crate) compositions: &'a Vec<Composition>,
     pub(crate) sort: Sort,
+    pub(crate) threshold: &'a Threshold,
 }
 
 impl<'a> Key<'a> {
@@ -77,11 +82,12 @@ impl<'a> Key<'a> {
             frame: data_frame,
             index: settings.index,
             adduct: OrderedFloat(settings.adduct),
+            compositions: &settings.compositions,
             ddof: settings.ddof,
             order: settings.order,
             round_mass: settings.round_mass,
-            compositions: &settings.compositions,
             sort: settings.sort,
+            threshold: &settings.threshold,
         }
     }
 }
@@ -104,7 +110,6 @@ fn compute(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
 }
 
 fn compose(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
-    // eval_arr(col(VALUE).arr().eval(element().cum_count(false), false), |expr| )?;
     println!("OG 1: {}", lazy_frame.clone().collect().unwrap());
     // Composition
     for (index, composition) in key.compositions.iter().enumerate() {
@@ -175,26 +180,45 @@ fn compose(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             }
             .alias(format!("Key{index}")),
         );
-        // let expr = as_struct(vec![
-        //     array.clone().arr().mean().alias(MEAN),
-        //     array.clone().arr().std(key.ddof).alias(STANDARD_DEVIATION),
-        //     array.alias(SAMPLE),
-        // ])
         lazy_frame = lazy_frame.with_column(
-            eval_arr(col(VALUE), |expr| expr.sum())?
-                .over([as_struct(vec![col(format!("^Key[0-{index}]$"))])])
-                .alias(format!("Value{index}")),
+            eval_arr(col(VALUE), |mut expr| {
+                {
+                    if key.threshold.filter {
+                        expr = expr.filter(col(THRESHOLD));
+                    }
+                    expr
+                }
+                .sum()
+            })?
+            .over([as_struct(vec![col(format!("^Key[0-{index}]$"))])])
+            .alias(format!("Value{index}")),
         );
     }
     println!("OG 2: {}", lazy_frame.clone().collect().unwrap());
     // Group
     lazy_frame = lazy_frame
         .group_by([col(r#"^Key\d$"#), col(r#"^Value\d$"#)])
-        .agg([as_struct(vec![col(LABEL), col(TRIACYLGLYCEROL), col(VALUE)]).alias(SPECIES)]);
+        .agg([as_struct(vec![
+            col(THRESHOLD),
+            col(LABEL),
+            col(TRIACYLGLYCEROL),
+            col(VALUE),
+        ])
+        .alias(SPECIES)]);
     println!("OG 3: {}", lazy_frame.clone().collect().unwrap());
+    let values = concat_list(vec![col(r#"^Value\d$"#)])?;
     lazy_frame = lazy_frame.select([
+        values
+            .clone()
+            .list()
+            .last()
+            .arr()
+            .eval(element().gt_eq(key.threshold.auto.0), false)
+            .arr()
+            .any()
+            .alias(THRESHOLD),
         as_struct(vec![col(r#"^Key\d$"#)]).alias(KEYS),
-        concat_list(vec![col(r#"^Value\d$"#)])?.alias(VALUES),
+        values.alias(VALUES),
         col(SPECIES),
     ]);
     println!("OG 4: {}", lazy_frame.clone().collect().unwrap());
@@ -231,40 +255,6 @@ fn sort(mut lazy_frame: LazyFrame, key: Key) -> LazyFrame {
     lazy_frame
 }
 
-// fn mean_and_standard_deviation(
-//     mut lazy_frame: LazyFrame,
-//     settings: &Settings,
-// ) -> PolarsResult<LazyFrame> {
-//     // TODO [array_get?](https://docs.rs/polars/latest/polars/prelude/array/trait.ArrayNameSpace.html)
-//     let list = |index| {
-//         // TODO: .arr().to_list().list() for compute mean std with None
-//         concat_list([all()
-//             .exclude_cols([KEYS, r#"^Value\d$"#])
-//             .as_expr()
-//             .arr()
-//             .get(lit(index as u32), true)])
-//     };
-//     for index in 0..settings.special.selections.len() {
-//         lazy_frame = lazy_frame.with_column(
-//             as_struct(vec![
-//                 list(index)?.list().mean().alias(MEAN),
-//                 list(index)?
-//                     .list()
-//                     .std(settings.special.ddof)
-//                     .alias(STANDARD_DEVIATION),
-//             ])
-//             .alias(format!("Value{index}")),
-//         );
-//     }
-//     // Group
-//     lazy_frame = lazy_frame.select([
-//         col(KEYS),
-//         concat_arr(vec![col(r#"^Value\d$"#)])?.alias(VALUES),
-//     ]);
-//     Ok(lazy_frame)
-// }
-
-pub(crate) mod filtered;
 pub(crate) mod species;
 pub(crate) mod sum;
 pub(crate) mod table;

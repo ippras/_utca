@@ -1,7 +1,10 @@
 use crate::{
     app::states::calculation::settings::{Settings, Threshold},
     r#const::*,
-    utils::HashedDataFrame,
+    utils::{
+        HashedDataFrame,
+        polars::{MeanAndStandardDeviationOptions, mean_and_standard_deviation},
+    },
 };
 use const_format::formatcp;
 use egui::util::cache::{ComputerMut, FrameCache};
@@ -187,6 +190,17 @@ impl<'a> Key<'a> {
             precision: settings.precision,
             significant: settings.significant,
             threshold: &settings.threshold,
+        }
+    }
+}
+
+impl From<Key<'_>> for MeanAndStandardDeviationOptions {
+    fn from(key: Key) -> Self {
+        Self {
+            ddof: key.ddof,
+            percent: key.percent,
+            precision: key.precision,
+            significant: key.significant,
         }
     }
 }
@@ -405,30 +419,30 @@ fn calculation_sf(
     ))
 }
 
-fn mean_and_standard_deviation(array: Expr, key: Key) -> Expr {
-    as_struct(vec![
-        array
-            .clone()
-            .arr()
-            .mean()
-            .percent(key.percent)
-            .precision(key.precision, key.significant)
-            .alias(MEAN),
-        array
-            .clone()
-            .arr()
-            .std(key.ddof)
-            .percent(key.percent)
-            .precision(key.precision + 1, key.significant)
-            .alias(STANDARD_DEVIATION),
-        array
-            .arr()
-            .eval(
-                element()
-                    .percent(key.percent)
-                    .precision(key.precision, key.significant),
-                false,
-            )
-            .alias(SAMPLE),
-    ])
-}
+// fn mean_and_standard_deviation(array: Expr, key: Key) -> Expr {
+//     as_struct(vec![
+//         array
+//             .clone()
+//             .arr()
+//             .mean()
+//             .percent(key.percent)
+//             .precision(key.precision, key.significant)
+//             .alias(MEAN),
+//         array
+//             .clone()
+//             .arr()
+//             .std(key.ddof)
+//             .percent(key.percent)
+//             .precision(key.precision + 1, key.significant)
+//             .alias(STANDARD_DEVIATION),
+//         array
+//             .arr()
+//             .eval(
+//                 element()
+//                     .percent(key.percent)
+//                     .precision(key.precision, key.significant),
+//                 false,
+//             )
+//             .alias(SAMPLE),
+//     ])
+// }

@@ -1,5 +1,5 @@
 use crate::{
-    app::states::composition::{
+    app::states::composition::settings::{
         ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO, SPECIES_POSITIONAL,
         SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO,
         UNSATURATION_STEREO,

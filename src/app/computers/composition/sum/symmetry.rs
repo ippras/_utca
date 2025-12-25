@@ -1,7 +1,10 @@
 use crate::{
-    app::states::composition::{Order, Settings, Sort},
-    r#const::{GROUP, MEAN, SAMPLE, STANDARD_DEVIATION, TRIACYLGLYCEROLS, VALUE},
-    utils::HashedDataFrame,
+    app::states::composition::settings::{Order, Settings, Sort},
+    r#const::{GROUP, TRIACYLGLYCEROLS, VALUE},
+    utils::{
+        HashedDataFrame,
+        polars::{MeanAndStandardDeviationOptions, mean_and_standard_deviation},
+    },
 };
 use egui::util::cache::{ComputerMut, FrameCache};
 use lipid::prelude::*;
@@ -19,14 +22,16 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
+        let mut lazy_frame = key.frame.data_frame.clone().lazy();
         // | Label                          | Triacylglycerol                | Value                          |
         // | ---                            | ---                            | ---                            |
         // | struct[3]                      | struct[3]                      | array[f64, 3]                  |
         // |--------------------------------|--------------------------------|--------------------------------|
-        let mut lazy_frame = key.frame.data_frame.clone().lazy();
-        println!("SYM 0: {}", lazy_frame.clone().collect().unwrap());
         lazy_frame = compute(lazy_frame, key)?;
-        println!("SYM 1: {}", lazy_frame.clone().collect().unwrap());
+        // | Group | Label           | Value     |
+        // | ---   | ---             | ---       |
+        // | str   | list[struct[3]] | struct[3] |
+        // |-------|-----------------|-----------|
         lazy_frame.collect()
     }
 }
@@ -63,12 +68,18 @@ impl<'a> Key<'a> {
     }
 }
 
+impl From<Key<'_>> for MeanAndStandardDeviationOptions {
+    fn from(key: Key) -> Self {
+        Self {
+            ddof: key.ddof,
+            percent: key.percent,
+            precision: key.precision,
+            significant: key.significant,
+        }
+    }
+}
+
 /// Composition symmetry sum value
-///
-/// | Group | Label           | Value     |
-/// | ---   | ---             | ---       |
-/// | str   | list[struct[3]] | struct[3] |
-/// |-------|-----------------|-----------|
 type Value = DataFrame;
 
 fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
@@ -140,33 +151,33 @@ fn compute(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
 //     .alias(SAMPLE),
 // ])
 // .alias("Value"),
-fn mean_and_standard_deviation(array: Expr, key: Key) -> Expr {
-    as_struct(vec![
-        array
-            .clone()
-            .arr()
-            .mean()
-            .percent(key.percent)
-            .precision(key.precision, key.significant)
-            .alias(MEAN),
-        array
-            .clone()
-            .arr()
-            .std(key.ddof)
-            .percent(key.percent)
-            .precision(key.precision + 1, key.significant)
-            .alias(STANDARD_DEVIATION),
-        array
-            .arr()
-            .eval(
-                element()
-                    .percent(key.percent)
-                    .precision(key.precision, key.significant),
-                false,
-            )
-            .alias(SAMPLE),
-    ])
-}
+// fn mean_and_standard_deviation(array: Expr, key: Key) -> Expr {
+//     as_struct(vec![
+//         array
+//             .clone()
+//             .arr()
+//             .mean()
+//             .percent(key.percent)
+//             .precision(key.precision, key.significant)
+//             .alias(MEAN),
+//         array
+//             .clone()
+//             .arr()
+//             .std(key.ddof)
+//             .percent(key.percent)
+//             .precision(key.precision + 1, key.significant)
+//             .alias(STANDARD_DEVIATION),
+//         array
+//             .arr()
+//             .eval(
+//                 element()
+//                     .percent(key.percent)
+//                     .precision(key.precision, key.significant),
+//                 false,
+//             )
+//             .alias(SAMPLE),
+//     ])
+// }
 
 fn sort(expr: Expr, key: Key) -> Expr {
     let mut sort_options = SortMultipleOptions::default();

@@ -1,22 +1,20 @@
-pub(crate) use self::{
-    composition::{
-        COMPOSITIONS, Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO,
-        SPECIES_POSITIONAL, SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
-        UNSATURATION_MONO, UNSATURATION_STEREO,
-    },
-    filter::{Filter, FilterWidget},
+pub(crate) use self::composition::{
+    COMPOSITIONS, Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO,
+    SPECIES_POSITIONAL, SPECIES_STEREO, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO,
+    UNSATURATION_STEREO,
 };
 
-use super::ID_SOURCE;
 use crate::{
-    app::MAX_PRECISION,
+    app::{
+        MAX_PRECISION,
+        states::{cache::Cache, calculation::settings::Threshold},
+    },
     r#const::relative_atomic_mass::{H, LI, NA, NH4},
     text::Text,
-    utils::HashedDataFrame,
 };
 use egui::{
     ComboBox, DragValue, Grid, Id, Key, KeyboardShortcut, Modifiers, PopupCloseBehavior,
-    ScrollArea, Slider, Ui, Vec2b, Widget as _,
+    ScrollArea, Slider, SliderClamping, Ui, Vec2b, Widget as _,
     containers::menu::{MenuButton, MenuConfig},
     emath::Float,
 };
@@ -25,10 +23,12 @@ use egui_ext::LabeledSeparator;
 use egui_l20n::prelude::*;
 use egui_phosphor::regular::{BOOKMARK, CHART_BAR, DOTS_SIX_VERTICAL, ERASER, MINUS, PLUS, TABLE};
 use indexmap::IndexMap;
+use polars::prelude::*;
+use polars_utils::format_list_truncated;
 use serde::{Deserialize, Serialize};
 use std::{
-    borrow::Cow,
     hash::{Hash, Hasher},
+    iter::zip,
 };
 
 /// Composition settings
@@ -52,8 +52,8 @@ pub(crate) struct Settings {
     pub(crate) order: Order,
     pub(crate) round_mass: u32,
     pub(crate) compositions: Vec<Composition>,
-    pub(crate) show_filtered: bool,
     pub(crate) sort: Sort,
+    pub(crate) threshold: Threshold,
     // Gunstone method
     pub(crate) discriminants: Discriminants,
 
@@ -83,8 +83,8 @@ impl Settings {
             method: Method::VanderWal,
             order: Order::Descending,
             round_mass: 2,
-            show_filtered: false,
             sort: Sort::Value,
+            threshold: Threshold::new(),
             // Gunstone method
             discriminants: Discriminants::new(),
 
@@ -93,6 +93,8 @@ impl Settings {
     }
 
     pub(crate) fn show(&mut self, ui: &mut Ui) {
+        let id = Id::new("Cache");
+        let cache = Cache::load(ui.ctx(), id);
         ScrollArea::vertical().show(ui, |ui| {
             self.precision(ui);
             self.significant(ui);
@@ -137,10 +139,14 @@ impl Settings {
             self.adduct(ui);
             self.round_mass(ui);
 
-            // View
-            ui.labeled_separator(ui.localize("View"));
-
-            self.show_filtered(ui);
+            // Threshold
+            ui.labeled_separator(ui.localize("Threshold"))
+                .on_hover_localized("Threshold.hover");
+            self.is_auto_threshold(ui);
+            self.auto_threshold(ui);
+            self.manual_threshold(ui, &cache);
+            self.sort_thresholded(ui);
+            self.filter_thresholded(ui);
 
             // Sort
             ui.labeled_separator(ui.localize("Sort"));
@@ -419,12 +425,115 @@ impl Settings {
         });
     }
 
-    /// Show filtered
-    fn show_filtered(&mut self, ui: &mut Ui) {
+    /// Is auto threshold
+    fn is_auto_threshold(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
-            ui.label(ui.localize("ShowFiltered"))
-                .on_hover_localized("ShowFiltered.hover");
-            ui.checkbox(&mut self.show_filtered, "");
+            ui.label(ui.localize("IsAutoThreshold"))
+                .on_hover_localized("IsAutoThreshold.hover");
+            ui.checkbox(&mut self.threshold.is_auto, ());
+        });
+    }
+
+    /// Auto threshold
+    fn auto_threshold(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("AutoThreshold"))
+                .on_hover_localized("AutoThreshold.hover");
+            if Slider::new(&mut self.threshold.auto.0, 0.0..=1.0)
+                .clamping(SliderClamping::Always)
+                .custom_formatter(|mut value, _| {
+                    if self.percent {
+                        value *= 100.0;
+                    }
+                    AnyValue::Float64(value).to_string()
+                })
+                .custom_parser(|value| {
+                    let mut parsed = value.parse::<f64>().ok()?;
+                    if self.percent {
+                        parsed /= 100.0;
+                    }
+                    Some(parsed)
+                })
+                .logarithmic(true)
+                .update_while_editing(false)
+                .ui(ui)
+                .changed()
+            {
+                self.threshold.is_auto = true;
+            }
+            // if ui
+            //     .button((BOOKMARK, if self.percent { "0.1%" } else { "0.001" }))
+            //     .clicked()
+            // {
+            //     self.threshold.auto.0 = 0.001;
+            //     self.threshold.is_auto = true;
+            // }
+            if ui
+                .button((BOOKMARK, if self.percent { "0.25%" } else { "0.0025" }))
+                .clicked()
+            {
+                self.threshold.auto.0 = 0.0025;
+                self.threshold.is_auto = true;
+            }
+            // if ui
+            //     .button((BOOKMARK, if self.percent { "1%" } else { "0.01" }))
+            //     .clicked()
+            // {
+            //     self.threshold.auto.0 = 0.01;
+            //     self.threshold.is_auto = true;
+            // }
+        });
+    }
+
+    /// Manual threshold
+    fn manual_threshold(&mut self, ui: &mut Ui, cache: &Cache) {
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("ManualThreshold"))
+                .on_hover_localized("ManualThreshold.hover");
+            let selected_text = format_list_truncated!(
+                zip(&self.threshold.manual, &cache.fatty_acids)
+                    .filter_map(|(keep, fatty_acid)| keep.then_some(fatty_acid)),
+                1
+            );
+            ComboBox::from_id_salt("ManualThreshold")
+                .close_behavior(PopupCloseBehavior::CloseOnClickOutside)
+                .selected_text(&selected_text)
+                .show_ui(ui, |ui| {
+                    for (fatty_acid, selected) in
+                        zip(&cache.fatty_acids, &mut self.threshold.manual)
+                    {
+                        if ui
+                            .toggle_value(selected, fatty_acid)
+                            .on_hover_text(fatty_acid)
+                            .changed()
+                        {
+                            self.threshold.is_auto = false;
+                        }
+                    }
+                })
+                .response
+                .on_hover_ui(|ui| {
+                    ui.label(selected_text);
+                });
+        });
+    }
+
+    /// Filter thresholded
+    fn filter_thresholded(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label(ui.localize("FilterThreshold"))
+                .on_hover_localized("FilterThreshold.hover");
+            ui.checkbox(&mut self.threshold.filter, ());
+        });
+    }
+
+    /// Sort thresholded
+    fn sort_thresholded(&mut self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            // Sort by minor major
+            ui.label(ui.localize("SortByMinorMajor"))
+                .on_hover_localized("SortByMinorMajor.hover");
+            ui.checkbox(&mut self.threshold.sort, ());
         });
     }
 
@@ -709,23 +818,6 @@ impl Text for Order {
     }
 }
 
-/// Selection
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
-pub(crate) struct Selection {
-    pub(crate) composition: Composition,
-    #[serde(skip)]
-    pub(crate) filter: Filter,
-}
-
-impl Selection {
-    pub(crate) fn new() -> Self {
-        Self {
-            composition: Composition::new(),
-            filter: Filter::new(),
-        }
-    }
-}
-
 /// Symmetry
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub(crate) struct Symmetry {
@@ -796,5 +888,5 @@ impl Plot {
     }
 }
 
-pub(super) mod composition;
-pub(super) mod filter;
+mod composition;
+// pub(super) mod filter;

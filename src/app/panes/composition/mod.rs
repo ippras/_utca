@@ -4,15 +4,18 @@ use crate::{
     app::{
         computers::composition::{
             Computed as CompositionComputed, Key as CompositionKey,
-            filtered::{Computed as FilteredComputed, Key as FilteredKey},
             species::{Computed as SpeciesComputed, Key as SpeciesKey},
             sum::symmetry::{Computed as SymmetryComputed, Key as SymmetryKey},
             table::{Computed as TableComputed, Key as TableKey},
             unique::{Computed as UniqueComputed, Key as UniqueKey},
         },
-        states::composition::{ID_SOURCE, Settings, State, View},
+        states::composition::{
+            ID_SOURCE, State,
+            settings::{Settings, View},
+        },
         widgets::butons::{ResetButton, ResizeButton, SettingsButton},
     },
+    r#const::VALUE,
     export::{ron, xlsx},
     text::Text,
     utils::{
@@ -48,7 +51,7 @@ pub(crate) struct Pane {
     #[serde(skip)]
     species: HashedDataFrame,
     #[serde(skip)]
-    target: HashedDataFrame,
+    composition: HashedDataFrame,
 }
 
 impl Pane {
@@ -57,7 +60,7 @@ impl Pane {
             id: None,
             frames,
             species: HashedDataFrame::EMPTY,
-            target: HashedDataFrame::EMPTY,
+            composition: HashedDataFrame::EMPTY,
         }
     }
 
@@ -152,7 +155,7 @@ impl Pane {
             .on_hover_localized("Composition");
         response |= ui.heading(self.title(state.settings.index));
         response = response
-            .on_hover_text(format!("{}/{:x}", self.id(), self.target.hash))
+            .on_hover_text(format!("{}/{:x}", self.id(), self.composition.hash))
             .on_hover_cursor(CursorIcon::Grab);
         ui.separator();
         // List
@@ -242,7 +245,7 @@ impl Pane {
                 })
                 .clicked()
             {
-                _ = self.save_ron(ui, &name, state);
+                _ = self.save_ron(&name, state);
             }
             if ui
                 .button((FLOPPY_DISK, "XLSX"))
@@ -258,12 +261,12 @@ impl Pane {
     }
 
     #[instrument(skip_all, err)]
-    fn save_ron(&self, ui: &mut Ui, name: impl Debug + Display, state: &State) -> Result<()> {
+    fn save_ron(&self, name: impl Debug + Display, state: &State) -> Result<()> {
         let meta = self.meta(state);
         let data = self
             .species
             .data_frame
-            .select([LABEL, TRIACYLGLYCEROL, "Value"])?;
+            .select([LABEL, TRIACYLGLYCEROL, VALUE])?;
         // let data = self.data(ui, state)?;
         println!("data: {data}");
         let frame = MetaDataFrame::new(meta, HashedDataFrame::new(data)?);
@@ -278,12 +281,13 @@ impl Pane {
 
     #[instrument(skip_all, err)]
     fn save_xlsx(&self, ui: &mut Ui, name: impl Debug + Display, state: &State) -> Result<()> {
-        let data_frame = ui.memory_mut(|memory| {
-            memory.caches.cache::<FilteredComputed>().get(FilteredKey {
-                data_frame: &self.target,
-                settings: &state.settings,
-            })
-        });
+        // let data_frame = ui.memory_mut(|memory| {
+        //     memory.caches.cache::<FilteredComputed>().get(FilteredKey {
+        //         data_frame: &self.composition,
+        //         settings: &state.settings,
+        //     })
+        // });
+        let data_frame = &self.composition;
         let data_frame = data_frame.data_frame.unnest(["Keys"], None)?;
         _ = xlsx::save(&data_frame, &format!("{name}.utca.xlsx"));
         Ok(())
@@ -304,50 +308,21 @@ impl Pane {
         }
     }
 
-    fn data(&self, ui: &Ui, state: &State) -> PolarsResult<DataFrame> {
-        let data_frame = ui.memory_mut(|memory| {
-            memory.caches.cache::<FilteredComputed>().get(FilteredKey {
-                data_frame: &self.target,
-                settings: &state.settings,
-            })
-        });
-        data_frame
-            .data_frame
-            .lazy()
-            .select([col("Species").explode(ExplodeOptions {
-                empty_as_null: true,
-                keep_nulls: true,
-            })])
-            .unnest(by_name(["Species"], true), None)
-            .sort(
-                ["Value"],
-                SortMultipleOptions::default().with_order_descending(true),
-            )
-            .collect()
-    }
-
     fn central(&mut self, ui: &mut Ui, state: &mut State) {
         // Composition
-        self.target = ui.memory_mut(|memory| {
+        self.composition = ui.memory_mut(|memory| {
             let key = CompositionKey::new(&self.species, &state.settings);
             HashedDataFrame {
                 data_frame: memory.caches.cache::<CompositionComputed>().get(key),
                 hash: hash(key),
             }
         });
-        // Filtered
-        let data_frame = ui.memory_mut(|memory| {
-            memory.caches.cache::<FilteredComputed>().get(FilteredKey {
-                data_frame: &self.target,
-                settings: &state.settings,
-            })
-        });
         // Table
         let data_frame = ui.memory_mut(|memory| {
             memory
                 .caches
                 .cache::<TableComputed>()
-                .get(TableKey::new(&data_frame, &state.settings))
+                .get(TableKey::new(&self.composition, &state.settings))
         });
         match state.settings.view {
             View::Plot => PlotView::new(&data_frame, state).show(ui),

@@ -4,15 +4,16 @@ use crate::{
         panes::MARGIN, states::composition::State,
         widgets::mean_and_standard_deviation::NewMeanAndStandardDeviation,
     },
-    r#const::{KEY, SPECIES, VALUE},
+    r#const::{KEY, SPECIES, THRESHOLD, VALUE},
     text::Text,
     utils::HashedDataFrame,
 };
 use egui::{
-    Context, Frame, Grid, Id, Label, Margin, PopupCloseBehavior, ScrollArea, TextStyle, Ui, Widget,
+    Context, Frame, Grid, Id, Label, Margin, PopupCloseBehavior, ScrollArea, TextStyle,
+    TextWrapMode, Ui, Widget,
     containers::menu::{MenuButton, MenuConfig},
 };
-use egui_ext::InnerResponseExt as _;
+use egui_ext::{InnerResponseExt as _, ResponseExt};
 use egui_l20n::prelude::*;
 use egui_phosphor::regular::{HASH, LIST};
 use egui_table::{CellInfo, Column, HeaderCellInfo, HeaderRow, Table, TableDelegate, TableState};
@@ -111,24 +112,15 @@ impl TableView<'_> {
         row: usize,
         column: Range<usize>,
     ) -> PolarsResult<()> {
-        self.body_cell_content_ui(ui, row, column)
-        // if row != self.data_frame.height() {
-        //     self.body_cell_content_ui(ui, row, column)
-        // } else {
-        //     self.footer_cell_content_ui(ui, column)
-        // }
-    }
-
-    fn body_cell_content_ui(
-        &mut self,
-        ui: &mut Ui,
-        row: usize,
-        column: Range<usize>,
-    ) -> PolarsResult<()> {
+        if let Some(threshold) = self.data_frame[THRESHOLD].bool()?.get(row)
+            && !threshold
+        {
+            ui.visuals_mut().override_text_color = Some(ui.visuals().weak_text_color());
+        }
         match (row, column) {
             (row, top::INDEX) => {
-                if let Some(text) = self.data_frame[INDEX].idx()?.get(row) {
-                    ui.label(text.to_string());
+                if row + 1 < self.data_frame.height() {
+                    ui.label(row.to_string());
                 }
             }
             (row, column) if column.start + 1 < self.data_frame.width() => {
@@ -156,10 +148,10 @@ impl TableView<'_> {
     fn list_button(&self, ui: &mut Ui, row: usize) -> PolarsResult<()> {
         let species_series = self.data_frame[SPECIES].as_materialized_series();
         if let Some(species) = species_series.list()?.get_as_series(row) {
-            let (_, inner_response) = MenuButton::new(LIST)
+            let len = species.len();
+            let (response, inner_response) = MenuButton::new(LIST)
                 .config(MenuConfig::new().close_behavior(PopupCloseBehavior::CloseOnClickOutside))
                 .ui(ui, |ui| {
-                    let len = species.len();
                     ui.heading(SPECIES).on_hover_text(len.to_string());
                     ui.separator();
                     ScrollArea::vertical()
@@ -168,6 +160,14 @@ impl TableView<'_> {
                         .inner
                 });
             inner_response.transpose()?;
+            response.try_on_hover_ui(|ui| -> PolarsResult<()> {
+                ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
+                let major = species
+                    .filter(species.struct_()?.field_by_name(THRESHOLD)?.bool()?)?
+                    .len();
+                ui.label(format!("Count: {major}/{len}"));
+                Ok(())
+            })?;
         }
         Ok(())
     }
@@ -175,7 +175,20 @@ impl TableView<'_> {
     fn list_button_content(&self, ui: &mut Ui, species: &Series) -> PolarsResult<()> {
         Grid::new(ui.next_auto_id())
             .show(ui, |ui| {
+                let text_color = ui.visuals().text_color();
+                let weak_text_color = ui.visuals().weak_text_color();
                 for index in 0..species.len() {
+                    if let Some(threshold) = species
+                        .struct_()?
+                        .field_by_name(THRESHOLD)?
+                        .bool()?
+                        .get(index)
+                        && !threshold
+                    {
+                        ui.visuals_mut().override_text_color = Some(weak_text_color);
+                    } else {
+                        ui.visuals_mut().override_text_color = Some(text_color);
+                    }
                     ui.label(index.to_string());
                     ui.label(species.struct_()?.field_by_name(LABEL)?.str_value(index)?);
                     NewMeanAndStandardDeviation::new(

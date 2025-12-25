@@ -1,6 +1,6 @@
 use crate::{
     app::{
-        states::composition::Settings,
+        states::composition::settings::Settings,
         widgets::mean_and_standard_deviation::{
             MeanAndStandardDeviation, NewMeanAndStandardDeviation,
         },

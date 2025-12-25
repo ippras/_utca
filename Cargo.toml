@@ -33,6 +33,7 @@ ordered-float = { version = "5.1.0", features = ["serde"] }
 # fea5335e5befc493af208a34c6b4162a1cbd2798 2025-11-12
 # 05f6f2db49c6721f8208b3bbcca5ec54568e34c4 2025-12-17
 polars = { git = "https://github.com/pola-rs/polars", rev = "05f6f2d", default-features = false, features = [
+    "array_any_all",
     "array_arithmetic",
     "bitwise",
     "concat_str",

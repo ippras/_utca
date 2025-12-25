@@ -1,11 +1,10 @@
-use std::fmt::{self, Display, Formatter};
-
 use self::{
     Composition::*,
     Stereospecificity::{NonStereospecific, Stereospecific},
 };
 use crate::text::Text;
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display, Formatter};
 
 pub(crate) const COMPOSITIONS: [Composition; 12] = [
     SPECIES_STEREO,

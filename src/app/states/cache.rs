@@ -1,24 +1,23 @@
-use self::{settings::Settings, windows::Windows};
 use egui::{Context, Id};
 use serde::{Deserialize, Serialize};
 
-/// State
+// const ID: Id = Id::from_hash(ahash::RandomState::with_seeds(1, 2, 3, 4).hash_one("Cache"));
+
+/// Cache
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub(crate) struct State {
-    pub(crate) settings: Settings,
-    pub(crate) windows: Windows,
+pub(crate) struct Cache {
+    pub(crate) fatty_acids: Vec<String>,
 }
 
-impl State {
+impl Cache {
     pub(crate) fn new() -> Self {
         Self {
-            settings: Settings::new(),
-            windows: Windows::new(),
+            fatty_acids: Vec::new(),
         }
     }
 }
 
-impl State {
+impl Cache {
     pub(crate) fn load(ctx: &Context, id: Id) -> Self {
         ctx.data_mut(|data| {
             data.get_persisted_mut_or_insert_with(id, || Self::new())
@@ -32,11 +31,3 @@ impl State {
         });
     }
 }
-
-pub(crate) mod cache;
-pub(crate) mod calculation;
-pub(crate) mod composition;
-pub(crate) mod configuration;
-pub(crate) mod settings;
-
-mod windows;

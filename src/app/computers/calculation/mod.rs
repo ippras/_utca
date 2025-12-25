@@ -72,6 +72,9 @@ impl Computer {
             .alias(STANDARD),
             any_horizontal([col(THRESHOLD_).alias(THRESHOLD)])?,
         ]);
+        // | Label | FattyAcid | StereospecificNumbers123 | StereospecificNumbers13 | StereospecificNumbers2 | Standard  | Threshold |
+        // | ----- | --------- | ------------------------ | ----------------------- | ---------------------- | --------- | --------- |
+        // | str   | struct[2] | array[f64, n]            | array[f64, n]           | array[f64, n]          | struct[2] | bool      |
         HashedDataFrame::new(lazy_frame.collect()?)
     }
 }
@@ -115,10 +118,6 @@ impl<'a> Key<'a> {
 }
 
 /// Calculation value
-///
-/// | Label | FattyAcid | StereospecificNumbers123 | StereospecificNumbers13 | StereospecificNumbers2 | Standard  | Threshold |
-/// | ----- | --------- | ------------------------ | ----------------------- | ---------------------- | --------- | --------- |
-/// | str   | struct[2] | array[f64, n]            | array[f64, n]           | array[f64, n]          | struct[2] | bool      |
 type Value = HashedDataFrame;
 
 fn indexed(lazy_frame: LazyFrame, index: usize) -> LazyFrame {
