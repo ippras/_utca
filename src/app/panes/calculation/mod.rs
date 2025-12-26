@@ -123,7 +123,7 @@ impl Pane {
             })
             .inner;
         CentralPanel::default()
-            .frame(Frame::central_panel(&ui.style()))
+            .frame(Frame::central_panel(ui.style()))
             .show_inside(ui, |ui| {
                 _ = self.central(ui, &mut state);
                 self.windows(ui, &mut state);

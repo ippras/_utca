@@ -106,7 +106,7 @@ use tracing::instrument;
 //         Field::new(PlSmallStr::from_static(THRESHOLD), DataType::Boolean),
 //     ]))
 // });
-const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+static SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
     Arc::new(Schema::from_iter([
         Field::new(PlSmallStr::from_static(LABEL), DataType::String),
         field!(FATTY_ACID),
@@ -152,7 +152,7 @@ pub(crate) struct Computer;
 impl Computer {
     #[instrument(skip(self), err)]
     fn try_compute(&mut self, key: Key) -> PolarsResult<Value> {
-        schema(&key.frame)?;
+        schema(key.frame)?;
         println!("T: {:?}", key);
         let mut lazy_frame = key.frame.data_frame.clone().lazy();
         lazy_frame = filter_and_sort(lazy_frame, key);
@@ -270,9 +270,7 @@ fn body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     .alias(FACTORS)]);
     // Stereospecific numbers
     lazy_frame = lazy_frame.with_columns(
-        STEREOSPECIFIC_NUMBERS
-            .map(|name| mean_and_standard_deviation(col(name), key).alias(name))
-            .to_vec(),
+        STEREOSPECIFIC_NUMBERS.map(|name| mean_and_standard_deviation(col(name), key).alias(name)),
     );
     // Properties
     lazy_frame = lazy_frame.with_columns([as_struct(vec![
@@ -379,14 +377,12 @@ fn body(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
 
 fn sum(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
     // Stereospecific numbers
-    Ok(lazy_frame.select(
-        STEREOSPECIFIC_NUMBERS
-            .try_map(|name| -> PolarsResult<_> {
-                let array = eval_arr(col(name), |expr| expr.filter(THRESHOLD).sum())?;
-                Ok(mean_and_standard_deviation(array, key).alias(name))
-            })?
-            .to_vec(),
-    ))
+    Ok(
+        lazy_frame.select(STEREOSPECIFIC_NUMBERS.try_map(|name| -> PolarsResult<_> {
+            let array = eval_arr(col(name), |expr| expr.filter(THRESHOLD).sum())?;
+            Ok(mean_and_standard_deviation(array, key).alias(name))
+        })?),
+    )
 }
 
 fn calculation_sn13(predicate: Expr, sn123: Expr, sn2: Expr) -> PolarsResult<Expr> {

@@ -67,7 +67,7 @@ impl<'a> Properties<'a> {
                             .inner?;
                         }
                         name => {
-                            MeanAndStandardDeviation::new(&self.data_frame, [name], row)
+                            MeanAndStandardDeviation::new(self.data_frame, [name], row)
                                 .with_standard_deviation(self.settings.standard_deviation)
                                 .with_sample(true)
                                 .show(ui)?;

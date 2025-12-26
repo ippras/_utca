@@ -31,12 +31,10 @@ impl UiExt for Ui {
                 } else {
                     Visuals::light().widgets.inactive.text_color()
                 }
+            } else if self.visuals().dark_mode {
+                Visuals::dark().text_color()
             } else {
-                if self.visuals().dark_mode {
-                    Visuals::dark().text_color()
-                } else {
-                    Visuals::light().text_color()
-                }
+                Visuals::light().text_color()
             }
         });
         let font_id = format.font_id.unwrap_or_default();

@@ -402,7 +402,7 @@ impl TableDelegate for TableView<'_> {
     }
 
     fn cell_ui(&mut self, ui: &mut Ui, cell: &CellInfo) {
-        if cell.row_nr % 2 == 0 {
+        if cell.row_nr.is_multiple_of(2) {
             ui.painter()
                 .rect_filled(ui.max_rect(), 0.0, ui.visuals().faint_bg_color);
         }

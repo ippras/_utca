@@ -21,7 +21,7 @@ impl State {
 impl State {
     pub(crate) fn load(ctx: &Context, id: Id) -> Self {
         ctx.data_mut(|data| {
-            data.get_persisted_mut_or_insert_with(id, || Self::new())
+            data.get_persisted_mut_or_insert_with(id,  Self::new)
                 .clone()
         })
     }

@@ -268,7 +268,7 @@ impl TableView<'_> {
                     Ok(memory
                         .caches
                         .cache::<TableComputed>()
-                        .get(TableKey { frame: &self.data }))
+                        .get(TableKey { frame: self.data }))
                 })?;
                 let value = data_frame[STEREOSPECIFIC_NUMBERS123].f64()?.get(row);
                 let inner_response = FloatWidget::new(value)
@@ -287,7 +287,7 @@ impl TableView<'_> {
                     Ok(memory
                         .caches
                         .cache::<TableComputed>()
-                        .get(TableKey { frame: &self.data }))
+                        .get(TableKey { frame: self.data }))
                 })?;
                 let name = data_frame.get_columns()[3].name().as_str();
                 let value = data_frame[name].f64()?.get(row);
@@ -309,10 +309,8 @@ impl TableView<'_> {
     fn footer_cell_content_ui(&mut self, ui: &mut Ui, column: Range<usize>) -> PolarsResult<()> {
         match column {
             INDEX => {
-                if self.state.settings.edit {
-                    if ui.button(PLUS).clicked() {
-                        self.state.event.add_table_row = true;
-                    }
+                if self.state.settings.edit && ui.button(PLUS).clicked() {
+                    self.state.event.add_table_row = true;
                 }
             }
             // TAG => {
@@ -355,7 +353,7 @@ impl TableDelegate for TableView<'_> {
     }
 
     fn cell_ui(&mut self, ui: &mut Ui, cell: &CellInfo) {
-        if cell.row_nr % 2 == 0 {
+        if cell.row_nr.is_multiple_of(2) {
             ui.painter()
                 .rect_filled(ui.max_rect(), 0.0, ui.visuals().faint_bg_color);
         }

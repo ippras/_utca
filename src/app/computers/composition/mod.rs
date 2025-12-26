@@ -28,7 +28,7 @@ const KEY_: &str = formatcp!(r#"^{KEY}.*$"#);
 /// Starts with `VALUE`
 const VALUE_: &str = formatcp!(r#"^{VALUE}.*$"#);
 
-const SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
+static SCHEMA: LazyLock<SchemaRef> = LazyLock::new(|| {
     Arc::new(Schema::from_iter([
         Field::new(PlSmallStr::from_static(THRESHOLD), DataType::Boolean),
         field!(LABEL[DataType::String]),

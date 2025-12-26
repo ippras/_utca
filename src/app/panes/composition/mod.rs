@@ -99,7 +99,7 @@ impl Pane {
     ) -> UiResponse {
         let id = *self.id.get_or_insert_with(|| ui.next_auto_id());
         let mut state = State::load(ui.ctx(), id);
-        _ = self.init(ui, &mut state);
+        self.init(ui, &mut state);
         let response = TopBottomPanel::top(ui.auto_id_with("Pane"))
             .show_inside(ui, |ui| {
                 MenuBar::new()
@@ -122,7 +122,7 @@ impl Pane {
             })
             .inner;
         CentralPanel::default()
-            .frame(Frame::central_panel(&ui.style()))
+            .frame(Frame::central_panel(ui.style()))
             .show_inside(ui, |ui| {
                 self.central(ui, &mut state);
                 self.windows(ui, &mut state);

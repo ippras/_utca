@@ -13,7 +13,7 @@ use ron::{
 use std::{borrow::Borrow, sync::LazyLock};
 use tracing::instrument;
 
-const CONFIG: LazyLock<PrettyConfig> =
+static CONFIG: LazyLock<PrettyConfig> =
     LazyLock::new(|| PrettyConfig::new().extensions(Extensions::UNWRAP_NEWTYPES));
 
 #[cfg(not(target_arch = "wasm32"))]

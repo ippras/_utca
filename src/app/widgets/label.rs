@@ -66,12 +66,12 @@ impl LabelWidget<'_> {
                 if let Some(fatty_acid) = &fatty_acid {
                     ui.menu_button("Fill one label", |ui| {
                         let id = fatty_acid.id();
-                        if ui.button("Common name").clicked() {
-                            if let Some(name) = ui.try_localize(&format!("{id}.common")) {
-                                let label = name.to_owned();
-                                inner = Ok(Some(Inner::Cell(label)));
-                                changed = true;
-                            }
+                        if ui.button("Common name").clicked()
+                            && let Some(name) = ui.try_localize(&format!("{id}.common"))
+                        {
+                            let label = name.to_owned();
+                            inner = Ok(Some(Inner::Cell(label)));
+                            changed = true;
                         }
                         if ui.button("Empty string").clicked() {
                             inner = Ok(Some(Inner::Cell(String::new())));

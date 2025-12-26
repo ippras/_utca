@@ -19,10 +19,7 @@ impl Cache {
 
 impl Cache {
     pub(crate) fn load(ctx: &Context, id: Id) -> Self {
-        ctx.data_mut(|data| {
-            data.get_persisted_mut_or_insert_with(id, || Self::new())
-                .clone()
-        })
+        ctx.data_mut(|data| data.get_persisted_mut_or_insert_with(id, Self::new).clone())
     }
 
     pub(crate) fn store(self, ctx: &Context, id: Id) {

@@ -62,8 +62,6 @@ pub(crate) struct Settings {
 
 impl Settings {
     pub(crate) fn new() -> Self {
-        let mut compositions = Vec::new();
-        compositions.push(Composition::new());
         Self {
             index: None,
             // Display
@@ -79,7 +77,7 @@ impl Settings {
             // Parameters
             ddof: 1,
             adduct: 0.0,
-            compositions,
+            compositions: vec![Composition::new()],
             method: Method::VanderWal,
             order: Order::Descending,
             round_mass: 2,
@@ -688,8 +686,7 @@ impl Discriminants {
                                 .ui(ui);
                         }
                     });
-                })
-                .response;
+                });
             if ui.button(ERASER).clicked() {
                 for values in self.0.values_mut() {
                     *values = [1.0; 3]

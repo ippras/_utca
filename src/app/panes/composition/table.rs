@@ -132,7 +132,7 @@ impl TableView<'_> {
                     }
                 } else {
                     let value = self.data_frame[column.start].as_materialized_series();
-                    NewMeanAndStandardDeviation::new(&value, row)
+                    NewMeanAndStandardDeviation::new(value, row)
                         .with_standard_deviation(self.state.settings.standard_deviation)
                         .with_sample(true)
                         .show(ui)?;

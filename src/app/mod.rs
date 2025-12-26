@@ -320,7 +320,7 @@ impl App {
 
     #[instrument(skip_all, err)]
     fn parse(&mut self, ctx: &Context, dropped_file: DroppedFile) -> Result<()> {
-        const CONFIGURATION: LazyLock<SchemaRef> = LazyLock::new(|| {
+        static CONFIGURATION: LazyLock<SchemaRef> = LazyLock::new(|| {
             Arc::new(Schema::from_iter([
                 Field::new(PlSmallStr::from_static(LABEL), DataType::String),
                 field!(FATTY_ACID),
@@ -339,7 +339,7 @@ impl App {
             ]))
         });
 
-        const COMPOSITION: LazyLock<SchemaRef> = LazyLock::new(|| {
+        static COMPOSITION: LazyLock<SchemaRef> = LazyLock::new(|| {
             Arc::new(Schema::from_iter([
                 field!(LABEL[DataType::String]),
                 field!(TRIACYLGLYCEROL[data_type!(FATTY_ACID)]),
@@ -348,7 +348,7 @@ impl App {
         });
 
         /// Monoacylglycerol
-        const MAG: LazyLock<SchemaRef> = LazyLock::new(|| {
+        static MAG: LazyLock<SchemaRef> = LazyLock::new(|| {
             Arc::new(Schema::from_iter([
                 Field::new(PlSmallStr::from_static(LABEL), DataType::String),
                 field!(FATTY_ACID),
@@ -364,7 +364,7 @@ impl App {
         });
 
         /// Diacylglycerol
-        const DAG: LazyLock<SchemaRef> = LazyLock::new(|| {
+        static DAG: LazyLock<SchemaRef> = LazyLock::new(|| {
             Arc::new(Schema::from_iter([
                 Field::new(PlSmallStr::from_static(LABEL), DataType::String),
                 field!(FATTY_ACID),

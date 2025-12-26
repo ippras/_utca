@@ -28,7 +28,7 @@ impl Computer {
         // Чтобы обрабатывать универсально - даже при одно фрейме берем слайс.
         let frames = match key.index {
             Some(index) => &key.frames[index..=index],
-            None => &key.frames[..],
+            None => key.frames,
         };
         let compute = |frame: &HashedMetaDataFrame| {
             // | Label | FattyAcid | StereospecificNumbers123 | StereospecificNumbers13 | StereospecificNumbers2 |

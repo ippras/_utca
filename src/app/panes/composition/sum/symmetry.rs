@@ -41,7 +41,7 @@ impl<'a> Symmetry<'a> {
             for row in 0..self.data_frame.height() {
                 let group = self.data_frame[GROUP].str()?.get(row).unwrap_or(EM_DASH);
                 ui.label(group);
-                MeanAndStandardDeviation::new(&self.data_frame, [VALUE], row)
+                MeanAndStandardDeviation::new(self.data_frame, [VALUE], row)
                     .with_standard_deviation(self.settings.standard_deviation)
                     .with_sample(true)
                     .show(ui)?;

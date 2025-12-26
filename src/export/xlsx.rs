@@ -102,7 +102,7 @@ fn write(data_frame: &DataFrame, worksheet: &mut Worksheet) -> Result<()> {
                         TimeUnit::Milliseconds => timestamp_ms_to_datetime(value),
                     };
                     let format = Format::new().set_num_format("yyyy\\-mm\\-dd\\ hh:mm:ss");
-                    worksheet.write_datetime_with_format(row, col, &datetime, &format)?;
+                    worksheet.write_datetime_with_format(row, col, datetime, &format)?;
                     worksheet.set_column_width(col, 18)?;
                 }
                 value => {

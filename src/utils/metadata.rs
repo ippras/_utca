@@ -57,7 +57,7 @@ pub fn longest_common_prefix(strings: Vec<&str>) -> &str {
     }
     let mut prefix = strings[0];
     for string in strings {
-        while !string.starts_with(&prefix) {
+        while !string.starts_with(prefix) {
             if prefix.is_empty() {
                 return "";
             }
