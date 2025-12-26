@@ -1,11 +1,7 @@
 use crate::{
     app::states::{
         calculation::settings::Threshold,
-        composition::settings::{
-            Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, SPECIES_MONO,
-            SPECIES_POSITIONAL, SPECIES_STEREO, Settings, TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO,
-            UNSATURATION_MONO, UNSATURATION_STEREO,
-        },
+        composition::settings::{Composition, Settings, Stereospecificity},
     },
     r#const::{KEY, KEYS, SPECIES, THRESHOLD, VALUE, VALUES},
     utils::{
@@ -127,14 +123,10 @@ fn body(lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
             triacylglycerol.stereospecific_number3(),
         ];
         exprs.push(
-            match key.compositions[index] {
-                ECN_STEREO | MASS_STEREO | SPECIES_STEREO | TYPE_STEREO | UNSATURATION_STEREO => {
-                    format_str("[{}; {}; {}]", args)?
-                }
-                SPECIES_POSITIONAL | TYPE_POSITIONAL => format_str("[{}/2; {}; {}/2]", args)?,
-                ECN_MONO | MASS_MONO | SPECIES_MONO | TYPE_MONO | UNSATURATION_MONO => {
-                    format_str("[{}/3; {}/3; {}/3]", args)?
-                }
+            match key.compositions[index].stereospecificity() {
+                Some(Stereospecificity::Stereo) => format_str("[{}; {}; {}]", args)?,
+                Some(Stereospecificity::Positional) => format_str("[{}/2; {}; {}/2]", args)?,
+                None => format_str("[{}/3; {}/3; {}/3]", args)?,
             }
             .alias(format!("{KEY}[{index}]")),
         );

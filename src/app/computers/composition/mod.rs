@@ -2,9 +2,10 @@ use crate::{
     app::states::{
         calculation::settings::Threshold,
         composition::settings::{
-            Composition, ECN_MONO, ECN_STEREO, MASS_MONO, MASS_STEREO, Order, SPECIES_MONO,
-            SPECIES_POSITIONAL, SPECIES_STEREO, Settings, Sort, TYPE_MONO, TYPE_POSITIONAL,
-            TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_STEREO,
+            Composition, ECN_MONO, ECN_POSITIONAL, ECN_STEREO, MASS_MONO, MASS_POSITIONAL,
+            MASS_STEREO, Order, SPECIES_MONO, SPECIES_POSITIONAL, SPECIES_STEREO, Settings, Sort,
+            TYPE_MONO, TYPE_POSITIONAL, TYPE_STEREO, UNSATURATION_MONO, UNSATURATION_POSITIONAL,
+            UNSATURATION_STEREO,
         },
     },
     r#const::{KEY, KEYS, SPECIES, THRESHOLD, VALUE, VALUES},
@@ -124,6 +125,31 @@ fn compose(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                             .round(key.round_mass, RoundMode::HalfToEven)
                     })
                     .alias("MMC"),
+                MASS_POSITIONAL => {
+                    let sn13 = (col(TRIACYLGLYCEROL)
+                        .triacylglycerol()
+                        .stereospecific_number1()
+                        .fatty_acid()
+                        .relative_atomic_mass(None)
+                        + col(TRIACYLGLYCEROL)
+                            .triacylglycerol()
+                            .stereospecific_number3()
+                            .fatty_acid()
+                            .relative_atomic_mass(None))
+                    .round(key.round_mass, RoundMode::HalfToEven);
+                    as_struct(vec![
+                        sn13.clone().alias(STEREOSPECIFIC_NUMBERS1),
+                        col(TRIACYLGLYCEROL)
+                            .triacylglycerol()
+                            .stereospecific_number2()
+                            .fatty_acid()
+                            .relative_atomic_mass(None)
+                            .round(key.round_mass, RoundMode::HalfToEven)
+                            .alias(STEREOSPECIFIC_NUMBERS2),
+                        sn13.alias(STEREOSPECIFIC_NUMBERS3),
+                    ])
+                    .alias("MPC")
+                }
                 MASS_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map(|expr| {
@@ -140,6 +166,29 @@ fn compose(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                             .equivalent_carbon_number()
                     })
                     .alias("NMC"),
+                ECN_POSITIONAL => {
+                    let sn13 = col(TRIACYLGLYCEROL)
+                        .triacylglycerol()
+                        .stereospecific_number1()
+                        .fatty_acid()
+                        .equivalent_carbon_number()
+                        + col(TRIACYLGLYCEROL)
+                            .triacylglycerol()
+                            .stereospecific_number3()
+                            .fatty_acid()
+                            .equivalent_carbon_number();
+                    as_struct(vec![
+                        sn13.clone().alias(STEREOSPECIFIC_NUMBERS1),
+                        col(TRIACYLGLYCEROL)
+                            .triacylglycerol()
+                            .stereospecific_number2()
+                            .fatty_acid()
+                            .equivalent_carbon_number()
+                            .alias(STEREOSPECIFIC_NUMBERS2),
+                        sn13.alias(STEREOSPECIFIC_NUMBERS3),
+                    ])
+                    .alias("NPC")
+                }
                 ECN_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map(|expr| expr.fatty_acid().equivalent_carbon_number())
@@ -173,6 +222,29 @@ fn compose(mut lazy_frame: LazyFrame, key: Key) -> PolarsResult<LazyFrame> {
                     .triacylglycerol()
                     .map(|_| col(TRIACYLGLYCEROL).triacylglycerol().unsaturation())
                     .alias("UMC"),
+                UNSATURATION_POSITIONAL => {
+                    let sn13 = col(TRIACYLGLYCEROL)
+                        .triacylglycerol()
+                        .stereospecific_number1()
+                        .fatty_acid()
+                        .unsaturation()
+                        + col(TRIACYLGLYCEROL)
+                            .triacylglycerol()
+                            .stereospecific_number3()
+                            .fatty_acid()
+                            .unsaturation();
+                    as_struct(vec![
+                        sn13.clone().alias(STEREOSPECIFIC_NUMBERS1),
+                        col(TRIACYLGLYCEROL)
+                            .triacylglycerol()
+                            .stereospecific_number2()
+                            .fatty_acid()
+                            .unsaturation()
+                            .alias(STEREOSPECIFIC_NUMBERS2),
+                        sn13.alias(STEREOSPECIFIC_NUMBERS3),
+                    ])
+                    .alias("UPC")
+                }
                 UNSATURATION_STEREO => col(TRIACYLGLYCEROL)
                     .triacylglycerol()
                     .map(|expr| expr.fatty_acid().unsaturation())
