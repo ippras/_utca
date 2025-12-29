@@ -8,7 +8,6 @@ pub mod egui;
 pub mod hash;
 pub mod metadata;
 pub mod polars;
-pub mod ui;
 
 mod spawn;
 mod trie;

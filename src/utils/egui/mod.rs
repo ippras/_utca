@@ -1,45 +1,4 @@
-use egui::{Context, Id, Response, RichText, Tooltip, Ui};
-use egui_l20n::prelude::*;
-use egui_phosphor::regular::{
-    ARROWS_CLOCKWISE, ARROWS_HORIZONTAL, GEAR, PENCIL, SIGMA, SLIDERS_HORIZONTAL,
-};
-
-// /// Extension methods for [`Ui`]
-// pub trait UiExt {
-//     /// Edit
-//     fn edit(&mut self, selected: &mut bool);
-
-//     /// Reset
-//     fn reset_button(&mut self, selected: &mut bool);
-
-//     /// Resize
-//     fn resize_button(&mut self, selected: &mut bool);
-
-//     /// Settings
-//     fn settings_button(&mut self, selected: &mut bool);
-// }
-
-// impl UiExt for Ui {
-//     fn edit(&mut self, selected: &mut bool) {
-//         self.toggle_value(selected, RichText::new(PENCIL).heading())
-//             .on_hover_localized("Edit");
-//     }
-
-//     fn reset_button(&mut self, selected: &mut bool) {
-//         self.toggle_value(selected, RichText::new(ARROWS_CLOCKWISE).heading())
-//             .on_hover_localized("ResetTable");
-//     }
-
-//     fn resize_button(&mut self, selected: &mut bool) {
-//         self.toggle_value(selected, RichText::new(ARROWS_HORIZONTAL).heading())
-//             .on_hover_localized("ResizeTable");
-//     }
-
-//     fn settings_button(&mut self, selected: &mut bool) {
-//         self.toggle_value(selected, RichText::new(SLIDERS_HORIZONTAL).heading())
-//             .on_hover_localized("Settings");
-//     }
-// }
+use egui::{Response, Tooltip, Ui};
 
 /// Extension methods for [`Response`]
 pub trait ResponseExt: Sized {
@@ -84,39 +43,5 @@ impl ResponseExt for Response {
     }
 }
 
-/// State
-pub trait State: Sized {
-    fn load(ctx: &Context, id: Id) -> Self;
-
-    fn store(self, ctx: &Context, id: Id);
-
-    fn reset(ctx: &Context, id: Id);
-}
-
-// /// Settings undoer
-// pub(crate) type SettingsUndoer = Undoer<(String, bool)>;
-
-// /// Settings state
-// #[derive(Clone, Default, Deserialize, Serialize)]
-// pub(crate) struct SettingsState {
-//     /// Wrapped in Arc for cheaper clones.
-//     #[serde(skip)]
-//     pub(crate) undoer: Arc<Mutex<SettingsUndoer>>,
-// }
-
-// impl SettingsState {
-//     pub(crate) fn undoer(&self) -> SettingsUndoer {
-//         self.undoer.lock().clone()
-//     }
-
-//     #[allow(clippy::needless_pass_by_ref_mut)] // Intentionally hide interiority of mutability
-//     pub(crate) fn set_undoer(&mut self, undoer: SettingsUndoer) {
-//         *self.undoer.lock() = undoer;
-//     }
-
-//     pub(crate) fn clear_undoer(&mut self) {
-//         self.set_undoer(SettingsUndoer::default());
-//     }
-// }
-
-pub mod state;
+// pub mod ui;
+// pub mod state;

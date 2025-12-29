@@ -2,10 +2,7 @@ use egui::{Grid, InnerResponse, Label, Response, Ui, Widget};
 use egui_l20n::UiExt as _;
 use lipid::prelude::*;
 use polars::prelude::*;
-use std::{
-    borrow::Cow,
-    fmt::{Write, from_fn},
-};
+use std::borrow::Cow;
 
 /// Label widget
 pub(crate) struct LabelWidget<'a> {
