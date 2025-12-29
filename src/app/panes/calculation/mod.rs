@@ -18,7 +18,7 @@ use crate::{
         },
         identifiers::COMPOSE,
         states::calculation::{ID_SOURCE, State, settings::Settings},
-        widgets::butons::{ResetButton, ResizeButton, SettingsButton},
+        widgets::buttons::{ResetButton, ResizeButton, SettingsButton},
     },
     r#const::THRESHOLD,
     export::ron,

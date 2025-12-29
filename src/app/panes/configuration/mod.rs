@@ -4,7 +4,7 @@ use crate::{
     app::{
         identifiers::CALCULATE,
         states::configuration::State,
-        widgets::butons::{EditButton, ResetButton, ResizeButton, SettingsButton},
+        widgets::buttons::{EditButton, ResetButton, ResizeButton, SettingsButton},
     },
     export,
     utils::{HashedDataFrame, HashedMetaDataFrame},

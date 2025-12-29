@@ -13,7 +13,7 @@ use crate::{
             ID_SOURCE, State,
             settings::{Settings, View},
         },
-        widgets::butons::{ResetButton, ResizeButton, SettingsButton},
+        widgets::buttons::{ResetButton, ResizeButton, SettingsButton},
     },
     r#const::VALUE,
     export::{ron, xlsx},

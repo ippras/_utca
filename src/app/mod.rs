@@ -6,7 +6,7 @@ use self::{
     widgets::{About, Github},
 };
 use crate::{
-    app::widgets::butons::{
+    app::widgets::buttons::{
         AboutButton, GridButton, HorizontalButton, LeftPanelButton, ReactiveButton, ResetButton,
         SettingsButton, TabsButton, VerticalButton,
     },

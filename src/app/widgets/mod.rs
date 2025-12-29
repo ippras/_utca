@@ -7,7 +7,7 @@ pub(super) use self::{
 };
 
 pub(super) mod about;
-pub(super) mod butons;
+pub(super) mod buttons;
 pub(super) mod fatty_acid;
 pub(super) mod float;
 pub(super) mod github;
